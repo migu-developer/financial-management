@@ -1,0 +1,28 @@
+{
+  "name": "@repo/config",
+  "version": "1.0.0",
+  "description": "Configuration packages for the financial management project",
+  "private": true,
+  "files": [
+    "eslint.config.ts",
+    "prettier-preset.mjs",
+    "tsconfig.base.json"
+  ],
+  "exports": {
+    "./eslint": "./eslint.config.ts",
+    "./prettier": "./prettier-preset.mjs",
+    "./tsconfig": "./tsconfig.base.json",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "devDependencies": {
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "main",
+  "version": "1.0.0",
+  "description": "Main client for financial management",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "ts-node": "catalog:",
+    "typescript": "catalog:",
+    "eslint": "catalog:",
+    "@repo/config": "workspace:*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3"
+}

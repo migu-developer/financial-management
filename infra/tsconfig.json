@@ -1,0 +1,9 @@
+{
+  "extends": "@repo/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": ["bin", "lib", "test"],
+  "exclude": ["node_modules", "dist", "cdk.out", ".turbo"]
+}

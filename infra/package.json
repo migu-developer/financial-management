@@ -1,0 +1,37 @@
+{
+  "name": "@repo/infra",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "infra": "bin/infra.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "aws-cdk": "catalog:",
+    "ts-node": "catalog:",
+    "typescript": "catalog:",
+    "eslint": "catalog:",
+    "@repo/config": "workspace:*"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "catalog:",
+    "constructs": "catalog:",
+    "@repo/server": "workspace:*"
+  },
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=24"
+  }
+}
