@@ -51,6 +51,9 @@ export function getAppConfig(
 
 function parseStacksFilter(contextStacks: unknown): string[] | undefined {
   if (typeof contextStacks !== 'string') return undefined;
-  const list = contextStacks.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = contextStacks
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return list.length > 0 ? list : undefined;
 }

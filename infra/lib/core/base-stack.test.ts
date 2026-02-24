@@ -1,57 +1,51 @@
-import * as cdk from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
-import { BaseStack, BaseStackProps } from './base-stack';
+import { buildBaseStackProps, BaseStackProps } from './base-stack';
 
-function createStack(overrides: Partial<BaseStackProps> = {}): BaseStack {
-  const app = new cdk.App();
-  return new BaseStack(app, 'TestBaseStack', {
+function buildProps(overrides: Partial<BaseStackProps> = {}): BaseStackProps {
+  return {
     version: 'v1',
     stackName: 'TestStack',
     description: 'Test description',
     ...overrides,
-  });
+  };
 }
 
-describe('BaseStack', () => {
-  test('sets stack name as FinancialManagement-{version}-{stackName}', () => {
-    const stack = createStack();
-    expect(stack.stackName).toBe('FinancialManagement-v1-TestStack');
+describe('buildBaseStackProps', () => {
+  test('builds full stack name as FinancialManagement-{version}-{stackName}', () => {
+    const result = buildBaseStackProps(buildProps());
+    expect(result.stackName).toBe('FinancialManagement-v1-TestStack');
   });
 
   test('uses custom description when provided', () => {
-    const stack = createStack({ description: 'Custom desc' });
-    const template = Template.fromStack(stack);
-    expect(template).toBeDefined();
+    const result = buildBaseStackProps(
+      buildProps({ description: 'Custom desc' }),
+    );
+    expect(result.description).toBe('Custom desc');
   });
 
-  test('sets default description when not provided', () => {
-    const app = new cdk.App();
-    const stack = new BaseStack(app, 'Id', {
-      version: 'v2',
-      stackName: 'Networking',
-    });
-    expect(stack.stackName).toBe('FinancialManagement-v2-Networking');
+  test('uses default description when not provided', () => {
+    const result = buildBaseStackProps(
+      buildProps({
+        version: 'v2',
+        stackName: 'Networking',
+        description: undefined,
+      }),
+    );
+    expect(result.description).toBe('Financial Management - Networking (v2)');
   });
 
-  test('template includes Version and Project in stack metadata/tags', () => {
-    const stack = createStack();
-    const template = Template.fromStack(stack);
-    const templateObj = template.toJSON();
-    expect(templateObj).toBeDefined();
-    expect(stack.stackName).toBe('FinancialManagement-v1-TestStack');
+  test('includes Version, Project and ManagedBy in tags', () => {
+    const result = buildBaseStackProps(buildProps());
+    expect(result.tags.Version).toBe('v1');
+    expect(result.tags.Project).toBe('FinancialManagement');
+    expect(result.tags.ManagedBy).toBe('CDK');
   });
 
-  test('accepts and merges custom tags', () => {
-    const app = new cdk.App();
-    const stack = new BaseStack(app, 'Id', {
-      version: 'v1',
-      stackName: 'Test',
-      tags: {
-        Custom: 'value',
-      },
-    });
-    expect(stack.stackName).toBe('FinancialManagement-v1-Test');
-    const template = Template.fromStack(stack);
-    expect(template).toBeDefined();
+  test('merges custom tags with base tags', () => {
+    const result = buildBaseStackProps(
+      buildProps({ tags: { Custom: 'value' } }),
+    );
+    expect(result.tags.Version).toBe('v1');
+    expect(result.tags.Project).toBe('FinancialManagement');
+    expect(result.tags.Custom).toBe('value');
   });
 });

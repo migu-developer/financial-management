@@ -14,21 +14,43 @@ export interface BaseStackProps extends StackProps {
   readonly description?: string;
 }
 
+/** Builds the props passed to Stack. Extracted for testability without CDK. */
+export function buildBaseStackProps(props: BaseStackProps): {
+  stackName: string;
+  description: string;
+  tags: Record<string, string>;
+} {
+  const { version, stackName, description, ...stackProps } = props;
+  const fullStackName = `FinancialManagement-${version}-${stackName}`;
+  return {
+    stackName: fullStackName,
+    description:
+      description ?? `Financial Management - ${stackName} (${version})`,
+    tags: {
+      ...(stackProps.tags as Record<string, string>),
+      Version: version,
+      Project: 'FinancialManagement',
+      ManagedBy: 'CDK',
+    },
+  };
+}
+
 export class BaseStack extends Stack {
   constructor(scope: Construct, id: string, props: BaseStackProps) {
     const { version, stackName, description, ...stackProps } = props;
-    const fullStackName = `FinancialManagement-${version}-${stackName}`;
+
+    const built = buildBaseStackProps({
+      ...props,
+      version,
+      stackName,
+      description,
+    });
+
     super(scope, id, {
       ...stackProps,
-      stackName: fullStackName,
-      description:
-        description ?? `Financial Management - ${stackName} (${version})`,
-      tags: {
-        ...stackProps.tags,
-        Version: version,
-        Project: 'FinancialManagement',
-        ManagedBy: 'CDK',
-      },
+      stackName: built.stackName,
+      description: built.description,
+      tags: built.tags,
     });
   }
 }

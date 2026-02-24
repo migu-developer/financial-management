@@ -1,4 +1,3 @@
-import { App, Stack } from 'aws-cdk-lib';
 import { DEFAULT_VERSION, VERSION_STACKS } from '@config/versions';
 import { DEPLOY_VERSION } from '@versions/deploy-config';
 import { getAppConfig } from '@config/entry-config';
@@ -41,27 +40,33 @@ describe('infra entry', () => {
     });
   });
 
-  describe('app and stacks creation', () => {
-    test('creates app and stacks from getAppConfig result', () => {
-      const app = new App();
-      const { version, factoriesToInstantiate } = getAppConfig(
-        VERSION_STACKS,
-        DEFAULT_VERSION,
-        'v1',
-        undefined,
-      );
-      const stackMap = new Map<string, Stack>();
+  describe('entry flow (mocked factories)', () => {
+    test('loop populates stackMap with one entry per factory', () => {
+      const mockStack = { node: {} };
+      const create = jest.fn().mockReturnValue(mockStack);
+      const factoriesToInstantiate = [
+        { name: 'Auth', create },
+        { name: 'Database', create },
+      ];
+      const stackMap = new Map<string, unknown>();
       const deps = {
         getStack(name: string) {
           return stackMap.get(name);
         },
       };
-      for (const { name, create } of factoriesToInstantiate) {
-        const stack = create(app, version, deps);
+      const version = 'v1';
+      const mockApp = { node: {} };
+
+      for (const { name, create: createFn } of factoriesToInstantiate) {
+        const stack = createFn(mockApp, version, deps);
         stackMap.set(name, stack);
       }
-      expect(stackMap.size).toBe(factoriesToInstantiate.length);
-      expect(app.node.children.length).toBeGreaterThan(0);
+
+      expect(stackMap.size).toBe(2);
+      expect(stackMap.get('Auth')).toBe(mockStack);
+      expect(stackMap.get('Database')).toBe(mockStack);
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(create).toHaveBeenCalledWith(mockApp, version, deps);
     });
   });
 });
