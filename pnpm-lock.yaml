@@ -152,9 +152,12 @@ importers:
 
   infra:
     dependencies:
-      '@repo/server':
+      '@repo/auth':
         specifier: workspace:*
         version: link:../services/auth
+      '@repo/cognito':
+        specifier: workspace:*
+        version: link:../packages/cognito
       aws-cdk-lib:
         specifier: 'catalog:'
         version: 2.238.0(constructs@10.4.5)
@@ -189,6 +192,21 @@ importers:
       tsconfig-paths:
         specifier: 'catalog:'
         version: 4.2.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/cognito:
+    devDependencies:
+      '@repo/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
+      eslint:
+        specifier: 'catalog:'
+        version: 10.0.0(jiti@2.6.1)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

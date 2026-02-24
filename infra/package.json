@@ -29,7 +29,8 @@
   "dependencies": {
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:",
-    "@repo/server": "workspace:*"
+    "@repo/auth": "workspace:*",
+    "@repo/cognito": "workspace:*"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

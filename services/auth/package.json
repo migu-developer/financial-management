@@ -1,5 +1,5 @@
 {
-  "name": "@repo/server",
+  "name": "@repo/auth",
   "version": "1.0.0",
   "description": "Authentication service for financial management",
   "private": true,

@@ -1,21 +1,23 @@
 {
-  "name": "@repo/expenses",
+  "name": "@repo/cognito",
   "version": "1.0.0",
-  "description": "Expenses service for financial management",
-  "main": "index.js",
+  "description": "Cognito package for the financial management project",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3",
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
     "@repo/config": "workspace:*"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.29.3"
+  "engines": {
+    "node": ">=24"
+  }
 }
