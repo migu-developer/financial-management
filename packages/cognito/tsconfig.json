@@ -2,7 +2,11 @@
   "extends": "@repo/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@custom-message/*": ["./src/custom-message/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
