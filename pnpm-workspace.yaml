@@ -8,7 +8,7 @@ packages:
 
 catalog:
   # Build & Runtime
-  turbo: '^2.8.8'
+  turbo: '^2.8.10'
   typescript: '^5.9.3'
   ts-node: '^10.9.2'
   '@types/node': '^25.2.3'
@@ -20,8 +20,8 @@ catalog:
   typescript-eslint: '^8.55.0'
 
   # Commit & Git
-  '@commitlint/cli': '^20.4.1'
-  '@commitlint/config-conventional': '^20.1.0'
+  '@commitlint/cli': '^20.4.2'
+  '@commitlint/config-conventional': '^20.4.2'
   '@commitlint/types': '^20.4.0'
   husky: '^9.1.7'
 
