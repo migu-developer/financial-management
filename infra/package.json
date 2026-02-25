@@ -1,5 +1,5 @@
 {
-  "name": "@repo/infra",
+  "name": "@infra",
   "version": "1.0.0",
   "private": true,
   "bin": {
@@ -24,13 +24,13 @@
     "typescript": "catalog:",
     "eslint": "catalog:",
     "tsconfig-paths": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "dependencies": {
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:",
-    "@repo/auth": "workspace:*",
-    "@repo/cognito": "workspace:*"
+    "@services/auth": "workspace:*",
+    "@packages/cognito": "workspace:*"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

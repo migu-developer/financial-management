@@ -1,21 +1,23 @@
 {
-  "name": "@features/auth",
+  "name": "@packages/transactional",
   "version": "1.0.0",
-  "description": "Authentication features for the financial management project",
+  "description": "Transactional package for the financial management project",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3",
   "devDependencies": {
     "@types/node": "catalog:",
-    "ts-node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
     "@packages/config": "workspace:*"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.29.3"
+  "engines": {
+    "node": ">=24"
+  }
 }

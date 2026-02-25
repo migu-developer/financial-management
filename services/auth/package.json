@@ -1,5 +1,5 @@
 {
-  "name": "@repo/auth",
+  "name": "@services/auth",
   "version": "1.0.0",
   "description": "Authentication service for financial management",
   "private": true,
@@ -13,7 +13,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

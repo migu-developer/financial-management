@@ -1,5 +1,5 @@
 {
-  "name": "@repo/cognito",
+  "name": "@packages/cognito",
   "version": "1.0.0",
   "description": "Cognito package for the financial management project",
   "scripts": {
@@ -15,7 +15,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "engines": {
     "node": ">=24"

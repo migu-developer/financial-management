@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { cdkConfig } from '@repo/config/eslint';
+import { cdkConfig } from '@packages/config/eslint';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

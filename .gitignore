@@ -48,5 +48,6 @@ Thumbs.db
 # Keep skills/ source directory but ignore generated directories with symlinks
 .cursor/skills/
 .claude/skills/
+.claude/settings.local.json
 .gemini/skills/
 .codex/skills/

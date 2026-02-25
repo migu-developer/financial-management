@@ -1,5 +1,5 @@
 {
-  "name": "@repo/expenses",
+  "name": "@services/expenses",
   "version": "1.0.0",
   "description": "Expenses service for financial management",
   "scripts": {
@@ -11,7 +11,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "keywords": [],
   "author": "",
