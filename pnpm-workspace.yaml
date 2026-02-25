@@ -10,6 +10,8 @@ catalog:
   '@commitlint/cli': ^20.4.2
   '@commitlint/config-conventional': ^20.4.2
   '@commitlint/types': ^20.4.0
+  '@react-email/components': ^1.0.8
+  '@react-email/preview-server': ^5.2.8
   '@types/jest': ^30.0.0
   '@types/node': ^25.2.3
   aws-cdk: ^2.1106.0
@@ -21,6 +23,9 @@ catalog:
   husky: ^9.1.7
   jest: ^30.2.0
   prettier: ^3.8.1
+  react-email: ^5.2.8
+  react: ^19.2.4
+  react-dom: ^19.2.4
   ts-jest: ^29.4.6
   ts-node: ^10.9.2
   tsconfig-paths: ^4.2.0

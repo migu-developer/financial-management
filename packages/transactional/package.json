@@ -12,12 +12,19 @@
   "license": "ISC",
   "packageManager": "pnpm@10.29.3",
   "devDependencies": {
+    "@packages/config": "workspace:*",
+    "@react-email/preview-server": "catalog:",
     "@types/node": "catalog:",
-    "typescript": "catalog:",
     "eslint": "catalog:",
-    "@packages/config": "workspace:*"
+    "react-email": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=24"
+  },
+  "dependencies": {
+    "@react-email/components": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   }
 }
