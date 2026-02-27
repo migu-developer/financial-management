@@ -2,8 +2,23 @@
   "extends": "@packages/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": ".",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "paths": {
+      "@root/*": ["./*"],
+      "@config/*": ["./config/*"],
+      "@components/*": ["./components/*"]
+    }
   },
-  "include": ["src"],
-  "exclude": ["node_modules", ".turbo"]
+  "include": [
+    "./emails",
+    "eslint.config.ts",
+    "tailwind.config.ts",
+    "config/index.ts",
+    "jest.config.ts",
+    "components"
+  ],
+  "exclude": ["node_modules", ".turbo", ".react-email"]
 }

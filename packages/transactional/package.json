@@ -3,20 +3,40 @@
   "version": "1.0.0",
   "description": "Transactional package for the financial management project",
   "scripts": {
+    "email:dev": "NODE_ENV=development email dev",
+    "email:build": "email build && NODE_ENV=production && cd .react-email && npm run build",
+    "email:start": "NODE_ENV=production email start",
+    "email:export": "NODE_ENV=production email export --outDir dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.29.3",
   "devDependencies": {
+    "@babel/parser": "catalog:",
+    "@babel/traverse": "catalog:",
     "@packages/config": "workspace:*",
     "@react-email/preview-server": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/eslint-plugin-jsx-a11y": "catalog:",
+    "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "cross-env": "catalog:",
+    "dotenv": "catalog:",
     "eslint": "catalog:",
+    "eslint-plugin-jsx-a11y": "catalog:",
+    "eslint-plugin-react": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
+    "jest": "catalog:",
     "react-email": "catalog:",
+    "tailwindcss": "catalog:",
+    "ts-jest": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {
@@ -24,6 +44,7 @@
   },
   "dependencies": {
     "@react-email/components": "catalog:",
+    "@react-email/tailwind": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   }

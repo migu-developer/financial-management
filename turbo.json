@@ -26,6 +26,18 @@
     },
     "clean": {
       "cache": false
+    },
+    "email:dev": {
+      "cache": false
+    },
+    "email:build": {
+      "cache": false
+    },
+    "email:start": {
+      "cache": false
+    },
+    "email:export": {
+      "cache": false
     }
   }
 }

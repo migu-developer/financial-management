@@ -14,7 +14,11 @@
     "clean": "turbo clean",
     "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
     "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "email:dev": "turbo email:dev --filter=@packages/transactional",
+    "email:build": "turbo email:build --filter=@packages/transactional",
+    "email:start": "turbo email:start --filter=@packages/transactional",
+    "email:export": "turbo email:export --filter=@packages/transactional"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

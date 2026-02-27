@@ -11,11 +11,9 @@ export const baseConfig = defineConfig(
 export const nodeConfig = defineConfig(baseConfig, {
   rules: {
     'no-console': 'warn',
-  },
-});
-
-export const cdkConfig = defineConfig(baseConfig, {
-  rules: {
-    'no-new': 'off',
+    eqeqeq: ['error', 'always'],
+    'no-eval': 'error',
+    'no-debugger': 'error',
+    'prefer-const': 'warn',
   },
 });

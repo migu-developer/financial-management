@@ -3,3 +3,4 @@ dist
 cdk.out
 coverage
 pnpm-lock.yaml
+.react-email
