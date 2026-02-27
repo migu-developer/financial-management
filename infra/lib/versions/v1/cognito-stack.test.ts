@@ -188,8 +188,10 @@ describe('normalizePemFromEnv', () => {
   });
 
   test('replaces literal \\n with real newlines', () => {
-    const fromEnv = '-----BEGIN PRIVATE KEY-----\\nMIIEvQ\\n-----END PRIVATE KEY-----';
-    const expected = '-----BEGIN PRIVATE KEY-----\nMIIEvQ\n-----END PRIVATE KEY-----';
+    const fromEnv =
+      '-----BEGIN PRIVATE KEY-----\\nMIIEvQ\\n-----END PRIVATE KEY-----';
+    const expected =
+      '-----BEGIN PRIVATE KEY-----\nMIIEvQ\n-----END PRIVATE KEY-----';
     expect(normalizePemFromEnv(fromEnv)).toBe(expected);
   });
 

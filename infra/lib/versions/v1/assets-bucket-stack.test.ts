@@ -31,8 +31,7 @@ jest.mock('aws-cdk-lib', () => {
 
 const mockBucket = {
   bucketName: 'migudev-fm-us-east-1-assets',
-  bucketArn:
-    'arn:aws:s3:::migudev-fm-us-east-1-assets',
+  bucketArn: 'arn:aws:s3:::migudev-fm-us-east-1-assets',
 };
 
 jest.mock('aws-cdk-lib/aws-s3', () => ({
