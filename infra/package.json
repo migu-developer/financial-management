@@ -15,22 +15,23 @@
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "aws-cdk": "catalog:",
+    "esbuild": "catalog:",
+    "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
-    "aws-cdk": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "catalog:",
-    "eslint": "catalog:",
     "tsconfig-paths": "catalog:",
-    "@packages/config": "workspace:*"
+    "typescript": "catalog:"
   },
   "dependencies": {
-    "aws-cdk-lib": "catalog:",
-    "constructs": "catalog:",
+    "@packages/cognito": "workspace:*",
     "@services/auth": "workspace:*",
-    "@packages/cognito": "workspace:*"
+    "aws-cdk-lib": "catalog:",
+    "constructs": "catalog:"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

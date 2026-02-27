@@ -4,3 +4,8 @@ cdk.out
 coverage
 pnpm-lock.yaml
 .react-email
+.mcp.json
+CLAUDE.md
+.swarm/
+.claude-flow/
+.claude/

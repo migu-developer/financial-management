@@ -57,3 +57,9 @@ function parseStacksFilter(contextStacks: unknown): string[] | undefined {
     .filter(Boolean);
   return list.length > 0 ? list : undefined;
 }
+
+/**
+ * Builds the full stack name for a given version and stack name.
+ */
+export const fullStackResource = (version: string, resource: string) =>
+  `${process.env.PROJECT_PREFIX}-${version}-${resource}`;

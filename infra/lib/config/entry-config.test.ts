@@ -1,5 +1,5 @@
 import { Stack } from 'aws-cdk-lib';
-import { getAppConfig } from './entry-config';
+import { fullStackResource, getAppConfig } from './entry-config';
 import type { NamedStackFactory } from '@utils/types';
 
 const createMockFactory = (name: string): NamedStackFactory => ({
@@ -116,5 +116,17 @@ describe('getAppConfig', () => {
         /No stack matches/,
       );
     });
+  });
+});
+
+describe('fullStackResource', () => {
+  test('builds the full stack resource for a given version and resource', () => {
+    process.env.PROJECT_PREFIX = 'FinancialManagement';
+    expect(fullStackResource('v1', 'Auth')).toBe('FinancialManagement-v1-Auth');
+  });
+
+  test('builds the full stack resource for a given version and resource', () => {
+    process.env.PROJECT_PREFIX = 'FinancialManagement';
+    expect(fullStackResource('v1', 'auth')).toBe('FinancialManagement-v1-auth');
   });
 });
