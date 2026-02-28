@@ -2,64 +2,142 @@
 /* eslint-disable no-console */
 /**
  * Uploads dist/{locale}/*.html to S3 at prefix cognito/emails/{locale}/{name}.html.
- * Requires: ASSETS_BUCKET_NAME, AWS_REGION (or AWS_DEFAULT_REGION).
- * Optional: COGNITO_EMAILS_PREFIX (default cognito/emails).
+ * Requires: ASSETS_BUCKET_PREFIX, AWS_REGION (or AWS_DEFAULT_REGION), COGNITO_EMAILS_PREFIX.
  * Usage: pnpm email:upload
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { config } from '@config/index';
+import type {
+  PutObjectParams,
+  UploadEmailsS3Deps,
+} from './lib/upload-emails-s3';
 import { uploadEmailsToS3 } from './lib/upload-emails-s3';
 
-const DIST = path.join(process.cwd(), 'dist');
-const PREFIX = config.COGNITO_EMAILS_PREFIX;
+export interface UploadScriptConfig {
+  ASSETS_BUCKET_PREFIX?: string;
+  AWS_REGION?: string;
+  AWS_DEFAULT_REGION?: string;
+  COGNITO_EMAILS_PREFIX?: string;
+}
 
-async function main() {
-  const bucket = `${config.ASSETS_BUCKET_PREFIX}-${config.AWS_REGION}-assets`;
-  const region = config.AWS_REGION ?? config.AWS_DEFAULT_REGION;
+export interface UploadScriptDeps {
+  fs: UploadEmailsS3Deps['fs'];
+  path: UploadEmailsS3Deps['path'];
+  cwd: string;
+  uploadEmailsToS3: typeof import('./lib/upload-emails-s3').uploadEmailsToS3;
+  s3Send: (params: PutObjectParams) => Promise<unknown>;
+}
+
+export type RunUploadEmailsResult =
+  | {
+      ok: true;
+      uploadedCount: number;
+      keys: string[];
+      bucket: string;
+      prefix: string;
+    }
+  | { ok: false; exitCode: number; message: string };
+
+/**
+ * Runs upload validations and upload logic. Used by the CLI and by tests.
+ */
+export async function runUploadEmailsScript(options: {
+  config: UploadScriptConfig;
+  deps: UploadScriptDeps;
+}): Promise<RunUploadEmailsResult> {
+  const { config: cfg, deps: dep } = options;
+  const region = cfg.AWS_REGION ?? cfg.AWS_DEFAULT_REGION;
+  const bucket = [cfg.ASSETS_BUCKET_PREFIX, region].every(Boolean)
+    ? `${cfg.ASSETS_BUCKET_PREFIX}-${region}-assets`
+    : '';
+  const prefix = cfg.COGNITO_EMAILS_PREFIX ?? '';
+  const distPath = dep.path.join(dep.cwd, 'dist');
 
   if (!region) {
-    console.error('Set AWS_REGION or AWS_DEFAULT_REGION (e.g. us-east-1).');
-    process.exit(1);
+    return {
+      ok: false,
+      exitCode: 1,
+      message: 'Set AWS_REGION or AWS_DEFAULT_REGION (e.g. us-east-1).',
+    };
   }
-
   if (!bucket) {
-    console.error('Set ASSETS_BUCKET_NAME (e.g. migudev-fm-us-east-1-assets).');
-    process.exit(1);
+    return {
+      ok: false,
+      exitCode: 1,
+      message: 'Set ASSETS_BUCKET_NAME (e.g. migudev-fm-us-east-1-assets).',
+    };
+  }
+  if (!prefix) {
+    return {
+      ok: false,
+      exitCode: 1,
+      message: 'Set COGNITO_EMAILS_PREFIX (e.g. cognito/emails).',
+    };
+  }
+  if (!dep.fs.existsSync(distPath)) {
+    return {
+      ok: false,
+      exitCode: 1,
+      message: `Dist folder not found: ${distPath}. Run pnpm email:export first.`,
+    };
   }
 
-  if (!PREFIX) {
-    console.error('Set COGNITO_EMAILS_PREFIX (e.g. cognito/emails).');
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(DIST)) {
-    console.error(
-      `Dist folder not found: ${DIST}. Run pnpm email:export first.`,
-    );
-    process.exit(1);
-  }
-
-  const client = new S3Client({ region });
-  const { uploadedCount, keys } = await uploadEmailsToS3({
-    distPath: DIST,
+  const result = await dep.uploadEmailsToS3({
+    distPath,
     bucket,
-    prefix: PREFIX,
+    prefix,
+    deps: {
+      fs: dep.fs,
+      path: dep.path,
+      s3Send: dep.s3Send,
+    },
+  });
+  return {
+    ok: true,
+    uploadedCount: result.uploadedCount,
+    keys: result.keys,
+    bucket,
+    prefix,
+  };
+}
+
+async function main() {
+  const region = config.AWS_REGION ?? config.AWS_DEFAULT_REGION;
+
+  const result = await runUploadEmailsScript({
+    config: {
+      ASSETS_BUCKET_PREFIX: config.ASSETS_BUCKET_PREFIX,
+      AWS_REGION: config.AWS_REGION,
+      AWS_DEFAULT_REGION: config.AWS_DEFAULT_REGION,
+      COGNITO_EMAILS_PREFIX: config.COGNITO_EMAILS_PREFIX,
+    },
     deps: {
       fs,
       path,
-      s3Send: (params) => client.send(new PutObjectCommand(params)),
+      cwd: process.cwd(),
+      uploadEmailsToS3,
+      s3Send: (params) =>
+        new S3Client({ region: region! }).send(new PutObjectCommand(params)),
     },
   });
 
-  for (const key of keys) console.log(`Uploaded s3://${bucket}/${key}`);
+  if (!result.ok) {
+    console.error(result.message);
+    process.exit(result.exitCode);
+  }
+
+  for (const key of result.keys)
+    console.log(`Uploaded s3://${result.bucket}/${key}`);
   console.log(
-    `Done. Uploaded ${uploadedCount} file(s) to s3://${bucket}/${PREFIX}`,
+    `Done. Uploaded ${result.uploadedCount} file(s) to s3://${result.bucket}/${result.prefix}`,
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (typeof process.env.JEST_WORKER_ID === 'undefined') {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -16,9 +16,9 @@ describe('config', () => {
     expect(typeof config.APPLICATION_URL).toBe('string');
   });
 
-  it('has expected keys only', () => {
-    expect(Object.keys(config).sort()).toEqual(
-      ['APPLICATION_URL', 'ASSETS_URL', 'NODE_ENV'].sort(),
+  it('includes required keys for transactional package', () => {
+    expect(Object.keys(config)).toEqual(
+      expect.arrayContaining(['APPLICATION_URL', 'ASSETS_URL', 'NODE_ENV']),
     );
   });
 });

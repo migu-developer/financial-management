@@ -55,6 +55,7 @@ describe('AssetsBucketStack', () => {
           version: 'v1',
           stackName: 'Assets',
           description: 'Test Assets bucket stack',
+          assetsBucketPrefix: 'migudev-fm',
         }),
     ).not.toThrow();
   });
@@ -68,6 +69,7 @@ describe('AssetsBucketStack', () => {
         version: 'v1',
         stackName: 'Assets',
         description: 'Test Assets bucket stack',
+        assetsBucketPrefix: 'migudev-fm',
       },
     );
     expect(stack.bucket).toBe(mockBucket);
@@ -83,6 +85,7 @@ describe('AssetsBucketStack', () => {
       version: 'v1',
       stackName: 'Assets',
       description: 'Test Assets bucket stack',
+      assetsBucketPrefix: 'migudev-fm',
     });
 
     expect(mockExportForCrossVersion).toHaveBeenCalledTimes(2);
@@ -112,6 +115,7 @@ describe('AssetsBucketStack', () => {
         version: 'v1',
         stackName: 'Assets',
         description: 'Test Assets bucket stack',
+        assetsBucketPrefix: 'migudev-fm',
       },
     );
     expect(stack.stackName).toBe('FinancialManagement-v1-Assets');
