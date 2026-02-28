@@ -1,10 +1,14 @@
 import { Heading, Section, Text } from '@react-email/components';
 import { EmailLayout } from '@components/EmailLayout';
+import {
+  COGNITO_CODE_PLACEHOLDER,
+  COGNITO_USERNAME_PLACEHOLDER,
+} from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface AdminInvitationEmailProps {
-  username?: string;
-  temporaryPassword?: string;
+  username: string;
+  temporaryPassword: string;
 }
 
 export default function AdminInvitationEmail({
@@ -52,6 +56,6 @@ export default function AdminInvitationEmail({
 }
 
 AdminInvitationEmail.PreviewProps = {
-  username: 'usuario.ejemplo',
-  temporaryPassword: 'Temp-1234',
+  username: COGNITO_USERNAME_PLACEHOLDER,
+  temporaryPassword: COGNITO_CODE_PLACEHOLDER,
 } satisfies AdminInvitationEmailProps;

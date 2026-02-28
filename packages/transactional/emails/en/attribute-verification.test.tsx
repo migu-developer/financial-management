@@ -4,11 +4,12 @@ import AttributeVerificationEmail from './attribute-verification';
 
 describe('AttributeVerificationEmail (en)', () => {
   it('renders with verification code', () => {
-    const props = AttributeVerificationEmail.PreviewProps;
     const html = renderToStaticMarkup(
-      React.createElement(AttributeVerificationEmail, props),
+      React.createElement(AttributeVerificationEmail, {
+        verificationCode: '{####}',
+      }),
     );
     expect(html).toContain('contact information');
-    expect(html).toContain(props.verificationCode ?? '');
+    expect(html).toContain('{####}');
   });
 });

@@ -1,6 +1,7 @@
 import { Heading, Section, Text } from '@react-email/components';
 import { EmailLayout } from '@components/EmailLayout';
 import { VerificationCodeBlock } from '@components/VerificationCodeBlock';
+import { COGNITO_CODE_PLACEHOLDER } from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface AttributeVerificationEmailProps {
@@ -27,7 +28,7 @@ export default function AttributeVerificationEmail({
 
         <VerificationCodeBlock
           label="Código de verificación"
-          code={verificationCode}
+          code={verificationCode ?? COGNITO_CODE_PLACEHOLDER}
           hint="Válido durante 10 minutos"
         />
 
@@ -41,5 +42,5 @@ export default function AttributeVerificationEmail({
 }
 
 AttributeVerificationEmail.PreviewProps = {
-  verificationCode: '559018',
+  verificationCode: COGNITO_CODE_PLACEHOLDER,
 } satisfies AttributeVerificationEmailProps;

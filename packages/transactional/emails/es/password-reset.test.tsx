@@ -3,12 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import PasswordResetEmail from './password-reset';
 
 describe('PasswordResetEmail (es)', () => {
-  it('renders with password reset code', () => {
-    const props = PasswordResetEmail.PreviewProps;
+  it('renders with Cognito placeholder for code', () => {
     const html = renderToStaticMarkup(
-      React.createElement(PasswordResetEmail, props),
+      React.createElement(PasswordResetEmail, {
+        verificationCode: '{####}',
+      }),
     );
     expect(html).toContain('Recuperación de contraseña');
-    expect(html).toContain(props.verificationCode ?? '');
+    expect(html).toContain('{####}');
   });
 });

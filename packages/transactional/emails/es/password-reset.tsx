@@ -1,10 +1,11 @@
 import { Heading, Section, Text } from '@react-email/components';
 import { EmailLayout } from '@components/EmailLayout';
 import { VerificationCodeBlock } from '@components/VerificationCodeBlock';
+import { COGNITO_CODE_PLACEHOLDER } from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface PasswordResetEmailProps {
-  verificationCode?: string;
+  verificationCode: string;
 }
 
 export default function PasswordResetEmail({
@@ -41,5 +42,5 @@ export default function PasswordResetEmail({
 }
 
 PasswordResetEmail.PreviewProps = {
-  verificationCode: '304952',
+  verificationCode: COGNITO_CODE_PLACEHOLDER,
 } satisfies PasswordResetEmailProps;
