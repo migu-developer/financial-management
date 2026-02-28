@@ -7,6 +7,7 @@ packages:
   - infra
 
 catalog:
+  '@aws-sdk/client-s3': ^3.1000.0
   '@babel/parser': ^7.29.0
   '@babel/traverse': ^7.29.0
   '@commitlint/cli': ^20.4.2
@@ -21,7 +22,6 @@ catalog:
   '@types/node': ^25.2.3
   '@types/react': ^19.2.14
   '@types/react-dom': ^19.2.3
-  '@aws-sdk/client-s3': ^3.1000.0
   aws-cdk: ^2.1106.0
   aws-cdk-lib: ^2.238.0
   aws-sdk: ^2.1693.0
@@ -40,9 +40,9 @@ catalog:
   react: ^19.2.4
   react-dom: ^19.2.4
   react-email: ^5.2.8
+  tailwindcss: ^4.2.1
   ts-jest: ^29.4.6
   ts-node: ^10.9.2
-  tailwindcss: ^4.2.1
   tsconfig-paths: ^4.2.0
   turbo: ^2.8.10
   typescript: ^5.9.3
@@ -51,8 +51,9 @@ catalog:
 overrides:
   ajv: '>=6.14.0 <7.0.0'
   conf>ajv: ^8.17.0
-  minimatch: '>=10.2.1'
   esbuild: 0.27.3
+  minimatch: '>=10.2.1'
 
 patchedDependencies:
   '@commitlint/config-validator@20.4.0': patches/@commitlint__config-validator@20.4.0.patch
+  '@react-email/preview-server@5.2.8': patches/@react-email__preview-server@5.2.8.patch

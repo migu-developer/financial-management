@@ -131,6 +131,9 @@ patchedDependencies:
   '@commitlint/config-validator@20.4.0':
     hash: 7e9ffaa4de1eba33ed61931fbba566fd3d2a79add9e3c23cac8e56f9f2ada0da
     path: patches/@commitlint__config-validator@20.4.0.patch
+  '@react-email/preview-server@5.2.8':
+    hash: 6dd36c274c7f7b33972c0196d5b2e8c1a80de38b3f30cde0e85ffb9f7d9490ba
+    path: patches/@react-email__preview-server@5.2.8.patch
 
 importers:
 
@@ -342,7 +345,7 @@ importers:
         version: link:../config
       '@react-email/preview-server':
         specifier: 'catalog:'
-        version: 5.2.8(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 5.2.8(patch_hash=6dd36c274c7f7b33972c0196d5b2e8c1a80de38b3f30cde0e85ffb9f7d9490ba)(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tailwindcss/postcss':
         specifier: 'catalog:'
         version: 4.2.1
@@ -5866,7 +5869,7 @@ snapshots:
       marked: 15.0.12
       react: 19.2.4
 
-  '@react-email/preview-server@5.2.8(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@react-email/preview-server@5.2.8(patch_hash=6dd36c274c7f7b33972c0196d5b2e8c1a80de38b3f30cde0e85ffb9f7d9490ba)(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       esbuild: 0.27.3
       next: 16.1.6(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
