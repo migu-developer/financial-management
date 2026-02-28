@@ -19,7 +19,6 @@
     "email:build": "turbo email:build --filter=@packages/transactional",
     "email:start": "turbo email:start --filter=@packages/transactional",
     "email:export": "turbo email:export --filter=@packages/transactional",
-    "email:export:cognito": "turbo email:export:cognito --filter=@packages/transactional",
     "email:upload": "turbo email:upload --filter=@packages/transactional"
   },
   "devDependencies": {

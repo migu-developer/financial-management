@@ -39,9 +39,6 @@
     "email:export": {
       "cache": false
     },
-    "email:export:cognito": {
-      "cache": false
-    },
     "email:upload": {
       "cache": false
     }
