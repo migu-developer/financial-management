@@ -71,6 +71,7 @@ export interface CognitoStackProps extends BaseStackProps {
   readonly snsRegion: string;
   // Protection
   readonly removalProtect: boolean;
+  readonly cognitoEmailsPrefix: string;
 }
 
 /**
@@ -96,6 +97,10 @@ export class CognitoStack extends BaseStack {
       : RemovalPolicy.DESTROY;
 
     // ── Custom Message Lambda Trigger ────────────────────
+    const assetsStack = props.deps?.getStack(ActiveStack.ASSETS) as
+      | AssetsBucketStack
+      | undefined;
+
     const customMessageFn = new NodejsFunction(this, 'CustomMessageFn', {
       runtime: Runtime.NODEJS_22_X,
       entry: join(
@@ -108,11 +113,13 @@ export class CognitoStack extends BaseStack {
         sourceMap: true,
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
+      environment: {
+        ...(assetsStack?.bucket && {
+          ASSETS_BUCKET_NAME: assetsStack.bucket.bucketName,
+          COGNITO_EMAILS_PREFIX: props.cognitoEmailsPrefix,
+        }),
+      },
     });
-
-    const assetsStack = props.deps?.getStack(ActiveStack.ASSETS) as
-      | AssetsBucketStack
-      | undefined;
 
     if (assetsStack?.bucket) {
       assetsStack.bucket.grantRead(customMessageFn);

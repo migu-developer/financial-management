@@ -97,6 +97,7 @@ const defaultProps: CognitoStackProps = {
   sesReplyTo: 'support@example.com',
   snsRegion: 'us-east-1',
   removalProtect: false,
+  cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
 };
 
 describe('CognitoStack', () => {

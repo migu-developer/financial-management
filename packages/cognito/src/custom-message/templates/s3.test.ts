@@ -1,8 +1,4 @@
-import {
-  getS3Key,
-  TRIGGER_TO_TEMPLATE,
-  getEmailHtmlFromS3,
-} from './s3';
+import { getS3Key, TRIGGER_TO_TEMPLATE, getEmailHtmlFromS3 } from './s3';
 import type { CustomMessageTriggerSource } from '@custom-message/types';
 
 const originalEnv = process.env;

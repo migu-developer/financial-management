@@ -56,6 +56,7 @@ const createAuthStack: NamedStackFactory = {
         sesReplyTo: process.env.SES_REPLY_TO ?? '',
         snsRegion: process.env.AWS_REGION ?? '',
         removalProtect: process.env.COGNITO_REMOVAL_PROTECT === 'true',
+        cognitoEmailsPrefix: process.env.COGNITO_EMAILS_PREFIX ?? '',
       },
     ),
 };

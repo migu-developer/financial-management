@@ -331,7 +331,7 @@ importers:
         version: 19.2.4(react@19.2.4)
     devDependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.1000.0
+        specifier: 'catalog:'
         version: 3.1000.0
       '@babel/parser':
         specifier: 'catalog:'
