@@ -57,6 +57,6 @@ const resolvedPath = fs.existsSync(envPath) ? envPath : envPathFallback;
 loadEnv({ path: resolvedPath });
 
 export const config: Record<string, string> = {
-  NODE_ENV,
   ...(process.env as Record<string, string>),
+  NODE_ENV,
 };
