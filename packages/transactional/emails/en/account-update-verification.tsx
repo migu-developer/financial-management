@@ -5,11 +5,11 @@ import { COGNITO_CODE_PLACEHOLDER } from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface AccountUpdateVerificationEmailProps {
-  verificationCode: string;
+  verificationCode?: string;
 }
 
 export default function AccountUpdateVerificationEmail({
-  verificationCode,
+  verificationCode = COGNITO_CODE_PLACEHOLDER,
 }: AccountUpdateVerificationEmailProps) {
   return (
     <EmailLayout

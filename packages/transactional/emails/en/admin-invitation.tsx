@@ -7,13 +7,13 @@ import {
 import { footerCopy } from './footer-copy';
 
 interface AdminInvitationEmailProps {
-  username: string;
-  temporaryPassword: string;
+  username?: string;
+  temporaryPassword?: string;
 }
 
 export default function AdminInvitationEmail({
-  username,
-  temporaryPassword,
+  username = COGNITO_USERNAME_PLACEHOLDER,
+  temporaryPassword = COGNITO_CODE_PLACEHOLDER,
 }: AdminInvitationEmailProps) {
   return (
     <EmailLayout

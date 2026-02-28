@@ -5,11 +5,11 @@ import { COGNITO_CODE_PLACEHOLDER } from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface AttributeVerificationEmailProps {
-  verificationCode: string;
+  verificationCode?: string;
 }
 
 export default function AttributeVerificationEmail({
-  verificationCode,
+  verificationCode = COGNITO_CODE_PLACEHOLDER,
 }: AttributeVerificationEmailProps) {
   return (
     <EmailLayout

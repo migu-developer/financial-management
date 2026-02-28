@@ -9,7 +9,7 @@ interface AttributeVerificationEmailProps {
 }
 
 export default function AttributeVerificationEmail({
-  verificationCode,
+  verificationCode = COGNITO_CODE_PLACEHOLDER,
 }: AttributeVerificationEmailProps) {
   return (
     <EmailLayout
@@ -28,7 +28,7 @@ export default function AttributeVerificationEmail({
 
         <VerificationCodeBlock
           label="Código de verificación"
-          code={verificationCode ?? COGNITO_CODE_PLACEHOLDER}
+          code={verificationCode}
           hint="Válido durante 10 minutos"
         />
 

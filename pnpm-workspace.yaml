@@ -52,6 +52,7 @@ overrides:
   ajv: '>=6.14.0 <7.0.0'
   conf>ajv: ^8.17.0
   minimatch: '>=10.2.1'
+  esbuild: 0.27.3
 
 patchedDependencies:
   '@commitlint/config-validator@20.4.0': patches/@commitlint__config-validator@20.4.0.patch

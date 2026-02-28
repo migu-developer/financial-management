@@ -5,11 +5,11 @@ import { COGNITO_CODE_PLACEHOLDER } from '@utils/constants';
 import { footerCopy } from './footer-copy';
 
 interface PasswordResetEmailProps {
-  verificationCode: string;
+  verificationCode?: string;
 }
 
 export default function PasswordResetEmail({
-  verificationCode,
+  verificationCode = COGNITO_CODE_PLACEHOLDER,
 }: PasswordResetEmailProps) {
   return (
     <EmailLayout
