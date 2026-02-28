@@ -16,6 +16,7 @@ const createAssetsStack: NamedStackFactory = {
         version,
         stackName: fullStackResource(version, ActiveStack.ASSETS),
         deps,
+        assetsBucketPrefix: process.env.ASSETS_BUCKET_PREFIX ?? '',
         description:
           'S3 bucket for project assets and transactional emails (migudev-fm-{region}-assets).',
       },

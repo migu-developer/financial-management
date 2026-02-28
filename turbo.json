@@ -39,7 +39,10 @@
     "email:export": {
       "cache": false
     },
-    "email:upload": {
+    "email:upload:dev": {
+      "cache": false
+    },
+    "email:upload:prod": {
       "cache": false
     }
   }

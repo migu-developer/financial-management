@@ -56,8 +56,7 @@ const envPathFallback = path.join(configRoot, 'config', '.env.defaults');
 const resolvedPath = fs.existsSync(envPath) ? envPath : envPathFallback;
 loadEnv({ path: resolvedPath });
 
-export const config = {
+export const config: Record<string, string> = {
   NODE_ENV,
-  ASSETS_URL: process.env.ASSETS_URL ?? '',
-  APPLICATION_URL: process.env.APPLICATION_URL ?? '',
+  ...(process.env as Record<string, string>),
 };

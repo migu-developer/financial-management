@@ -14,6 +14,7 @@ import { StackDeps } from '@utils/types';
 export interface AssetsBucketStackProps extends BaseStackProps {
   /** Optional: not used for assets bucket; kept for interface consistency. */
   readonly deps?: StackDeps;
+  readonly assetsBucketPrefix: string;
 }
 
 /**
@@ -31,7 +32,7 @@ export class AssetsBucketStack extends BaseStack {
     super(scope, id, { version, stackName, description });
 
     const region = this.region;
-    const bucketName = `migudev-fm-${region}-assets`;
+    const bucketName = `${props.assetsBucketPrefix}-${region}-assets`;
 
     this.bucket = new Bucket(this, 'AssetsBucket', {
       bucketName,

@@ -9,15 +9,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-
+import { config } from '@config/index';
 import { uploadEmailsToS3 } from './lib/upload-emails-s3';
 
 const DIST = path.join(process.cwd(), 'dist');
-const PREFIX = process.env.COGNITO_EMAILS_PREFIX ?? 'cognito/emails';
+const PREFIX = config.COGNITO_EMAILS_PREFIX;
 
 async function main() {
-  const bucket = process.env.ASSETS_BUCKET_NAME;
-  const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION;
+  const bucket = `${config.ASSETS_BUCKET_PREFIX}-${config.AWS_REGION}-assets`;
+  const region = config.AWS_REGION ?? config.AWS_DEFAULT_REGION;
 
   if (!region) {
     console.error('Set AWS_REGION or AWS_DEFAULT_REGION (e.g. us-east-1).');
@@ -26,6 +26,11 @@ async function main() {
 
   if (!bucket) {
     console.error('Set ASSETS_BUCKET_NAME (e.g. migudev-fm-us-east-1-assets).');
+    process.exit(1);
+  }
+
+  if (!PREFIX) {
+    console.error('Set COGNITO_EMAILS_PREFIX (e.g. cognito/emails).');
     process.exit(1);
   }
 
