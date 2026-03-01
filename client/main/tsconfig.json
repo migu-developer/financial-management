@@ -1,9 +1,16 @@
 {
-  "extends": "@packages/config/tsconfig.base.json",
+  "extends": "@packages/config/tsconfig.expo.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": { "@/*": ["./*"] }
   },
-  "include": ["src"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
   "exclude": ["node_modules", ".turbo"]
 }

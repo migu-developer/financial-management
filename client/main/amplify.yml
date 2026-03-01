@@ -1,0 +1,27 @@
+# Build spec for this app only (client/main – Expo web).
+# In Amplify Console, set this app's Root to "client/main" so Amplify uses this file.
+# Other frontend clients can have their own amplify.yml in their directory.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd ../..
+        - corepack enable
+        - corepack prepare pnpm@10.29.3 --activate
+        - pnpm install --frozen-lockfile
+    build:
+      commands:
+        - cd ../..
+        - echo "USER_POOL_ID=$USER_POOL_ID" > client/main/.env
+        - echo "USER_POOL_CLIENT_ID=$USER_POOL_CLIENT_ID" >> client/main/.env
+        - echo "IDENTITY_POOL_ID=$IDENTITY_POOL_ID" >> client/main/.env
+        - echo "ASSETS_BUCKET_NAME=$ASSETS_BUCKET_NAME" >> client/main/.env
+        - pnpm --filter @client/main build:web
+  artifacts:
+    baseDirectory: client/main/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ../../node_modules/**/*

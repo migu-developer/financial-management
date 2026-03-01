@@ -22,6 +22,7 @@ const createAmplifyHostingStack: NamedStackFactory = {
         repository: process.env.AMPLIFY_REPOSITORY ?? '',
         accessTokenName: process.env.ACCESS_TOKEN_NAME ?? '',
         enableAutoBuild: process.env.AMPLIFY_ENABLE_AUTO_BUILD === 'true',
+        appRoot: process.env.AMPLIFY_CLIENT_MAIN_ROOT ?? '',
       },
     ),
 };

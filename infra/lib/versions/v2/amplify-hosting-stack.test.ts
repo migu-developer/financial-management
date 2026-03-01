@@ -79,6 +79,7 @@ describe('AmplifyHostingStack', () => {
             stage: 'DEVELOPMENT',
             defaultBranchName: 'develop',
             enableAutoBuild: false,
+            appRoot: 'client/main',
           },
         ),
     ).not.toThrow();
@@ -99,6 +100,7 @@ describe('AmplifyHostingStack', () => {
         stage: 'DEVELOPMENT',
         defaultBranchName: 'develop',
         enableAutoBuild: false,
+        appRoot: 'client/main',
       },
     );
 
@@ -145,6 +147,7 @@ describe('AmplifyHostingStack', () => {
         stage: 'DEVELOPMENT',
         defaultBranchName: 'develop',
         enableAutoBuild: false,
+        appRoot: 'client/main',
       },
     );
     expect(stack.amplifyApp).toBe(mockCfnApp);
@@ -166,6 +169,7 @@ describe('AmplifyHostingStack', () => {
         stage: 'DEVELOPMENT',
         defaultBranchName: 'develop',
         enableAutoBuild: false,
+        appRoot: 'client/main',
       },
     );
     expect(stack.stackName).toBe('FinancialManagement-v2-AmplifyHosting');
@@ -188,6 +192,7 @@ describe('AmplifyHostingStack', () => {
         stage: 'DEVELOPMENT',
         defaultBranchName: 'develop',
         enableAutoBuild: false,
+        appRoot: 'client/main',
       },
     );
     expect(CfnApp).toHaveBeenCalledWith(

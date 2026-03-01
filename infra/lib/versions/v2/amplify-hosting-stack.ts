@@ -29,6 +29,11 @@ export interface AmplifyHostingStackProps extends BaseStackProps {
    * Set to false for prod (e.g. us-east-2) so deploys only run when triggered (e.g. via API on release).
    */
   readonly enableAutoBuild: boolean;
+  /**
+   * Monorepo app root: path from repo root where this front lives (e.g. client/main).
+   * Amplify uses this to run the build from that directory and to load amplify.yml from there.
+   */
+  readonly appRoot: string;
 }
 
 /**
@@ -36,6 +41,7 @@ export interface AmplifyHostingStackProps extends BaseStackProps {
  * Imports from v1: Auth (UserPoolId, UserPoolClientId, IdentityPoolId) and Assets (AssetsBucketName).
  * Passes them as app-level environment variables for the frontend build.
  *
+ * Build spec: the app uses {appRoot}/amplify.yml. appRoot is passed as AMPLIFY_MONOREPO_APP_ROOT so Amplify uses that directory.
  *
  * Token: pass either accessToken (plain) or githubTokenSecretArn (Secrets Manager).
  * When using a secret, set AMPLIFY_GITHUB_TOKEN_SECRET_ARN (and optionally AMPLIFY_GITHUB_TOKEN_SECRET_KEY for JSON secrets).
@@ -74,6 +80,7 @@ export class AmplifyHostingStack extends BaseStack {
     );
 
     const envVars: CfnApp.EnvironmentVariableProperty[] = [
+      { name: 'AMPLIFY_MONOREPO_APP_ROOT', value: props.appRoot },
       { name: 'USER_POOL_ID', value: userPoolId },
       { name: 'USER_POOL_CLIENT_ID', value: userPoolClientId },
       { name: 'IDENTITY_POOL_ID', value: identityPoolId },
