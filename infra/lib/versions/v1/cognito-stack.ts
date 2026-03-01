@@ -18,6 +18,8 @@ import {
 import { CfnIdentityPool } from 'aws-cdk-lib/aws-cognito';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import {
   AwsCustomResource,
   AwsCustomResourcePolicy,
@@ -75,6 +77,7 @@ export interface CognitoStackProps extends BaseStackProps {
   // SNS SMS
   readonly snsRegion: string;
   readonly snsMonthlySpendLimit: string;
+  readonly smsBlockedCountries: string[];
   // Protection
   readonly removalProtect: boolean;
   readonly cognitoEmailsPrefix: string;
@@ -161,20 +164,158 @@ export class CognitoStack extends BaseStack {
     // ── SNS Monthly Spend Limit ───────────────────────
     new AwsCustomResource(this, 'SnsMonthlySpendLimit', {
       onUpdate: {
-        service: 'SNS',
-        action: 'setSMSAttributes',
+        service: 'PinpointSMSVoiceV2',
+        action: 'SetTextMessageSpendLimitOverride',
         parameters: {
-          attributes: {
-            MonthlySpendLimit: props.snsMonthlySpendLimit,
-          },
+          MonthlyLimit: parseInt(props.snsMonthlySpendLimit, 10),
         },
         physicalResourceId: PhysicalResourceId.of('SnsMonthlySpendLimit'),
         region: props.snsRegion,
       },
-      policy: AwsCustomResourcePolicy.fromSdkCalls({
-        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
-      }),
+      policy: AwsCustomResourcePolicy.fromStatements([
+        new PolicyStatement({
+          actions: ['sms-voice:SetTextMessageSpendLimitOverride'],
+          resources: ['*'],
+        }),
+      ]),
     });
+
+    // ── SMS Delivery Logging ──────────────────────────
+    const smsDeliveryLogs = new LogGroup(this, 'SmsDeliveryLogs', {
+      logGroupName: `/aws/sns/sms/${version}`,
+      retention: RetentionDays.ONE_MONTH,
+      removalPolicy,
+    });
+
+    const snsLogsRole = new Role(this, 'SnsLogsRole', {
+      assumedBy: new ServicePrincipal('sns.amazonaws.com'),
+      description:
+        'Allows SNS to publish SMS delivery status to CloudWatch Logs',
+    });
+
+    snsLogsRole.addToPolicy(
+      new PolicyStatement({
+        actions: [
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogStreams',
+        ],
+        resources: [
+          smsDeliveryLogs.logGroupArn,
+          `${smsDeliveryLogs.logGroupArn}:*`,
+        ],
+      }),
+    );
+
+    new AwsCustomResource(this, 'SnsDeliveryLogging', {
+      onUpdate: {
+        service: 'SNS',
+        action: 'setSMSAttributes',
+        parameters: {
+          attributes: {
+            DeliveryStatusIAMRole: snsLogsRole.roleArn,
+            DeliveryStatusSuccessSamplingRate: '100',
+          },
+        },
+        physicalResourceId: PhysicalResourceId.of('SnsDeliveryLogging'),
+        region: props.snsRegion,
+      },
+      policy: AwsCustomResourcePolicy.fromStatements([
+        new PolicyStatement({
+          actions: ['sns:SetSMSAttributes'],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          actions: ['iam:PassRole'],
+          resources: [snsLogsRole.roleArn],
+        }),
+      ]),
+    });
+
+    // ── SMS Protect Configuration (country block) ─────
+    if (props.smsBlockedCountries.length > 0) {
+      const countryRuleSet = props.smsBlockedCountries.reduce<
+        Record<string, { ProtectStatus: string }>
+      >(
+        (acc, country) => ({ ...acc, [country]: { ProtectStatus: 'BLOCK' } }),
+        {},
+      );
+
+      const protectConfig = new AwsCustomResource(this, 'SmsProtectConfig', {
+        onCreate: {
+          service: 'PinpointSMSVoiceV2',
+          action: 'CreateProtectConfiguration',
+          parameters: { DeletionProtectionEnabled: false },
+          physicalResourceId: PhysicalResourceId.fromResponse(
+            'ProtectConfigurationId',
+          ),
+          region: props.snsRegion,
+        },
+        policy: AwsCustomResourcePolicy.fromStatements([
+          new PolicyStatement({
+            actions: ['sms-voice:CreateProtectConfiguration'],
+            resources: ['*'],
+          }),
+        ]),
+      });
+
+      const protectConfigId = protectConfig.getResponseField(
+        'ProtectConfigurationId',
+      );
+
+      const protectConfigRules = new AwsCustomResource(
+        this,
+        'SmsProtectConfigRules',
+        {
+          onUpdate: {
+            service: 'PinpointSMSVoiceV2',
+            action: 'UpdateProtectConfigurationCountryRuleSet',
+            parameters: {
+              ProtectConfigurationId: protectConfigId,
+              NumberCapability: 'SMS',
+              CountryRuleSetUpdates: countryRuleSet,
+            },
+            physicalResourceId: PhysicalResourceId.of('SmsProtectConfigRules'),
+            region: props.snsRegion,
+            outputPaths: [],
+          },
+          policy: AwsCustomResourcePolicy.fromStatements([
+            new PolicyStatement({
+              actions: ['sms-voice:UpdateProtectConfigurationCountryRuleSet'],
+              resources: ['*'],
+            }),
+          ]),
+        },
+      );
+      protectConfigRules.node.addDependency(protectConfig);
+
+      const protectConfigDefault = new AwsCustomResource(
+        this,
+        'SmsProtectConfigDefault',
+        {
+          onUpdate: {
+            service: 'PinpointSMSVoiceV2',
+            action: 'SetAccountDefaultProtectConfiguration',
+            parameters: {
+              ProtectConfigurationId: protectConfigId,
+            },
+            physicalResourceId: PhysicalResourceId.of(
+              'SmsProtectConfigDefault',
+            ),
+            region: props.snsRegion,
+            outputPaths: [],
+          },
+          policy: AwsCustomResourcePolicy.fromStatements([
+            new PolicyStatement({
+              actions: ['sms-voice:SetAccountDefaultProtectConfiguration'],
+              resources: ['*'],
+            }),
+          ]),
+        },
+      );
+      protectConfigDefault.node.addDependency(protectConfig);
+    }
 
     // ── Identity Providers ─────────────────────────────
 

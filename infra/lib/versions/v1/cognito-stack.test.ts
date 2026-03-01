@@ -38,14 +38,36 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
   OutputFormat: { ESM: 'ESM' },
 }));
 
+jest.mock('aws-cdk-lib/aws-iam', () => ({
+  PolicyStatement: jest.fn().mockImplementation(() => ({})),
+  Role: jest.fn().mockImplementation(() => ({
+    roleArn: 'arn:aws:iam::123456789012:role/mock-sns-logs-role',
+    addToPolicy: jest.fn(),
+  })),
+  ServicePrincipal: jest.fn().mockImplementation(() => ({})),
+}));
+
+jest.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: jest.fn().mockImplementation(() => ({
+    logGroupArn:
+      'arn:aws:logs:us-east-1:123456789012:log-group:/aws/sns/sms/v1',
+  })),
+  RetentionDays: { ONE_MONTH: 30 },
+}));
+
 jest.mock('aws-cdk-lib/custom-resources', () => ({
-  AwsCustomResource: jest.fn().mockImplementation(() => ({})),
+  AwsCustomResource: jest.fn().mockImplementation(() => ({
+    getResponseField: jest.fn().mockReturnValue('mock-protect-config-id'),
+    node: { addDependency: jest.fn() },
+  })),
   AwsCustomResourcePolicy: {
     fromSdkCalls: jest.fn().mockReturnValue({}),
+    fromStatements: jest.fn().mockReturnValue({}),
     ANY_RESOURCE: '*',
   },
   PhysicalResourceId: {
-    of: jest.fn().mockReturnValue('SnsMonthlySpendLimit'),
+    of: jest.fn().mockImplementation((id: string) => id),
+    fromResponse: jest.fn().mockImplementation((field: string) => field),
   },
 }));
 
@@ -110,6 +132,7 @@ const defaultProps: CognitoStackProps = {
   removalProtect: false,
   cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
   snsMonthlySpendLimit: '1',
+  smsBlockedCountries: ['US'],
 };
 
 describe('CognitoStack', () => {
@@ -207,17 +230,101 @@ describe('CognitoStack', () => {
       'SnsMonthlySpendLimit',
       expect.objectContaining({
         onUpdate: expect.objectContaining({
-          service: 'SNS',
-          action: 'setSMSAttributes',
-          parameters: {
-            attributes: {
-              MonthlySpendLimit: '50',
-            },
-          },
+          service: 'PinpointSMSVoiceV2',
+          action: 'SetTextMessageSpendLimitOverride',
+          parameters: { MonthlyLimit: 50 },
           region: 'us-east-1',
         }),
       }),
     );
+  });
+
+  test('creates AwsCustomResource for SMS delivery logging with CloudWatch', () => {
+    const { AwsCustomResource } = jest.requireMock(
+      'aws-cdk-lib/custom-resources',
+    );
+    AwsCustomResource.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(
+      app as unknown as Construct,
+      'TestAuthStack',
+      defaultProps,
+    );
+
+    expect(AwsCustomResource).toHaveBeenCalledWith(
+      expect.anything(),
+      'SnsDeliveryLogging',
+      expect.objectContaining({
+        onUpdate: expect.objectContaining({
+          service: 'SNS',
+          action: 'setSMSAttributes',
+          parameters: expect.objectContaining({
+            attributes: expect.objectContaining({
+              DeliveryStatusSuccessSamplingRate: '100',
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  test('creates protect configuration and country block rules when smsBlockedCountries provided', () => {
+    const { AwsCustomResource } = jest.requireMock(
+      'aws-cdk-lib/custom-resources',
+    );
+    AwsCustomResource.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(app as unknown as Construct, 'TestAuthStack', {
+      ...defaultProps,
+      smsBlockedCountries: ['US', 'CA'],
+    });
+
+    expect(AwsCustomResource).toHaveBeenCalledWith(
+      expect.anything(),
+      'SmsProtectConfig',
+      expect.objectContaining({
+        onCreate: expect.objectContaining({
+          service: 'PinpointSMSVoiceV2',
+          action: 'CreateProtectConfiguration',
+        }),
+      }),
+    );
+
+    expect(AwsCustomResource).toHaveBeenCalledWith(
+      expect.anything(),
+      'SmsProtectConfigRules',
+      expect.objectContaining({
+        onUpdate: expect.objectContaining({
+          service: 'PinpointSMSVoiceV2',
+          action: 'UpdateProtectConfigurationCountryRuleSet',
+          parameters: expect.objectContaining({
+            NumberCapability: 'SMS',
+            CountryRuleSetUpdates: {
+              US: { ProtectStatus: 'BLOCK' },
+              CA: { ProtectStatus: 'BLOCK' },
+            },
+          }),
+        }),
+      }),
+    );
+  });
+
+  test('skips protect configuration when smsBlockedCountries is empty', () => {
+    const { AwsCustomResource } = jest.requireMock(
+      'aws-cdk-lib/custom-resources',
+    );
+    AwsCustomResource.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(app as unknown as Construct, 'TestAuthStack', {
+      ...defaultProps,
+      smsBlockedCountries: [],
+    });
+
+    const calls = AwsCustomResource.mock.calls.map((c: unknown[]) => c[1]);
+    expect(calls).not.toContain('SmsProtectConfig');
   });
 });
 
