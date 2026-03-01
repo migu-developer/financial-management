@@ -1,9 +1,33 @@
 {
-  "extends": "@repo/config/tsconfig.base.json",
+  "extends": "@packages/config/tsconfig.base.json",
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
+  },
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@utils/*": ["lib/utils/*"],
+      "@config/*": ["lib/config/*"],
+      "@core/*": ["lib/core/*"],
+      "@versions/*": ["lib/versions/*"]
+    },
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": false,
+    "inlineSources": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false
   },
-  "include": ["bin", "lib", "test"],
+  "include": ["bin", "lib", "eslint.config.ts", "jest.config.ts"],
   "exclude": ["node_modules", "dist", "cdk.out", ".turbo"]
 }

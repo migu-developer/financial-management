@@ -1,5 +1,5 @@
 {
-  "name": "@repo/infra",
+  "name": "@infra",
   "version": "1.0.0",
   "private": true,
   "bin": {
@@ -15,20 +15,23 @@
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "aws-cdk": "catalog:",
+    "esbuild": "catalog:",
+    "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
-    "aws-cdk": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "catalog:",
-    "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "tsconfig-paths": "catalog:",
+    "typescript": "catalog:"
   },
   "dependencies": {
+    "@packages/cognito": "workspace:*",
+    "@services/auth": "workspace:*",
     "aws-cdk-lib": "catalog:",
-    "constructs": "catalog:",
-    "@repo/server": "workspace:*"
+    "constructs": "catalog:"
   },
   "packageManager": "pnpm@10.29.3",
   "engines": {

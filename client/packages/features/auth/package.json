@@ -1,5 +1,5 @@
 {
-  "name": "auth",
+  "name": "@features/auth",
   "version": "1.0.0",
   "description": "Authentication features for the financial management project",
   "scripts": {
@@ -12,7 +12,7 @@
     "ts-node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "keywords": [],
   "author": "",

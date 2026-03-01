@@ -1,0 +1,15 @@
+diff --git a/lib/validate.js b/lib/validate.js
+index 4b7355b2b5a00e7659fe727badc2d80777ae17c0..5f25e6994dcf218a3e4417410b3708e1f4213efa 100644
+--- a/lib/validate.js
++++ b/lib/validate.js
+@@ -22,8 +22,8 @@ export function validateConfig(source, config) {
+         validateSchema: false,
+         verbose: true,
+     });
+-    ajv.addKeyword({
+-        keyword: "typeof",
++    // Ajv 6 API: addKeyword(keyword, definition). Ajv 8 uses addKeyword(definition).
++    ajv.addKeyword("typeof", {
+         validate: function typeOfFunc(schema, data) {
+             return typeof data === schema;
+         },

@@ -16,11 +16,33 @@
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "clean": {
+      "cache": false
+    },
+    "email:dev": {
+      "cache": false
+    },
+    "email:build": {
+      "cache": false
+    },
+    "email:start": {
+      "cache": false
+    },
+    "email:export": {
+      "cache": false
+    },
+    "email:upload:dev": {
+      "cache": false
+    },
+    "email:upload:prod": {
       "cache": false
     }
   }

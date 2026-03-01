@@ -1,8 +1,7 @@
 {
-  "name": "expenses",
+  "name": "@services/expenses",
   "version": "1.0.0",
   "description": "Expenses service for financial management",
-  "main": "index.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -12,7 +11,7 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "eslint": "catalog:",
-    "@repo/config": "workspace:*"
+    "@packages/config": "workspace:*"
   },
   "keywords": [],
   "author": "",
