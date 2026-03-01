@@ -6,6 +6,16 @@ import type {
 } from './types';
 import * as templates from './templates/index';
 
+jest.mock('@aws-lambda-powertools/logger', () => ({
+  Logger: jest.fn(() => ({
+    addContext: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+  })),
+}));
+
 jest.mock('./templates/index', () => ({
   resolveLocale: jest.fn(),
   getMessages: jest.fn(),
@@ -17,6 +27,7 @@ jest.mock('./templates/index', () => ({
     CustomMessage_ForgotPassword: 'password-reset',
     CustomMessage_UpdateUserAttribute: 'account-update-verification',
     CustomMessage_VerifyUserAttribute: 'attribute-verification',
+    CustomMessage_Authentication: 'mfa-authentication',
   },
 }));
 
@@ -83,6 +94,10 @@ describe('handler', () => {
         emailSubject: 'Verify attribute',
         smsMessage: 'Code: {####}',
       },
+      CustomMessage_Authentication: {
+        emailSubject: 'Sign-in code',
+        smsMessage: 'Sign-in code: {####}',
+      },
     });
     mockGetEmailHtmlFromS3.mockResolvedValue('<html>Email body</html>');
   });
@@ -124,6 +139,7 @@ describe('handler', () => {
       CustomMessage_ForgotPassword: { emailSubject: 'x', smsMessage: 'y' },
       CustomMessage_UpdateUserAttribute: { emailSubject: 'x', smsMessage: 'y' },
       CustomMessage_VerifyUserAttribute: null as unknown as MessageContent,
+      CustomMessage_Authentication: { emailSubject: 'x', smsMessage: 'y' },
     };
     mockGetMessages.mockReturnValue(messagesWithMissing);
     const event = baseEvent('CustomMessage_VerifyUserAttribute');

@@ -25,6 +25,7 @@
     "node": ">=24"
   },
   "dependencies": {
+    "@aws-lambda-powertools/logger": "catalog:",
     "@aws-sdk/client-s3": "catalog:"
   }
 }

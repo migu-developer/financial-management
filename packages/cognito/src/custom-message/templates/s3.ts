@@ -13,6 +13,7 @@ export const TRIGGER_TO_TEMPLATE: Record<CustomMessageTriggerSource, string> = {
   CustomMessage_ForgotPassword: 'password-reset',
   CustomMessage_UpdateUserAttribute: 'account-update-verification',
   CustomMessage_VerifyUserAttribute: 'attribute-verification',
+  CustomMessage_Authentication: 'mfa-authentication',
 };
 
 export function getS3Key(

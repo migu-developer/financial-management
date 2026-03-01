@@ -29,4 +29,9 @@ export const esMessages: LocaleMessages = {
     emailSubject: 'Verifica tu atributo - Financial Management',
     smsMessage: 'Tu código de verificación de Financial Management es: {####}',
   },
+  CustomMessage_Authentication: {
+    emailSubject: 'Tu código de inicio de sesión - Financial Management',
+    smsMessage:
+      'Tu código de verificación para iniciar sesión en Financial Management es: {####}',
+  },
 };

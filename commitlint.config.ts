@@ -27,6 +27,8 @@ const Configuration: UserConfig = {
         'project',
         'client',
         'server',
+        'transactional',
+        'cognito',
         'infra',
         'utils',
         'config',

@@ -68,9 +68,25 @@ export function EmailLayout({ preview, children, footer }: EmailLayoutProps) {
     <Html>
       <Head />
       <Tailwind config={tailwindConfig}>
-        <Body className="bg-neutral-100 font-sans text-neutral-800 antialiased">
+        <Body
+          className="bg-neutral-100 font-sans text-neutral-800 antialiased w-full min-h-screen"
+          style={{
+            padding: '24px 16px',
+            width: '100%',
+            margin: 0,
+            boxSizing: 'border-box',
+          }}
+        >
           <Preview>{preview}</Preview>
-          <Container className="max-w-[600px] mx-auto my-8 p-0 bg-white rounded-2xl overflow-hidden shadow-card-md">
+          <Container
+            className="w-full max-w-[600px] mx-auto my-0 p-0 bg-white rounded-2xl overflow-hidden shadow-card-md"
+            style={{
+              maxWidth: 600,
+              width: '100%',
+              margin: '0 auto',
+              boxSizing: 'border-box',
+            }}
+          >
             <EmailHeader />
             {children}
             <EmailFooter copy={footer} />

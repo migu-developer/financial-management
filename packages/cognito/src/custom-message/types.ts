@@ -4,7 +4,8 @@ export type CustomMessageTriggerSource =
   | 'CustomMessage_ResendCode'
   | 'CustomMessage_ForgotPassword'
   | 'CustomMessage_UpdateUserAttribute'
-  | 'CustomMessage_VerifyUserAttribute';
+  | 'CustomMessage_VerifyUserAttribute'
+  | 'CustomMessage_Authentication';
 
 export interface CustomMessageTriggerEvent {
   version: string;

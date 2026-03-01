@@ -27,4 +27,9 @@ export const enMessages: LocaleMessages = {
     emailSubject: 'Verify your attribute - Financial Management',
     smsMessage: 'Your Financial Management verification code is: {####}',
   },
+  CustomMessage_Authentication: {
+    emailSubject: 'Your sign-in code - Financial Management',
+    smsMessage:
+      'Your Financial Management sign-in verification code is: {####}',
+  },
 };

@@ -40,6 +40,7 @@ describe('getMessages', () => {
     'CustomMessage_ForgotPassword',
     'CustomMessage_UpdateUserAttribute',
     'CustomMessage_VerifyUserAttribute',
+    'CustomMessage_Authentication',
   ];
 
   it('returns en messages with emailSubject and smsMessage for every trigger', () => {

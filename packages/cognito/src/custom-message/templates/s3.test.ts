@@ -34,6 +34,7 @@ describe('TRIGGER_TO_TEMPLATE', () => {
       'CustomMessage_ForgotPassword',
       'CustomMessage_UpdateUserAttribute',
       'CustomMessage_VerifyUserAttribute',
+      'CustomMessage_Authentication',
     ];
     for (const trigger of triggers) {
       const name = TRIGGER_TO_TEMPLATE[trigger];
