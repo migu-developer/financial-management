@@ -6,4 +6,4 @@
  *   pnpm cdk deploy --all
  *   pnpm cdk synth
  */
-export const DEPLOY_VERSION: string | undefined = 'v1';
+export const DEPLOY_VERSION: string | undefined = 'v2';

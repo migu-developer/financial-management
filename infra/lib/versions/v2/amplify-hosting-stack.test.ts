@@ -42,10 +42,8 @@ jest.mock('aws-cdk-lib', () => {
     App: jest.fn().mockImplementation(() => ({
       node: { tryGetContext: jest.fn(), children: [] },
     })),
-    SecretValue: {
-      secretsManager: jest.fn().mockReturnValue({
-        toString: () => 'mock-secret-token',
-      }),
+    Fn: {
+      join: jest.fn((_delim: string, parts: string[]) => parts.join('')),
     },
   };
 });

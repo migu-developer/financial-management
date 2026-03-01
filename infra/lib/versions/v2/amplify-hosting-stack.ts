@@ -1,4 +1,4 @@
-import { CfnOutput, SecretValue } from 'aws-cdk-lib';
+import { CfnOutput, Fn } from 'aws-cdk-lib';
 import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { importFromVersion } from '@utils/cross-version';
@@ -90,12 +90,19 @@ export class AmplifyHostingStack extends BaseStack {
       },
     ];
 
+    /** Dynamic reference: CloudFormation resolves the secret at deploy time; the token never appears in the template. */
+    const accessTokenRef = Fn.join('', [
+      '{{resolve:secretsmanager:',
+      props.accessTokenName,
+      '}}',
+    ]);
+
     this.amplifyApp = new CfnApp(this, 'ClientApp', {
       name: appName,
       description: `Client app (web/mobile) for Financial Management (${version})`,
       environmentVariables: envVars,
       repository: props.repository,
-      accessToken: SecretValue.secretsManager(props.accessTokenName).toString(),
+      accessToken: accessTokenRef,
       platform: props.platform,
       enableBranchAutoDeletion: true,
       customRules,
