@@ -63,10 +63,26 @@ export interface EmailLayoutProps {
   footer: EmailFooterCopy;
 }
 
+const responsiveStyles = `
+  .email-container {
+    border-radius: 16px;
+    -webkit-border-radius: 16px;
+    overflow: hidden;
+  }
+  @media only screen and (max-width: 620px) {
+    .email-container {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+`;
+
 export function EmailLayout({ preview, children, footer }: EmailLayoutProps) {
   return (
     <Html>
-      <Head />
+      <Head>
+        <style dangerouslySetInnerHTML={{ __html: responsiveStyles }} />
+      </Head>
       <Tailwind config={tailwindConfig}>
         <Body
           className="bg-neutral-100 font-sans text-neutral-800 antialiased w-full min-h-screen"
@@ -79,12 +95,18 @@ export function EmailLayout({ preview, children, footer }: EmailLayoutProps) {
         >
           <Preview>{preview}</Preview>
           <Container
-            className="w-full max-w-[600px] mx-auto my-0 p-0 bg-white rounded-2xl overflow-hidden shadow-card-md"
+            width={600}
+            className="email-container w-full max-w-[600px] mx-auto my-0 p-0 bg-white overflow-hidden"
             style={{
-              maxWidth: 600,
-              width: '100%',
+              maxWidth: '600px',
+              width: '600px',
               margin: '0 auto',
               boxSizing: 'border-box',
+              borderRadius: '16px',
+              border: '1px solid #e5e7eb',
+              boxShadow:
+                '0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+              overflow: 'hidden',
             }}
           >
             <EmailHeader />
