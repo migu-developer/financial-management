@@ -6,13 +6,15 @@
   "files": [
     "eslint.config.ts",
     "prettier-preset.mjs",
-    "tsconfig.base.json"
+    "tsconfig.base.json",
+    "tsconfig.expo.json"
   ],
   "exports": {
     "./eslint": "./eslint.config.ts",
     "./prettier": "./prettier-preset.mjs",
     "./tsconfig": "./tsconfig.base.json",
-    "./tsconfig.base.json": "./tsconfig.base.json"
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.expo.json": "./tsconfig.expo.json"
   },
   "devDependencies": {
     "eslint": "catalog:",

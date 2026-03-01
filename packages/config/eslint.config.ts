@@ -1,14 +1,9 @@
-import { defineConfig } from 'eslint/config';
+import { Config, defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
-export const baseConfig = defineConfig(
-  tseslint.configs.eslintRecommended,
-  tseslint.configs.recommended,
-  prettier,
-);
-
-export const nodeConfig = defineConfig(baseConfig, {
+/** Shared rules to reuse in other configs (e.g. Expo) without merging full config + plugins. */
+export const sharedConfig: Config = {
   rules: {
     'no-console': 'warn',
     eqeqeq: ['error', 'always'],
@@ -16,4 +11,12 @@ export const nodeConfig = defineConfig(baseConfig, {
     'no-debugger': 'error',
     'prefer-const': 'warn',
   },
-});
+};
+
+export const baseConfig = defineConfig(
+  tseslint.configs.eslintRecommended,
+  tseslint.configs.recommended,
+  prettier,
+);
+
+export const nodeConfig = defineConfig(baseConfig, sharedConfig);
