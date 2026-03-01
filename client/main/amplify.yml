@@ -8,13 +8,11 @@ applications:
       phases:
         preBuild:
           commands:
-            - cd ../..
             - corepack enable
             - corepack prepare pnpm@10.29.3 --activate
             - pnpm install --frozen-lockfile
         build:
           commands:
-            - cd ../..
             - echo "EXPO_PUBLIC_USER_POOL_ID=$USER_POOL_ID" > client/main/.env
             - echo "EXPO_PUBLIC_USER_POOL_CLIENT_ID=$USER_POOL_CLIENT_ID" >> client/main/.env
             - echo "EXPO_PUBLIC_IDENTITY_POOL_ID=$IDENTITY_POOL_ID" >> client/main/.env
@@ -26,4 +24,4 @@ applications:
           - '**/*'
       cache:
         paths:
-          - ../../node_modules/**/*
+          - node_modules/**/*
