@@ -120,6 +120,7 @@ export class CognitoStack extends BaseStack {
       bundling: {
         format: OutputFormat.ESM,
         sourceMap: true,
+        minify: true,
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
       environment: {

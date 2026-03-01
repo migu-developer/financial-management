@@ -24,9 +24,12 @@ export async function handler(
     );
   }
 
-  event.response.emailSubject = content.emailSubject;
-  event.response.emailMessage = htmlFromS3;
-  event.response.smsMessage = content.smsMessage;
+  event.response = {
+    ...(event.response || {}),
+    emailSubject: content.emailSubject,
+    emailMessage: htmlFromS3,
+    smsMessage: content.smsMessage,
+  };
 
   return event;
 }
