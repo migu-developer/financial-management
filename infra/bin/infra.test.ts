@@ -28,6 +28,17 @@ describe('infra entry', () => {
       expect(names).toContain('Database');
     });
 
+    test('with real VERSION_STACKS, v2 has AmplifyHosting', () => {
+      const result = getAppConfig(
+        VERSION_STACKS,
+        DEFAULT_VERSION,
+        'v2',
+        undefined,
+      );
+      const names = result.factoriesToInstantiate.map((f) => f.name);
+      expect(names).toContain('AmplifyHosting');
+    });
+
     test('filtering by stacks context returns only requested stacks', () => {
       const result = getAppConfig(
         VERSION_STACKS,
