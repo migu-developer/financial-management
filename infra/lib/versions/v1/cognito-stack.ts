@@ -18,6 +18,11 @@ import {
 import { CfnIdentityPool } from 'aws-cdk-lib/aws-cognito';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import {
+  AwsCustomResource,
+  AwsCustomResourcePolicy,
+  PhysicalResourceId,
+} from 'aws-cdk-lib/custom-resources';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import type { AssetsBucketStack } from './assets-bucket-stack';
 import { exportForCrossVersion } from '@utils/cross-version';
@@ -69,6 +74,7 @@ export interface CognitoStackProps extends BaseStackProps {
   readonly sesReplyTo: string;
   // SNS SMS
   readonly snsRegion: string;
+  readonly snsMonthlySpendLimit: string;
   // Protection
   readonly removalProtect: boolean;
   readonly cognitoEmailsPrefix: string;
@@ -150,6 +156,24 @@ export class CognitoStack extends BaseStack {
         sesRegion: props.snsRegion,
       }),
       removalPolicy,
+    });
+
+    // ── SNS Monthly Spend Limit ───────────────────────
+    new AwsCustomResource(this, 'SnsMonthlySpendLimit', {
+      onUpdate: {
+        service: 'SNS',
+        action: 'setSMSAttributes',
+        parameters: {
+          attributes: {
+            MonthlySpendLimit: props.snsMonthlySpendLimit,
+          },
+        },
+        physicalResourceId: PhysicalResourceId.of('SnsMonthlySpendLimit'),
+        region: props.snsRegion,
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
     });
 
     // ── Identity Providers ─────────────────────────────

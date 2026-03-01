@@ -38,6 +38,17 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
   OutputFormat: { ESM: 'ESM' },
 }));
 
+jest.mock('aws-cdk-lib/custom-resources', () => ({
+  AwsCustomResource: jest.fn().mockImplementation(() => ({})),
+  AwsCustomResourcePolicy: {
+    fromSdkCalls: jest.fn().mockReturnValue({}),
+    ANY_RESOURCE: '*',
+  },
+  PhysicalResourceId: {
+    of: jest.fn().mockReturnValue('SnsMonthlySpendLimit'),
+  },
+}));
+
 const mockUserPool = {
   userPoolId: 'mock-pool-id',
   userPoolArn: 'mock-pool-arn',
@@ -98,6 +109,7 @@ const defaultProps: CognitoStackProps = {
   snsRegion: 'us-east-1',
   removalProtect: false,
   cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
+  snsMonthlySpendLimit: '1',
 };
 
 describe('CognitoStack', () => {
@@ -175,6 +187,37 @@ describe('CognitoStack', () => {
       defaultProps,
     );
     expect(stack.stackName).toBe('FinancialManagement-v1-Auth');
+  });
+
+  test('creates AwsCustomResource for SNS spend limit with correct parameters', () => {
+    const { AwsCustomResource } = jest.requireMock(
+      'aws-cdk-lib/custom-resources',
+    );
+    AwsCustomResource.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(app as unknown as Construct, 'TestAuthStack', {
+      ...defaultProps,
+      snsMonthlySpendLimit: '50',
+      snsRegion: 'us-east-1',
+    });
+
+    expect(AwsCustomResource).toHaveBeenCalledWith(
+      expect.anything(),
+      'SnsMonthlySpendLimit',
+      expect.objectContaining({
+        onUpdate: expect.objectContaining({
+          service: 'SNS',
+          action: 'setSMSAttributes',
+          parameters: {
+            attributes: {
+              MonthlySpendLimit: '50',
+            },
+          },
+          region: 'us-east-1',
+        }),
+      }),
+    );
   });
 });
 
