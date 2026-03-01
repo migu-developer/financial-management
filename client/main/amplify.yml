@@ -18,6 +18,7 @@ applications:
             - echo "EXPO_PUBLIC_IDENTITY_POOL_ID=$IDENTITY_POOL_ID" >> client/main/.env
             - echo "EXPO_PUBLIC_ASSETS_BUCKET_NAME=$ASSETS_BUCKET_NAME" >> client/main/.env
             - pnpm --filter @client/main build:web
+            - pnpm --filter @client/main run fix-font-paths
       artifacts:
         baseDirectory: client/main/dist
         files:
