@@ -24,6 +24,11 @@ export interface AmplifyHostingStackProps extends BaseStackProps {
   readonly platform: AmplifyPlatform;
   /** Enable branch auto deletion. */
   readonly stage: AmplifyStage;
+  /**
+   * If true (default), every push to the branch triggers a build.
+   * Set to false for prod (e.g. us-east-2) so deploys only run when triggered (e.g. via API on release).
+   */
+  readonly enableAutoBuild: boolean;
 }
 
 /**
@@ -99,7 +104,7 @@ export class AmplifyHostingStack extends BaseStack {
     this.defaultBranch = new CfnBranch(this, 'MainBranch', {
       appId: this.amplifyApp.attrAppId,
       branchName: defaultBranchName,
-      enableAutoBuild: true,
+      enableAutoBuild: props.enableAutoBuild,
       stage: props.stage,
     });
     this.defaultBranch.addDependency(this.amplifyApp);
