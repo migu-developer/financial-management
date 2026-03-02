@@ -40,7 +40,7 @@
     "react-email": "catalog:",
     "tailwindcss": "catalog:",
     "ts-jest": "catalog:",
-    "tsx": "^4.21.0",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {

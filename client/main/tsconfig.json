@@ -12,5 +12,5 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
-  "exclude": ["node_modules", ".turbo", "scripts/**/*"]
+  "exclude": ["node_modules", ".turbo"]
 }
