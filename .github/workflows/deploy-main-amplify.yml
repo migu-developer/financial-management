@@ -37,18 +37,18 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment"
+        description: 'Target environment'
         required: true
         type: choice
         options:
           - staging
           - production
       branch:
-        description: "Amplify branch to deploy (overrides AMPLIFY_BRANCH var)"
+        description: 'Amplify branch to deploy (overrides AMPLIFY_BRANCH var)'
         required: false
         type: string
       dry_run:
-        description: "Simulate the deploy without triggering Amplify (for testing)"
+        description: 'Simulate the deploy without triggering Amplify (for testing)'
         required: false
         type: boolean
         default: false
@@ -124,10 +124,10 @@ jobs:
         }}
     env:
       DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
-      AWS_REGION:      ${{ vars.AWS_REGION }}
-      AMPLIFY_APP_ID:  ${{ secrets.AMPLIFY_APP_ID }}
-      AMPLIFY_BRANCH:  ${{ inputs.branch || vars.AMPLIFY_BRANCH }}
-      DRY_RUN:         ${{ inputs.dry_run || 'false' }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AMPLIFY_APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
+      AMPLIFY_BRANCH: ${{ inputs.branch || vars.AMPLIFY_BRANCH }}
+      DRY_RUN: ${{ inputs.dry_run || 'false' }}
 
     steps:
       - name: 📥 Checkout actions
