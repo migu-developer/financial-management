@@ -1,12 +1,12 @@
 # Deploy client/main to AWS Amplify for staging and production environments.
 #
-# Automatic deploy (push to main) only fires when changes are detected in:
+# Automatic deploy fires after CI passes on main when changes are detected in:
 #   - client/main/**
 #   - .github/workflows/deploy-main-amplify.yml
 # Release and manual triggers always deploy regardless of changed paths.
 #
-# Environment resolution:
-#   staging    — push to main  OR  pre-release
+# Environment resolution (single source of truth: setup job):
+#   staging    — CI passes on main  OR  pre-release
 #   production — published release (non-pre-release)
 #   manual     — environment chosen via workflow_dispatch input
 #
@@ -26,12 +26,10 @@
 name: Deploy client/main to Amplify
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'client/main/**'
-      - '.github/workflows/deploy-main-amplify.yml'
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -55,12 +53,14 @@ on:
 
 permissions:
   contents: read
-  # actions: read is granted per-job in check-ci to follow least-privilege
+  # actions: read is granted per-job in setup to follow least-privilege
 
+# NOTE: concurrency.group is the only place the expression is repeated because
+# GitHub Actions evaluates it before any job runs — it cannot reference job outputs.
 concurrency:
   group: >-
     amplify-deploy-${{
-      (github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' ||
        (github.event_name == 'release' && github.event.release.prerelease == true))
       && 'staging'
       || inputs.environment
@@ -69,65 +69,108 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-ci:
-    name: ✅ Verify CI passed
+  setup:
+    name: ⚙️ Resolve environment & verify CI
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'release' && github.event.release.prerelease == true)
     permissions:
       actions: read
+      contents: read
+    outputs:
+      env_name: ${{ steps.resolve.outputs.env_name }}
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
     steps:
-      - name: Check CI workflow status for this commit
+      - name: Resolve environment and check CI
+        id: resolve
         uses: actions/github-script@v7
         with:
           script: |
-            const { data } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'ci.yml',
-              head_sha: context.sha,
-              per_page: 10,
-            });
+            const eventName = context.eventName;
+            const isPrerelease = eventName === 'release' && context.payload.release.prerelease;
 
-            const success = data.workflow_runs.find(r => r.conclusion === 'success');
-            if (!success) {
-              const runs = data.workflow_runs
-                .map(r => `  • Run #${r.run_number}: ${r.conclusion ?? 'in progress'}`)
-                .join('\n');
-              core.setFailed(
-                `No successful CI run found for commit ${context.sha}.\n` +
-                (runs ? `Found runs:\n${runs}` : 'No CI runs found for this commit.')
-              );
-              return;
+            // Single source of truth for environment resolution
+            let envName;
+            if (eventName === 'workflow_run' || isPrerelease) {
+              envName = 'staging';
+            } else if (eventName === 'release' && !context.payload.release.prerelease) {
+              envName = 'production';
+            } else {
+              envName = context.payload.inputs?.environment ?? '';
             }
-            core.info(`✅ CI passed — run #${success.run_number} (${success.html_url})`);
+            core.setOutput('env_name', envName);
+
+            // CI verification — only needed for workflow_run and pre-release
+            if (eventName === 'workflow_run') {
+              const { conclusion, head_sha, run_number } = context.payload.workflow_run;
+
+              if (conclusion !== 'success') {
+                core.info(`CI finished with conclusion: ${conclusion} — skipping deploy`);
+                core.setOutput('should_deploy', 'false');
+                return;
+              }
+
+              // Path filtering: only deploy when relevant files changed
+              const { data: commit } = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: head_sha,
+              });
+
+              const DEPLOY_PATHS = /^(client\/main\/|\.github\/workflows\/deploy-main-amplify\.yml)/;
+              const relevant = commit.files?.some(f => DEPLOY_PATHS.test(f.filename)) ?? false;
+
+              if (!relevant) {
+                core.info('No relevant paths changed — skipping deploy');
+                core.setOutput('should_deploy', 'false');
+              } else {
+                core.info(`✅ CI passed (run #${run_number}) and relevant paths changed — deploying`);
+                core.setOutput('should_deploy', 'true');
+              }
+            } else if (isPrerelease) {
+              // Pre-release: verify CI passed for this release commit
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'ci.yml',
+                head_sha: context.sha,
+                per_page: 10,
+              });
+
+              const success = data.workflow_runs.find(r => r.conclusion === 'success');
+              if (!success) {
+                const runs = data.workflow_runs
+                  .map(r => `  • Run #${r.run_number}: ${r.conclusion ?? 'in progress'}`)
+                  .join('\n');
+                core.setFailed(
+                  `No successful CI run found for commit ${context.sha}.\n` +
+                  (runs ? `Found runs:\n${runs}` : 'No CI runs found for this commit.')
+                );
+                return;
+              }
+              core.info(`✅ CI passed — run #${success.run_number} (${success.html_url})`);
+              core.setOutput('should_deploy', 'true');
+            } else {
+              // Production release or workflow_dispatch — always deploy
+              core.setOutput('should_deploy', 'true');
+            }
 
   deploy:
     name: 🚀 Trigger Amplify build
-    needs: [check-ci]
-    if: always() && (needs.check-ci.result == 'success' || needs.check-ci.result == 'skipped')
+    needs: [setup]
+    if: needs.setup.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
     environment:
-      name: >-
-        ${{
-          (github.event_name == 'push' ||
-           (github.event_name == 'release' && github.event.release.prerelease == true))
-          && 'staging'
-          || (github.event_name == 'release' && github.event.release.prerelease == false)
-          && 'production'
-          || inputs.environment
-        }}
+      name: ${{ needs.setup.outputs.env_name }}
     env:
       DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       AMPLIFY_APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
       AMPLIFY_BRANCH: ${{ inputs.branch || vars.AMPLIFY_BRANCH }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      DEPLOY_ENV: ${{ needs.setup.outputs.env_name }}
 
     steps:
       - name: 📥 Checkout actions
@@ -191,7 +234,7 @@ jobs:
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
-            echo "| Environment | \`$GITHUB_ENVIRONMENT\` |"
+            echo "| Environment | \`$DEPLOY_ENV\` |"
             echo "| Trigger | \`$TRIGGER\` |"
             echo "| Release | $RELEASE |"
             echo "| Branch | \`$AMPLIFY_BRANCH\` |"
