@@ -1,0 +1,31 @@
+name-template: 🚀
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '✨ Features'
+    label: 'feat'
+  - title: '🐛 Fixes'
+    label: 'fix'
+  - title: '📝 Documentation'
+    label: 'docs'
+  - title: '� Styles'
+    label: 'style'
+  - title: '🔄 Refactors'
+    label: 'refactor'
+  - title: '🔥 Performance'
+    label: 'perf'
+  - title: '🧪 Tests'
+    label: 'test'
+  - title: '🔧 Build'
+    label: 'build'
+  - title: '🔄 CI/CD'
+    label: 'ci'
+  - title: '🧰 Chores'
+    label: 'chore'
+  - title: '🔄 Reverts'
+    label: 'revert'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+template: |
+  ## Changes
+
+  $CHANGES
