@@ -8,6 +8,7 @@ node_modules
 dist
 *.js.map
 *.d.ts
+!client/main/eslint-config-expo.d.ts
 !commitlint.config.ts
 
 # TypeScript
