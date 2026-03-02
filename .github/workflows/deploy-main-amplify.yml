@@ -1,0 +1,200 @@
+# Deploy client/main to AWS Amplify for staging and production environments.
+#
+# Automatic deploy (push to main) only fires when changes are detected in:
+#   - client/main/**
+#   - .github/workflows/deploy-main-amplify.yml
+# Release and manual triggers always deploy regardless of changed paths.
+#
+# Environment resolution:
+#   staging    — push to main  OR  pre-release
+#   production — published release (non-pre-release)
+#   manual     — environment chosen via workflow_dispatch input
+#
+# Authentication: OIDC — no static AWS keys required.
+# The IAM role is assumed via GitHub's OIDC provider (id-token: write).
+#
+# Configure per environment in GitHub Settings → Environments:
+#
+#   Required secrets:
+#     DEPLOY_ROLE_ARN   — ARN of the IAM role with Amplify deploy permissions
+#     AMPLIFY_APP_ID    — Amplify App ID (from CDK output AmplifyAppId)
+#
+#   Optional variables:
+#     AWS_REGION        — AWS region, defaults to us-east-1
+#     AMPLIFY_BRANCH    — Amplify branch to deploy, defaults to main
+
+name: Deploy client/main to Amplify
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'client/main/**'
+      - '.github/workflows/deploy-main-amplify.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      branch:
+        description: "Amplify branch to deploy (overrides AMPLIFY_BRANCH var)"
+        required: false
+        type: string
+      dry_run:
+        description: "Simulate the deploy without triggering Amplify (for testing)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # actions: read is granted per-job in check-ci to follow least-privilege
+
+concurrency:
+  group: >-
+    amplify-deploy-${{
+      (github.event_name == 'push' ||
+       (github.event_name == 'release' && github.event.release.prerelease == true))
+      && 'staging'
+      || inputs.environment
+      || 'production'
+    }}
+  cancel-in-progress: false
+
+jobs:
+  check-ci:
+    name: ✅ Verify CI passed
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'release' && github.event.release.prerelease == true)
+    permissions:
+      actions: read
+    steps:
+      - name: Check CI workflow status for this commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              head_sha: context.sha,
+              per_page: 10,
+            });
+
+            const success = data.workflow_runs.find(r => r.conclusion === 'success');
+            if (!success) {
+              const runs = data.workflow_runs
+                .map(r => `  • Run #${r.run_number}: ${r.conclusion ?? 'in progress'}`)
+                .join('\n');
+              core.setFailed(
+                `No successful CI run found for commit ${context.sha}.\n` +
+                (runs ? `Found runs:\n${runs}` : 'No CI runs found for this commit.')
+              );
+              return;
+            }
+            core.info(`✅ CI passed — run #${success.run_number} (${success.html_url})`);
+
+  deploy:
+    name: 🚀 Trigger Amplify build
+    needs: [check-ci]
+    if: always() && (needs.check-ci.result == 'success' || needs.check-ci.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: >-
+        ${{
+          (github.event_name == 'push' ||
+           (github.event_name == 'release' && github.event.release.prerelease == true))
+          && 'staging'
+          || (github.event_name == 'release' && github.event.release.prerelease == false)
+          && 'production'
+          || inputs.environment
+        }}
+    env:
+      DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
+      AWS_REGION:      ${{ vars.AWS_REGION }}
+      AMPLIFY_APP_ID:  ${{ secrets.AMPLIFY_APP_ID }}
+      AMPLIFY_BRANCH:  ${{ inputs.branch || vars.AMPLIFY_BRANCH }}
+      DRY_RUN:         ${{ inputs.dry_run || 'false' }}
+
+    steps:
+      - name: 📥 Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
+      - name: ✅ Validate required configuration
+        shell: bash
+        run: |
+          missing=()
+          [[ -z "$DEPLOY_ROLE_ARN" ]] && missing+=("DEPLOY_ROLE_ARN (secret)")
+          [[ -z "$AMPLIFY_APP_ID" ]]  && missing+=("AMPLIFY_APP_ID (secret)")
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error::Missing required secrets/variables: ${missing[*]}"
+            exit 1
+          fi
+          echo "✅ All required secrets and variables are set."
+
+      - name: 🔐 Assume deployment role
+        uses: ./.github/actions/assume_role
+        with:
+          role-arn: ${{ env.DEPLOY_ROLE_ARN }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: 📤 Start Amplify build
+        id: start-job
+        shell: bash
+        run: |
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "::notice::Dry run — skipping Amplify job trigger"
+            echo "job_id=dry-run" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          JOB_ID=$(aws amplify start-job \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name "$AMPLIFY_BRANCH" \
+            --job-type RELEASE \
+            --query 'jobSummary.jobId' \
+            --output text)
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+          echo "Amplify job $JOB_ID started — app $AMPLIFY_APP_ID, branch $AMPLIFY_BRANCH"
+
+      - name: 📋 Job summary
+        if: always()
+        shell: bash
+        run: |
+          RELEASE="${{ github.event.release.tag_name || 'n/a' }}"
+          JOB_ID="${{ steps.start-job.outputs.job_id || 'n/a' }}"
+          TRIGGER="${{ github.event_name }}"
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            TITLE="🚀 Amplify deploy (dry run)"
+          else
+            TITLE="🚀 Amplify deploy triggered"
+          fi
+
+          {
+            echo "### $TITLE"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Environment | \`$GITHUB_ENVIRONMENT\` |"
+            echo "| Trigger | \`$TRIGGER\` |"
+            echo "| Release | $RELEASE |"
+            echo "| Branch | \`$AMPLIFY_BRANCH\` |"
+            echo "| Region | \`$AWS_REGION\` |"
+            echo "| Amplify Job ID | \`$JOB_ID\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

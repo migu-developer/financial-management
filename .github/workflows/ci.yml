@@ -1,5 +1,7 @@
 # CI: lint, typecheck, format, test.
 # Runs on PRs (to any branch) and on push to main.
+# Note: does not run on release events — CI is guaranteed to have already
+# run on the underlying commit when it was pushed to main.
 name: CI
 
 on:
@@ -8,6 +10,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -15,22 +20,15 @@ concurrency:
 jobs:
   quality:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    name: ${{ github.event_name == 'pull_request' && 'PR checks' || 'Main branch checks' }}
+    name: Quality checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.29.3
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
+      - name: 🔧 Configure pnpm and Node.js
+        uses: ./.github/actions/configure_pnpm
 
       - name: 📌 Install dependencies
         run: pnpm install --frozen-lockfile

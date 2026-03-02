@@ -1,0 +1,26 @@
+name: Assume AWS Deployment Role
+description: |
+  Configure AWS credentials by assuming an IAM role for a given region.
+  Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set as
+  job-level environment variables, or OIDC (id-token: write permission) enabled.
+
+inputs:
+  role-arn:
+    description: |
+      ARN of the IAM role to assume.
+      Always source this from a secret — never hardcode the value.
+    required: true
+  region:
+    description: AWS region for the assumed-role session.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 🔐 Assume IAM role
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.region }}
+        role-session-name: deployment-session
+        mask-aws-account-id: 'true'
