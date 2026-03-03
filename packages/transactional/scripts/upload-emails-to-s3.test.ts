@@ -17,7 +17,7 @@ const baseDeps: UploadScriptDeps = {
 };
 
 describe('runUploadEmailsScript validation (exit 1)', () => {
-  it('returns exitCode 1 when AWS_REGION and AWS_DEFAULT_REGION are missing', async () => {
+  it('returns exitCode 1 when AWS_REGION is missing', async () => {
     const result = await runUploadEmailsScript({
       config: {
         ASSETS_BUCKET_PREFIX: 'migudev-fm',
@@ -30,7 +30,6 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
     if (!result.ok) {
       expect(result.exitCode).toBe(1);
       expect(result.message).toContain('AWS_REGION');
-      expect(result.message).toContain('AWS_DEFAULT_REGION');
     }
   });
 

@@ -18,7 +18,7 @@
     "./scripts",
     "eslint.config.ts",
     "tailwind.config.ts",
-    "config/index.ts",
+    "./config",
     "jest.config.ts",
     "components",
     "utils"

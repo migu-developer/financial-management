@@ -1,29 +1,31 @@
-# Deploy client/main to AWS Amplify for staging and production environments.
+# Deploy transactional email templates to S3 for staging and production environments.
 #
 # Automatic deploy fires after CI passes on main when changes are detected in:
-#   - client/main/**
-#   - .github/workflows/deploy-main-amplify.yml
+#   - packages/transactional/**
+#   - .github/workflows/deploy-transactional.yml
 # Release and manual triggers always deploy regardless of changed paths.
 #
-# Environment resolution (single source of truth: setup job):
+# Environment resolution (single source of truth: resolve_deploy_env action):
 #   staging    — CI passes on main  OR  pre-release
 #   production — published release (non-pre-release)
 #   manual     — environment chosen via workflow_dispatch input
 #
 # Authentication: OIDC — no static AWS keys required.
-# The IAM role is assumed via GitHub's OIDC provider (id-token: write).
+# The IAM role must have s3:PutObject on the target bucket prefix.
 #
 # Configure per environment in GitHub Settings → Environments:
 #
 #   Required secrets:
-#     DEPLOY_ROLE_ARN   — ARN of the IAM role with Amplify deploy permissions
-#     AMPLIFY_APP_ID    — Amplify App ID (from CDK output AmplifyAppId)
+#     DEPLOY_ROLE_ARN          — ARN of the IAM role with s3:PutObject permissions
 #
-#   Optional variables:
-#     AWS_REGION        — AWS region, defaults to us-east-1
-#     AMPLIFY_BRANCH    — Amplify branch to deploy, defaults to main
+#   Required variables:
+#     AWS_REGION               — AWS region of the target bucket (e.g. us-east-1)
+#     ASSETS_BUCKET_PREFIX     — Bucket name prefix (e.g. migudev-fm)
+#     COGNITO_EMAILS_PREFIX    — S3 key prefix for emails (e.g. cognito/emails)
+#     ASSETS_URL               — Base URL for static assets used in email templates
+#     APPLICATION_URL          — App URL used in email links
 
-name: Deploy client/main to Amplify
+name: Deploy transactional emails to S3
 
 on:
   workflow_run:
@@ -41,12 +43,8 @@ on:
         options:
           - staging
           - production
-      branch:
-        description: 'Amplify branch to deploy (overrides AMPLIFY_BRANCH var)'
-        required: false
-        type: string
       dry_run:
-        description: 'Simulate the deploy without triggering Amplify (for testing)'
+        description: 'Simulate the upload without pushing to S3 (for testing)'
         required: false
         type: boolean
         default: false
@@ -59,7 +57,7 @@ permissions:
 # GitHub Actions evaluates it before any job runs — it cannot reference job outputs.
 concurrency:
   group: >-
-    amplify-deploy-${{
+    transactional-deploy-${{
       (github.event_name == 'workflow_run' ||
        (github.event_name == 'release' && github.event.release.prerelease == true))
       && 'staging'
@@ -89,14 +87,14 @@ jobs:
         id: resolve
         uses: ./.github/actions/resolve_deploy_env
         with:
-          deploy_paths: '^(client/main/|\.github/workflows/deploy-main-amplify\.yml)'
+          deploy_paths: '^(packages/transactional/|\.github/workflows/deploy-transactional\.yml)'
 
-  deploy:
-    name: 🚀 Trigger Amplify build
+  upload:
+    name: 📧 Export & upload email templates
     needs: [setup]
     if: needs.setup.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write
@@ -105,24 +103,31 @@ jobs:
     env:
       DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
       AWS_REGION: ${{ vars.AWS_REGION }}
-      AMPLIFY_APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
-      AMPLIFY_BRANCH: ${{ inputs.branch || vars.AMPLIFY_BRANCH }}
+      ASSETS_BUCKET_PREFIX: ${{ vars.ASSETS_BUCKET_PREFIX }}
+      COGNITO_EMAILS_PREFIX: ${{ vars.COGNITO_EMAILS_PREFIX }}
+      ASSETS_URL: ${{ vars.ASSETS_URL }}
+      APPLICATION_URL: ${{ vars.APPLICATION_URL }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
       DEPLOY_ENV: ${{ needs.setup.outputs.env_name }}
 
     steps:
-      - name: 📥 Checkout actions
+      - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/actions
-          sparse-checkout-cone-mode: false
+
+      - name: ⚙️ Configure Node and pnpm
+        uses: ./.github/actions/configure_pnpm
+
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile --filter @packages/transactional...
 
       - name: ✅ Validate required configuration
         shell: bash
         run: |
           missing=()
-          [[ -z "$DEPLOY_ROLE_ARN" ]] && missing+=("DEPLOY_ROLE_ARN (secret)")
-          [[ -z "$AMPLIFY_APP_ID" ]]  && missing+=("AMPLIFY_APP_ID (secret)")
+          [[ -z "$DEPLOY_ROLE_ARN" ]]       && missing+=("DEPLOY_ROLE_ARN (secret)")
+          [[ -z "$AWS_REGION" ]]            && missing+=("AWS_REGION (var)")
+          [[ -z "$ASSETS_BUCKET_PREFIX" ]]  && missing+=("ASSETS_BUCKET_PREFIX (var)")
+          [[ -z "$COGNITO_EMAILS_PREFIX" ]] && missing+=("COGNITO_EMAILS_PREFIX (var)")
           if [[ ${#missing[@]} -gt 0 ]]; then
             echo "::error::Missing required secrets/variables: ${missing[*]}"
             exit 1
@@ -135,36 +140,31 @@ jobs:
           role-arn: ${{ env.DEPLOY_ROLE_ARN }}
           region: ${{ env.AWS_REGION }}
 
-      - name: 📤 Start Amplify build
-        id: start-job
+      - name: 🔨 Export email templates
+        shell: bash
+        run: pnpm --filter @packages/transactional email:export
+
+      - name: 📤 Upload to S3
         shell: bash
         run: |
           if [[ "$DRY_RUN" == "true" ]]; then
-            echo "::notice::Dry run — skipping Amplify job trigger"
-            echo "job_id=dry-run" >> "$GITHUB_OUTPUT"
+            echo "::notice::Dry run — skipping S3 upload"
             exit 0
           fi
-          JOB_ID=$(aws amplify start-job \
-            --app-id "$AMPLIFY_APP_ID" \
-            --branch-name "$AMPLIFY_BRANCH" \
-            --job-type RELEASE \
-            --query 'jobSummary.jobId' \
-            --output text)
-          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
-          echo "Amplify job $JOB_ID started — app $AMPLIFY_APP_ID, branch $AMPLIFY_BRANCH"
+          pnpm --filter @packages/transactional email:upload
 
       - name: 📋 Job summary
         if: always()
         shell: bash
         run: |
           RELEASE="${{ github.event.release.tag_name || 'n/a' }}"
-          JOB_ID="${{ steps.start-job.outputs.job_id || 'n/a' }}"
           TRIGGER="${{ github.event_name }}"
+          BUCKET="${ASSETS_BUCKET_PREFIX}-${AWS_REGION}-assets"
 
           if [[ "$DRY_RUN" == "true" ]]; then
-            TITLE="🚀 Amplify deploy (dry run)"
+            TITLE="📧 Email templates upload (dry run)"
           else
-            TITLE="🚀 Amplify deploy triggered"
+            TITLE="📧 Email templates uploaded to S3"
           fi
 
           {
@@ -175,7 +175,7 @@ jobs:
             echo "| Environment | \`$DEPLOY_ENV\` |"
             echo "| Trigger | \`$TRIGGER\` |"
             echo "| Release | $RELEASE |"
-            echo "| Branch | \`$AMPLIFY_BRANCH\` |"
             echo "| Region | \`$AWS_REGION\` |"
-            echo "| Amplify Job ID | \`$JOB_ID\` |"
+            echo "| Bucket | \`$BUCKET\` |"
+            echo "| Prefix | \`$COGNITO_EMAILS_PREFIX\` |"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -19,8 +19,7 @@
     "email:build": "turbo email:build --filter=@packages/transactional",
     "email:start": "turbo email:start --filter=@packages/transactional",
     "email:export": "turbo email:export --filter=@packages/transactional",
-    "email:upload:dev": "turbo email:upload:dev --filter=@packages/transactional",
-    "email:upload:prod": "turbo email:upload:prod --filter=@packages/transactional"
+    "email:upload": "turbo email:upload --filter=@packages/transactional"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
