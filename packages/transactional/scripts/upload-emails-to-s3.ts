@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 /**
  * Uploads dist/{locale}/*.html to S3 at prefix cognito/emails/{locale}/{name}.html.
- * Requires: ASSETS_BUCKET_PREFIX, AWS_REGION (or AWS_DEFAULT_REGION), COGNITO_EMAILS_PREFIX.
+ * Requires: ASSETS_BUCKET_PREFIX, AWS_REGION, COGNITO_EMAILS_PREFIX.
  * Usage: pnpm email:upload
  */
 import fs from 'node:fs';
@@ -12,13 +12,14 @@ import { config } from '@config/index';
 import type {
   PutObjectParams,
   UploadEmailsS3Deps,
+  UploadEmailsS3Options,
+  UploadEmailsS3Result,
 } from './lib/upload-emails-s3';
 import { uploadEmailsToS3 } from './lib/upload-emails-s3';
 
 export interface UploadScriptConfig {
   ASSETS_BUCKET_PREFIX?: string;
   AWS_REGION?: string;
-  AWS_DEFAULT_REGION?: string;
   COGNITO_EMAILS_PREFIX?: string;
 }
 
@@ -26,7 +27,9 @@ export interface UploadScriptDeps {
   fs: UploadEmailsS3Deps['fs'];
   path: UploadEmailsS3Deps['path'];
   cwd: string;
-  uploadEmailsToS3: typeof import('./lib/upload-emails-s3').uploadEmailsToS3;
+  uploadEmailsToS3: (
+    options: UploadEmailsS3Options,
+  ) => Promise<UploadEmailsS3Result>;
   s3Send: (params: PutObjectParams) => Promise<unknown>;
 }
 
@@ -48,7 +51,7 @@ export async function runUploadEmailsScript(options: {
   deps: UploadScriptDeps;
 }): Promise<RunUploadEmailsResult> {
   const { config: cfg, deps: dep } = options;
-  const region = cfg.AWS_REGION ?? cfg.AWS_DEFAULT_REGION;
+  const region = cfg.AWS_REGION;
   const bucket = [cfg.ASSETS_BUCKET_PREFIX, region].every(Boolean)
     ? `${cfg.ASSETS_BUCKET_PREFIX}-${region}-assets`
     : '';
@@ -59,7 +62,7 @@ export async function runUploadEmailsScript(options: {
     return {
       ok: false,
       exitCode: 1,
-      message: 'Set AWS_REGION or AWS_DEFAULT_REGION (e.g. us-east-1).',
+      message: 'Set AWS_REGION (e.g. us-east-1).',
     };
   }
   if (!bucket) {
@@ -104,13 +107,12 @@ export async function runUploadEmailsScript(options: {
 }
 
 async function main() {
-  const region = config.AWS_REGION ?? config.AWS_DEFAULT_REGION;
+  const region = config.AWS_REGION;
 
   const result = await runUploadEmailsScript({
     config: {
       ASSETS_BUCKET_PREFIX: config.ASSETS_BUCKET_PREFIX,
       AWS_REGION: config.AWS_REGION,
-      AWS_DEFAULT_REGION: config.AWS_DEFAULT_REGION,
       COGNITO_EMAILS_PREFIX: config.COGNITO_EMAILS_PREFIX,
     },
     deps: {

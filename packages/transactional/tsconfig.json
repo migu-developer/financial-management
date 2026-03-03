@@ -18,8 +18,10 @@
     "./scripts",
     "eslint.config.ts",
     "tailwind.config.ts",
-    "config/index.ts",
+    "./config",
     "jest.config.ts",
+    "jest.setup.ts",
+    "jest.env.ts",
     "components",
     "utils"
   ],
