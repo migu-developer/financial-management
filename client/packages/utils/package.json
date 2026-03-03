@@ -1,15 +1,14 @@
 {
-  "name": "@features/auth",
+  "name": "@packages/utils",
   "version": "1.0.0",
-  "description": "Authentication features for the financial management project",
+  "description": "Utilities for the financial management project",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@features/ui": "workspace:*",
-    "@packages/utils": "workspace:*"
+    "react-native": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -5,6 +5,7 @@
   "description": "Financial Management app",
   "scripts": {
     "start": "expo start",
+    "dev": "pnpm start",
     "reset-project": "tsx ./scripts/reset-project.ts",
     "fix-font-paths": "tsx ./scripts/fix-font-paths.ts",
     "android": "expo start --android",
@@ -12,6 +13,7 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "postbuild:web": "tsx ./scripts/fix-font-paths.ts",
+    "build": "pnpm build:web && pnpm postbuild:web",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
@@ -19,6 +21,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "catalog:",
+    "@features/auth": "workspace:*",
     "@react-navigation/bottom-tabs": "catalog:",
     "@react-navigation/elements": "catalog:",
     "@react-navigation/native": "catalog:",
@@ -46,12 +49,12 @@
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
-    "@types/jest": "catalog:",
+    "@types/jest": "^29.5.14",
     "@types/node": "catalog:",
     "@types/react": "~19.1.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "catalog:",
-    "jest": "catalog:",
+    "jest": "~29.7.0",
     "ts-jest": "catalog:",
     "ts-node": "catalog:",
     "tsx": "catalog:",

@@ -1,16 +1,13 @@
 {
-  "name": "@features/auth",
+  "name": "@features/ui",
   "version": "1.0.0",
-  "description": "Authentication features for the financial management project",
+  "description": "UI features for the financial management project",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
-  "dependencies": {
-    "@features/ui": "workspace:*",
-    "@packages/utils": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "catalog:",
     "ts-node": "catalog:",
