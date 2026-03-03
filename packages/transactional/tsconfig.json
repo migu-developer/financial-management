@@ -20,6 +20,8 @@
     "tailwind.config.ts",
     "./config",
     "jest.config.ts",
+    "jest.setup.ts",
+    "jest.env.ts",
     "components",
     "utils"
   ],

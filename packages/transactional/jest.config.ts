@@ -2,6 +2,7 @@ import type { Config } from 'jest';
 
 const config: Config = {
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/jest.env.ts'],
   roots: [
     '<rootDir>/components',
     '<rootDir>/config',
