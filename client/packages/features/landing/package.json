@@ -1,0 +1,25 @@
+{
+  "name": "@features/landing",
+  "version": "1.0.0",
+  "description": "Landing page features for the financial management project",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@features/ui": "workspace:*",
+    "@packages/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "ts-node": "catalog:",
+    "typescript": "catalog:",
+    "eslint": "catalog:",
+    "@packages/config": "workspace:*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3"
+}
