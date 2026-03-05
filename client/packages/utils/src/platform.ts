@@ -1,6 +1,23 @@
 import { Platform } from 'react-native';
 
-export const isWeb = () => Platform.OS === 'web';
+export enum PlatformOS {
+  WEB = 'web',
+  MOBILE = 'mobile',
+  ANDROID = 'android',
+  IOS = 'ios',
+  WINDOWS = 'windows',
+  MACOS = 'macos',
+}
+
+export const isWeb = () => Platform.OS === PlatformOS.WEB;
 
 export const isMobile = () =>
-  Platform.OS === 'ios' || Platform.OS === 'android';
+  Platform.OS === PlatformOS.IOS || Platform.OS === PlatformOS.ANDROID;
+
+export const isAndroid = () => Platform.OS === PlatformOS.ANDROID;
+
+export const isIOS = () => Platform.OS === PlatformOS.IOS;
+
+export const isWindows = () => Platform.OS === PlatformOS.WINDOWS;
+
+export const isMacOS = () => Platform.OS === PlatformOS.MACOS;
