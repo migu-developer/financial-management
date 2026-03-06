@@ -17,8 +17,8 @@
     "@packages/utils": "workspace:*"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-native": "*"
+    "react": "catalog:",
+    "react-native": "catalog:"
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
