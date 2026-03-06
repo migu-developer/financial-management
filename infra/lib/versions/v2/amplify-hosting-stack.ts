@@ -34,6 +34,11 @@ export interface AmplifyHostingStackProps extends BaseStackProps {
    * Amplify uses this to run the build from that directory and to load amplify.yml from there.
    */
   readonly appRoot: string;
+
+  /** Assets bucket URL. */
+  readonly assetsBucketUrl: string;
+  /** Application URL. */
+  readonly applicationUrl: string;
 }
 
 /**
@@ -85,6 +90,8 @@ export class AmplifyHostingStack extends BaseStack {
       { name: 'USER_POOL_CLIENT_ID', value: userPoolClientId },
       { name: 'IDENTITY_POOL_ID', value: identityPoolId },
       { name: 'ASSETS_BUCKET_NAME', value: assetsBucketName },
+      { name: 'ASSETS_BUCKET_URL', value: props.assetsBucketUrl },
+      { name: 'APPLICATION_URL', value: props.applicationUrl },
     ];
 
     /** SPA rewrite: non-file requests serve index.html for client-side routing (React Native web). */

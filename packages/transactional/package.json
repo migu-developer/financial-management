@@ -46,6 +46,7 @@
     "node": ">=24"
   },
   "dependencies": {
+    "@features/ui": "workspace:*",
     "@react-email/components": "catalog:",
     "@react-email/tailwind": "catalog:",
     "react": "catalog:",

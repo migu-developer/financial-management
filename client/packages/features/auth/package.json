@@ -7,6 +7,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
+  "dependencies": {
+    "@features/ui": "workspace:*",
+    "@packages/utils": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "catalog:",
     "ts-node": "catalog:",
