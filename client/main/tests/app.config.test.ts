@@ -1,4 +1,4 @@
-import appConfigFn from '../app.config';
+import appConfigFn from '@/app.config';
 import { primary, surface } from '@features/ui/utils/colors';
 
 const config = appConfigFn({

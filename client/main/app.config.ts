@@ -1,5 +1,5 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
-import { primary, surface } from '../packages/features/ui/src/utils/colors';
+import { primary, surface } from '@features/ui/utils/colors';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
