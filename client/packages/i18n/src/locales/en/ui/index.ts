@@ -5,6 +5,10 @@ export const ui = {
   },
   languageSelector: {
     label: 'Select language',
+    languages: {
+      en: 'English',
+      es: 'Spanish',
+    },
   },
 } as const;
 

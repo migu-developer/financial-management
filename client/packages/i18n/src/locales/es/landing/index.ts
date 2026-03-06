@@ -108,6 +108,15 @@ export const landing = {
       '© {{year}} Financial Management. Todos los derechos reservados.',
     tagline: 'Hecho con ♥ para el control financiero personal',
   },
+  notFound: {
+    code: '404',
+    title: 'Página no encontrada',
+    description: 'La página que buscas no existe o ha sido movida.',
+    cta: 'Ir al inicio',
+    a11y: {
+      cta: 'Volver a la página de inicio',
+    },
+  },
 } as const;
 
 export type LandingTranslation = typeof landing;

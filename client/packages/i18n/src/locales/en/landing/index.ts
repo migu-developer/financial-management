@@ -105,6 +105,16 @@ export const landing = {
     copyright: '© {{year}} Financial Management. All rights reserved.',
     tagline: 'Made with ♥ for personal finance management',
   },
+  notFound: {
+    code: '404',
+    title: 'Page not found',
+    description:
+      'The page you are looking for does not exist or has been moved.',
+    cta: 'Go to home',
+    a11y: {
+      cta: 'Go back to the home page',
+    },
+  },
 } as const;
 
 export type LandingTranslation = typeof landing;
