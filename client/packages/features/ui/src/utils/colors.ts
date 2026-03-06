@@ -75,7 +75,7 @@ export const neutral = {
 export const surface = {
   light: {
     background: neutral[50],
-    card: '#FFFFFF',
+    card: generic.white,
     border: neutral[200],
     subtle: neutral[100],
   },
@@ -94,10 +94,10 @@ export const textTokens = {
     primary: neutral[900],
     secondary: neutral[600],
     muted: neutral[400],
-    inverse: '#FFFFFF',
+    inverse: generic.white,
   },
   dark: {
-    primary: '#FFFFFF',
+    primary: generic.white,
     secondary: '#CBD5E1', // slate-300
     muted: '#64748B', // slate-500
     inverse: neutral[900],

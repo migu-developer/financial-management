@@ -1,5 +1,22 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
-import { primary, surface } from '@features/ui/utils/colors';
+
+/**
+ * Sincronized with the design system colors.
+ * reference: @features/ui/src/utils/colors.ts
+ */
+const colors = {
+  primary: {
+    50: '#E8F7F2',
+  },
+  surface: {
+    light: {
+      card: '#FFFFFF',
+    },
+    dark: {
+      background: '#0f172a',
+    },
+  },
+};
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -19,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundColor: primary[50],
+      backgroundColor: colors.primary[50],
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     edgeToEdgeEnabled: true,
@@ -39,9 +56,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: './assets/images/splash-icon.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: surface.light.card,
+        backgroundColor: colors.surface.light.card,
         dark: {
-          backgroundColor: surface.dark.background,
+          backgroundColor: colors.surface.dark.background,
         },
       },
     ],
