@@ -10,6 +10,6 @@
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"]
     }
   },
-  "include": ["src", "nativewind-env.d.ts"],
+  "include": ["src", "nativewind-env.d.ts", "nativewind-types.d.ts"],
   "exclude": ["node_modules", ".turbo"]
 }

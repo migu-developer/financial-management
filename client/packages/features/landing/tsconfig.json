@@ -15,6 +15,6 @@
       "@features/ui/utils/*": ["./node_modules/@features/ui/src/utils/*"]
     }
   },
-  "include": ["src", "nativewind-env.d.ts"],
+  "include": ["src", "nativewind-env.d.ts", "nativewind-types.d.ts"],
   "exclude": ["node_modules", ".turbo"]
 }
