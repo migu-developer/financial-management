@@ -23,6 +23,8 @@ const createAmplifyHostingStack: NamedStackFactory = {
         accessTokenName: process.env.ACCESS_TOKEN_NAME ?? '',
         enableAutoBuild: process.env.AMPLIFY_ENABLE_AUTO_BUILD === 'true',
         appRoot: process.env.AMPLIFY_CLIENT_MAIN_ROOT ?? '',
+        assetsBucketUrl: process.env.ASSETS_BUCKET_URL ?? '',
+        applicationUrl: process.env.APPLICATION_URL ?? '',
       },
     ),
 };
