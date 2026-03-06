@@ -6,7 +6,8 @@
     "paths": {
       "@features/ui": ["./src/index.ts"],
       "@features/ui/components/*": ["./src/components/*"],
-      "@features/ui/utils/*": ["./src/utils/*"]
+      "@features/ui/utils/*": ["./src/utils/*"],
+      "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"]
     }
   },
   "include": ["src", "nativewind-env.d.ts"],

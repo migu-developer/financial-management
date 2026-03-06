@@ -80,6 +80,8 @@ describe('AmplifyHostingStack', () => {
             defaultBranchName: 'develop',
             enableAutoBuild: false,
             appRoot: 'client/main',
+            assetsBucketUrl: 'https://example.com',
+            applicationUrl: 'https://example.com',
           },
         ),
     ).not.toThrow();
@@ -101,6 +103,8 @@ describe('AmplifyHostingStack', () => {
         defaultBranchName: 'develop',
         enableAutoBuild: false,
         appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
       },
     );
 
@@ -148,6 +152,8 @@ describe('AmplifyHostingStack', () => {
         defaultBranchName: 'develop',
         enableAutoBuild: false,
         appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
       },
     );
     expect(stack.amplifyApp).toBe(mockCfnApp);
@@ -170,6 +176,8 @@ describe('AmplifyHostingStack', () => {
         defaultBranchName: 'develop',
         enableAutoBuild: false,
         appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
       },
     );
     expect(stack.stackName).toBe('FinancialManagement-v2-AmplifyHosting');
@@ -193,6 +201,8 @@ describe('AmplifyHostingStack', () => {
         defaultBranchName: 'develop',
         enableAutoBuild: false,
         appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
       },
     );
     expect(CfnApp).toHaveBeenCalledWith(

@@ -23,6 +23,10 @@ const config: Config = {
     '^@utils/(.*)$': '<rootDir>/utils/$1',
     '^@features/ui/src/utils/colors$':
       '<rootDir>/../../client/packages/features/ui/src/utils/colors.ts',
+    '^@features/ui/src/utils/typography$':
+      '<rootDir>/../../client/packages/features/ui/src/utils/typography.ts',
+    '^@features/ui/src/utils/spacing$':
+      '<rootDir>/../../client/packages/features/ui/src/utils/spacing.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],

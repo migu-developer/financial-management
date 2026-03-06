@@ -7,10 +7,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "jest"
   },
   "dependencies": {
-    "@expo/vector-icons": "catalog:"
+    "@expo/vector-icons": "catalog:",
+    "@packages/i18n": "workspace:*"
   },
   "peerDependencies": {
     "react": "*",
@@ -18,10 +20,13 @@
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
+    "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "eslint": "catalog:",
+    "jest": "catalog:",
     "nativewind": "catalog:",
+    "ts-jest": "catalog:",
     "ts-node": "catalog:",
     "typescript": "catalog:"
   },
