@@ -1,13 +1,11 @@
+import { LandingTemplate } from './index';
+
 describe('LandingTemplate', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.LandingTemplate).toBe('function');
+    expect(typeof LandingTemplate).toBe('function');
   });
 
   it('LandingTemplate has the expected name', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { LandingTemplate } = require('./index');
     expect(LandingTemplate.name).toBe('LandingTemplate');
   });
 
@@ -30,8 +28,6 @@ describe('LandingTemplate', () => {
 
   describe('props interface', () => {
     it('accepts optional onLoginPress and onGetStartedPress callbacks', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { LandingTemplate } = require('./index');
       expect(LandingTemplate).toBeDefined();
     });
   });

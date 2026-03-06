@@ -1,13 +1,12 @@
-import { ColorScheme } from '../utils/constants';
+import { ColorScheme } from '@features/ui/utils/constants';
+import { useColorScheme } from './use-color-scheme';
 
 describe('useColorScheme hooks', () => {
   describe('use-color-scheme.ts (native re-export)', () => {
     it('exports useColorScheme as a function', () => {
       // The native file re-exports from react-native which is mocked
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('./use-color-scheme');
-      expect(mod.useColorScheme).toBeDefined();
-      expect(typeof mod.useColorScheme).toBe('function');
+      expect(useColorScheme).toBeDefined();
+      expect(typeof useColorScheme).toBe('function');
     });
   });
 
@@ -25,9 +24,7 @@ describe('useColorScheme hooks', () => {
         useColorScheme: jest.fn(() => 'dark'),
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('./use-color-scheme.web');
-      expect(typeof mod.useColorScheme).toBe('function');
+      expect(typeof useColorScheme).toBe('function');
     });
 
     it('returns LIGHT scheme before hydration (SSR safety)', () => {
@@ -40,8 +37,6 @@ describe('useColorScheme hooks', () => {
         useColorScheme: jest.fn(() => 'dark'),
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { useColorScheme } = require('./use-color-scheme.web');
       const result = useColorScheme();
       expect(result).toBe(ColorScheme.LIGHT);
     });
@@ -56,8 +51,6 @@ describe('useColorScheme hooks', () => {
         useColorScheme: jest.fn(() => 'dark'),
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { useColorScheme } = require('./use-color-scheme.web');
       const result = useColorScheme();
       expect(result).toBe('dark');
     });

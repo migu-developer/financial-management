@@ -3,14 +3,10 @@ import { NotFoundTemplate } from './index';
 
 describe('NotFoundTemplate template', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.NotFoundTemplate).toBe('function');
+    expect(typeof NotFoundTemplate).toBe('function');
   });
 
   it('NotFoundTemplate has the expected name', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { NotFoundTemplate } = require('./index');
     expect(NotFoundTemplate.name).toBe('NotFoundTemplate');
   });
 

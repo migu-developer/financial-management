@@ -1,10 +1,9 @@
-import { primary } from '../../../utils/colors';
+import { primary } from '@features/ui/utils/colors';
+import { Button } from './index';
 
 describe('Button component', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.Button).toBe('function');
+    expect(typeof Button).toBe('function');
   });
 
   describe('spinner color logic', () => {

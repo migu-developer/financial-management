@@ -1,15 +1,12 @@
 import { primary } from '@features/ui/utils/colors';
+import { CTASection } from './index';
 
 describe('CTASection organism', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.CTASection).toBe('function');
+    expect(typeof CTASection).toBe('function');
   });
 
   it('CTASection has the expected name', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { CTASection } = require('./index');
     expect(CTASection.name).toBe('CTASection');
   });
 
@@ -26,8 +23,6 @@ describe('CTASection organism', () => {
 
   describe('props interface', () => {
     it('accepts optional onGetStartedPress callback', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { CTASection } = require('./index');
       expect(CTASection).toBeDefined();
     });
   });

@@ -1,10 +1,9 @@
-import { primary } from '../../../utils/colors';
+import { primary } from '@features/ui/utils/colors';
+import { FeatureCard } from './index';
 
 describe('FeatureCard component', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.FeatureCard).toBe('function');
+    expect(typeof FeatureCard).toBe('function');
   });
 
   describe('default design tokens', () => {

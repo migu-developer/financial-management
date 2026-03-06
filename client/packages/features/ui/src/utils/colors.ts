@@ -8,6 +8,12 @@
  *                  (e.g. bg-primary-dark, text-primary-pale, border-primary-light)
  */
 
+// ─── Generic — white and black ─────────────────────────────────────────────────
+export const generic = {
+  white: '#FFFFFF',
+  black: '#000000',
+};
+
 // ─── Brand Primary — teal / blue-green ───────────────────────────────────────
 
 export const primary = {

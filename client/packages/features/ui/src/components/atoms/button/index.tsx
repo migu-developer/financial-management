@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import type { TouchableOpacityProps } from 'react-native';
 
-import { primary } from '@features/ui/utils/colors';
+import { generic, primary } from '@features/ui/utils/colors';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
@@ -51,7 +51,9 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const spinnerColor =
-    variant === 'primary' || variant === 'secondary' ? '#ffffff' : primary[600];
+    variant === 'primary' || variant === 'secondary'
+      ? generic.white
+      : primary[600];
 
   return (
     <TouchableOpacity

@@ -1,11 +1,10 @@
-import { uiTokens } from '../../../utils/colors';
-import { ColorScheme, IconNames } from '../../../utils/constants';
+import { uiTokens } from '@features/ui/utils/colors';
+import { ThemeToggle } from './index';
+import { ColorScheme, IconNames } from '@features/ui/utils/constants';
 
 describe('ThemeToggle component', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.ThemeToggle).toBe('function');
+    expect(typeof ThemeToggle).toBe('function');
   });
 
   describe('design tokens used by ThemeToggle', () => {

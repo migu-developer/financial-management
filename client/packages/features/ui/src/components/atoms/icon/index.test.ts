@@ -1,10 +1,9 @@
-import { neutral } from '../../../utils/colors';
+import { neutral } from '@features/ui/utils/colors';
+import { Icon } from './index';
 
 describe('Icon component', () => {
   it('module exports a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('./index');
-    expect(typeof mod.Icon).toBe('function');
+    expect(typeof Icon).toBe('function');
   });
 
   describe('default color from design system', () => {
