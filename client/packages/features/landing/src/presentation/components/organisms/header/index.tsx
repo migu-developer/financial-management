@@ -3,7 +3,7 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, ThemeToggle } from '@features/ui';
+import { Button, LanguageSelector, ThemeToggle } from '@features/ui';
 
 interface LandingHeaderProps {
   onLoginPress?: () => void;
@@ -67,8 +67,9 @@ export function LandingHeader({
         </TouchableOpacity>
       </View>
 
-      {/* CTA + theme toggle */}
+      {/* CTA + language selector + theme toggle */}
       <View className="flex-row items-center gap-3">
+        <LanguageSelector />
         <ThemeToggle />
         <Button
           label={t('header.cta')}
