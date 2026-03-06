@@ -1,31 +1,42 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from '@react-navigation/native';
+import '@packages/i18n';
+
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, StatusBarStyle } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { isWeb } from '@packages/utils';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from '@features/ui/hooks/use-color-scheme';
+import { useColorScheme as useWebColorScheme } from '@features/ui/hooks/use-color-scheme.web';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import '@/styles/global.css';
+import { ROUTE_NAMES } from '@/utils/route';
 
-export default function RootLayout() {
+function StatusBarWeb(): React.ReactNode {
+  const colorScheme = useWebColorScheme();
+
+  return <StatusBar style={colorScheme as StatusBarStyle} />;
+}
+
+function StatusBarMobile(): React.ReactNode {
   const colorScheme = useColorScheme();
 
+  return <StatusBar style={colorScheme as StatusBarStyle} />;
+}
+
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
-          name="modal"
-          options={{ presentation: 'modal', title: 'Modal' }}
+          name={ROUTE_NAMES.index}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name={ROUTE_NAMES.landing}
+          options={{ headerShown: false }}
         />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      {isWeb() ? <StatusBarWeb /> : <StatusBarMobile />}
+    </>
   );
 }

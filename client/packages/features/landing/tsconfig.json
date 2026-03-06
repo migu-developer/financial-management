@@ -11,7 +11,8 @@
       "@features/ui": ["./node_modules/@features/ui/src/index.ts"],
       "@features/ui/components/*": [
         "./node_modules/@features/ui/src/components/*"
-      ]
+      ],
+      "@features/ui/utils/*": ["./node_modules/@features/ui/src/utils/*"]
     }
   },
   "include": ["src", "nativewind-env.d.ts"],
