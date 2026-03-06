@@ -55,9 +55,8 @@ export const landing = {
           'Manage accounts in different currencies with real-time conversion. Ideal for international expenses.',
       },
       security: {
-        title: 'Bank-grade security',
-        description:
-          'Bank-level encryption (AES-256) and two-factor authentication to keep your information safe.',
+        title: 'High level security',
+        description: 'Two-factor authentication to keep your information safe.',
       },
     },
   },
@@ -89,7 +88,7 @@ export const landing = {
   cta: {
     title: 'Ready to take control?',
     subtitle:
-      'Join over 10,000 people who already manage their finances intelligently. Free forever on the basic plan.',
+      'Join us and take control of your finances. Free forever on the basic plan.',
     button: 'Start for free now',
     trustNote: 'No credit card required · Cancel anytime',
     a11y: {

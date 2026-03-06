@@ -55,9 +55,9 @@ export const landing = {
           'Administra cuentas en diferentes monedas con conversión en tiempo real. Ideal para gastos internacionales.',
       },
       security: {
-        title: 'Seguridad bancaria',
+        title: 'Seguridad de alto nivel',
         description:
-          'Cifrado de nivel bancario (AES-256) y autenticación de dos factores para mantener tu información segura.',
+          'Autenticación de dos factores para mantener tu información segura.',
       },
     },
   },
@@ -90,7 +90,7 @@ export const landing = {
   cta: {
     title: '¿Listo para tomar el control?',
     subtitle:
-      'Únete a más de 10,000 personas que ya gestionan sus finanzas de manera inteligente. Gratis para siempre en el plan básico.',
+      'Unete a nosotros y toma el control de tus finanzas. Gratis para siempre en el plan básico.',
     button: 'Comenzar gratis ahora',
     trustNote: 'Sin tarjeta de crédito requerida · Cancela cuando quieras',
     a11y: {
