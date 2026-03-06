@@ -3,14 +3,23 @@
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
-    "paths": { "@/*": ["./*"] }
+    "paths": {
+      "@/*": ["./*"],
+      "@features/landing/*": ["./node_modules/@features/landing/src/*"],
+      "@features/ui/*": ["./node_modules/@features/ui/src/*"],
+      "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"]
+    }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     "**/*.d.ts",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "tailwind.config.ts",
+    "nativewind-env.d.ts",
+    "tailwind.config.ts",
+    "metro.config.ts"
   ],
   "exclude": ["node_modules", ".turbo"]
 }

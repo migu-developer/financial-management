@@ -14,11 +14,15 @@ const config: Config = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { useESM: false }],
   },
+  // Allow ts-jest to transform @features/ui even when resolved through node_modules symlink
+  transformIgnorePatterns: ['/node_modules/(?!@features/ui)'],
   moduleNameMapper: {
     '^@root/(.*)$': '<rootDir>/$1',
     '^@config/(.*)$': '<rootDir>/config/$1',
     '^@components/(.*)$': '<rootDir>/components/$1',
     '^@utils/(.*)$': '<rootDir>/utils/$1',
+    '^@features/ui/src/utils/colors$':
+      '<rootDir>/../../client/packages/features/ui/src/utils/colors.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
