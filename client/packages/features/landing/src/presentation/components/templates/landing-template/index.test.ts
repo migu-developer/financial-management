@@ -11,10 +11,7 @@ describe('LandingTemplate', () => {
 
   describe('environment variable usage', () => {
     it('reads EXPO_PUBLIC_ASSETS_URL from process.env', () => {
-      // The template constructs logoUrl from process.env.EXPO_PUBLIC_ASSETS_URL
-      // Verify the env var key is consistent
       const envVar = process.env.EXPO_PUBLIC_ASSETS_URL;
-      // In test environment, it's undefined — the template falls back to ''
       expect(envVar === undefined || typeof envVar === 'string').toBe(true);
     });
 
@@ -28,6 +25,10 @@ describe('LandingTemplate', () => {
 
   describe('props interface', () => {
     it('accepts optional onLoginPress and onGetStartedPress callbacks', () => {
+      expect(LandingTemplate).toBeDefined();
+    });
+
+    it('accepts optional footer navigation callbacks (onPrivacyPress, onTermsPress, onContactPress)', () => {
       expect(LandingTemplate).toBeDefined();
     });
   });

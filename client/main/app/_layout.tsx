@@ -31,10 +31,6 @@ export default function RootLayout() {
           name={ROUTE_NAMES.index}
           options={{ headerShown: false }}
         />
-        <Stack.Screen
-          name={ROUTE_NAMES.landing}
-          options={{ headerShown: false }}
-        />
       </Stack>
       {isWeb() ? <StatusBarWeb /> : <StatusBarMobile />}
     </>

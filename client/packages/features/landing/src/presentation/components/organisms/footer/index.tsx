@@ -10,11 +10,25 @@ const LINK_KEYS: LinkKey[] = ['privacy', 'terms', 'contact'];
 
 interface LandingFooterProps {
   logoUrl: string;
+  onPrivacyPress?: () => void;
+  onTermsPress?: () => void;
+  onContactPress?: () => void;
 }
 
-export function LandingFooter({ logoUrl }: LandingFooterProps) {
+export function LandingFooter({
+  logoUrl,
+  onPrivacyPress,
+  onTermsPress,
+  onContactPress,
+}: LandingFooterProps) {
   const { t } = useTranslation('landing');
   const currentYear = new Date().getFullYear();
+
+  const onPressMap: Record<LinkKey, (() => void) | undefined> = {
+    privacy: onPrivacyPress,
+    terms: onTermsPress,
+    contact: onContactPress,
+  };
 
   return (
     <View
@@ -45,6 +59,7 @@ export function LandingFooter({ logoUrl }: LandingFooterProps) {
                 key={key}
                 accessibilityRole="link"
                 accessibilityLabel={t(`footer.links.${key}.a11y`)}
+                onPress={onPressMap[key]}
               >
                 <Text className="text-slate-400 text-sm">
                   {t(`footer.links.${key}.label`)}

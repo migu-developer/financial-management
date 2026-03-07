@@ -25,5 +25,17 @@ describe('LandingScreen screen (app/landing)', () => {
     it('ROUTES.auth is defined for post-landing navigation', () => {
       expect(typeof ROUTES.auth).toBe('string');
     });
+
+    it('ROUTES.privacy is defined for footer link navigation', () => {
+      expect(ROUTES.privacy).toBe('/privacy');
+    });
+
+    it('ROUTES.terms is defined for footer link navigation', () => {
+      expect(ROUTES.terms).toBe('/terms');
+    });
+
+    it('ROUTES.contact is defined for footer link navigation', () => {
+      expect(ROUTES.contact).toBe('/contact');
+    });
   });
 });

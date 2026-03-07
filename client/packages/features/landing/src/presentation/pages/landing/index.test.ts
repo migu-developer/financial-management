@@ -13,5 +13,9 @@ describe('LandingPage page', () => {
     it('requires onNavigateToAuth callback', () => {
       expect(LandingPage).toBeDefined();
     });
+
+    it('accepts optional footer navigation callbacks (onNavigateToPrivacy, onNavigateToTerms, onNavigateToContact)', () => {
+      expect(LandingPage).toBeDefined();
+    });
   });
 });

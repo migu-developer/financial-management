@@ -108,6 +108,63 @@ export const landing = {
       '© {{year}} Financial Management. Todos los derechos reservados.',
     tagline: 'Hecho con ♥ para el control financiero personal',
   },
+  privacy: {
+    title: 'Política de Privacidad',
+    lastUpdated: '7 de marzo de 2026',
+    back: 'Volver',
+    sections: {
+      intro: 'Introducción',
+      dataCollection: 'Información que recopilamos',
+      dataUse: 'Cómo usamos tu información',
+      dataSharing: 'Compartición de datos',
+      dataSecurity: 'Seguridad de datos',
+      thirdPartyAuth: 'Autenticación de terceros',
+      userRights: 'Tus derechos',
+      policyChanges: 'Cambios en la política',
+      contactInfo: 'Contacto',
+    },
+  },
+  terms: {
+    title: 'Términos de Servicio',
+    lastUpdated: '7 de marzo de 2026',
+    back: 'Volver',
+    sections: {
+      intro: 'Introducción',
+      acceptance: 'Aceptación de los términos',
+      serviceDescription: 'Descripción del servicio',
+      useOfServices: 'Uso de los servicios',
+      userContent: 'Contenido del usuario',
+      thirdPartyServices: 'Servicios de terceros',
+      liabilityLimitation: 'Limitación de responsabilidad',
+      modifications: 'Modificaciones',
+      termination: 'Terminación',
+      applicableLaw: 'Ley aplicable',
+      contactInfo: 'Contacto',
+    },
+  },
+  contact: {
+    title: 'Contáctanos',
+    subtitle:
+      'Nos encantaría saber de ti. Escríbenos con preguntas, comentarios o solicitudes de soporte.',
+    back: 'Volver',
+    emailLabel: 'Email',
+    email: 'contact@financialmanagement.app',
+    responseTime: 'Generalmente respondemos en 24–48 horas.',
+    sections: {
+      support: {
+        title: 'Soporte técnico',
+        body: 'Para problemas técnicos, errores o solicitudes de funciones, escríbenos un correo y te responderemos a la brevedad.',
+      },
+      privacyInquiries: {
+        title: 'Privacidad y datos',
+        body: 'Para preguntas sobre cómo manejamos tus datos o para ejercer tus derechos, contacta a nuestro equipo de privacidad.',
+      },
+      business: {
+        title: 'Negocios',
+        body: 'Para alianzas, consultas de prensa u oportunidades de negocio, comunícate con nuestro equipo.',
+      },
+    },
+  },
   notFound: {
     code: '404',
     title: 'Página no encontrada',
