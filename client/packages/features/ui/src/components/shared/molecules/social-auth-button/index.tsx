@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { generic } from '@features/ui/utils/colors';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -16,10 +17,10 @@ const providerIconMap: Record<SocialProvider, MaterialCommunityIconName> = {
 };
 
 const providerColorMap: Record<SocialProvider, string> = {
-  google: '#EA4335',
-  facebook: '#1877F2',
-  microsoft: '#00A4EF',
-  apple: '#FFFFFF',
+  google: generic.providers.google,
+  facebook: generic.providers.facebook,
+  microsoft: generic.providers.microsoft,
+  apple: generic.providers.apple,
 };
 
 interface SocialAuthButtonProps {

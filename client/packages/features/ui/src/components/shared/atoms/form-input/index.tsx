@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TextInput, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
-import { primary } from '@features/ui/utils/colors';
+import { generic, primary } from '@features/ui/utils/colors';
 
 interface FormInputProps {
   label: string;
@@ -42,7 +42,7 @@ export function FormInput({
         className={`bg-slate-800 text-white rounded-xl px-4 py-3 text-base border ${
           error ? 'border-red-500' : 'border-slate-700'
         } ${disabled ? 'opacity-50' : ''}`}
-        style={{ borderColor: error ? '#EF4444' : primary[800] }}
+        style={{ borderColor: error ? generic.error : primary[800] }}
         accessibilityLabel={label}
       />
       {error ? (
