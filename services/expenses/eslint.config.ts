@@ -1,15 +1,13 @@
+import { getNodeConfig } from '@packages/config/eslint';
+import { defineConfig } from 'eslint/config';
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { nodeConfig } from '@packages/config/eslint';
-import { defineConfig } from 'eslint/config';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const base = Array.isArray(nodeConfig) ? nodeConfig : [nodeConfig];
-
 export default defineConfig([
-  ...base,
+  ...getNodeConfig(__dirname),
   {
     files: ['src/**/*.ts'],
     languageOptions: {

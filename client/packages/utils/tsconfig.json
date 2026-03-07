@@ -2,11 +2,11 @@
   "extends": "@packages/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "paths": {
       "@utils/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "eslint.config.ts"],
   "exclude": ["node_modules", ".turbo"]
 }

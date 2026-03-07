@@ -3,6 +3,7 @@ const noop = () => null;
 
 module.exports = {
   MaterialIcons: noop,
+  MaterialCommunityIcons: noop,
   Ionicons: noop,
   FontAwesome: noop,
 };
