@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, FormInput, SocialAuthButton } from '@features/ui';
+import { Button, Card, FormInput, SocialAuthButton } from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
 interface LoginTemplateProps {
@@ -42,76 +42,83 @@ export function LoginTemplate({
       contentContainerStyle={{
         flexGrow: 1,
         justifyContent: 'center',
+        alignItems: 'center',
         padding: 24,
       }}
     >
-      <View className="mb-8">
-        <Text className="text-white font-bold text-3xl mb-2">{t('title')}</Text>
-        <Text className="text-slate-400 text-base">{t('subtitle')}</Text>
-      </View>
-
-      {error ? (
-        <View className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 mb-4">
-          <Text className="text-red-400 text-sm">{error}</Text>
+      <Card className="w-full p-6" style={{ maxWidth: 448 }}>
+        <View className="mb-8">
+          <Text className="text-white font-bold text-3xl mb-2">
+            {t('title')}
+          </Text>
+          <Text className="text-slate-400 text-base">{t('subtitle')}</Text>
         </View>
-      ) : null}
 
-      <FormInput
-        label={t('emailLabel')}
-        value={email}
-        onChangeText={setEmail}
-        placeholder={t('emailPlaceholder')}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+        {error ? (
+          <View className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-400 text-sm">{error}</Text>
+          </View>
+        ) : null}
 
-      <FormInput
-        label={t('passwordLabel')}
-        value={password}
-        onChangeText={setPassword}
-        placeholder={t('passwordPlaceholder')}
-        secureTextEntry
-      />
-
-      <TouchableOpacity
-        onPress={onForgotPassword}
-        className="self-end mb-6"
-        accessibilityRole="button"
-      >
-        <Text className="text-primary-400 text-sm">{t('forgotPassword')}</Text>
-      </TouchableOpacity>
-
-      <Button
-        label={t('signInButton')}
-        onPress={() => onSignIn(email, password)}
-        loading={loading}
-        className="mb-6"
-      />
-
-      <View className="flex-row items-center mb-6">
-        <View className="flex-1 h-px bg-slate-700" />
-        <Text className="text-slate-500 text-sm mx-4">{t('or')}</Text>
-        <View className="flex-1 h-px bg-slate-700" />
-      </View>
-
-      {SOCIAL_PROVIDERS.map((provider) => (
-        <SocialAuthButton
-          key={provider}
-          provider={provider}
-          label={t(`social.${provider}` as never)}
-          onPress={() => onSocialSignIn(provider)}
-          disabled={loading}
+        <FormInput
+          label={t('emailLabel')}
+          value={email}
+          onChangeText={setEmail}
+          placeholder={t('emailPlaceholder')}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
-      ))}
 
-      <View className="flex-row justify-center mt-6">
-        <Text className="text-slate-400 text-sm">{t('noAccount')} </Text>
-        <TouchableOpacity onPress={onSignUp} accessibilityRole="button">
-          <Text className="text-primary-400 text-sm font-semibold">
-            {t('signUp')}
+        <FormInput
+          label={t('passwordLabel')}
+          value={password}
+          onChangeText={setPassword}
+          placeholder={t('passwordPlaceholder')}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          onPress={onForgotPassword}
+          className="self-end mb-6"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary-400 text-sm">
+            {t('forgotPassword')}
           </Text>
         </TouchableOpacity>
-      </View>
+
+        <Button
+          label={t('signInButton')}
+          onPress={() => onSignIn(email, password)}
+          loading={loading}
+          className="mb-6"
+        />
+
+        <View className="flex-row items-center mb-6">
+          <View className="flex-1 h-px bg-slate-700" />
+          <Text className="text-slate-500 text-sm mx-4">{t('or')}</Text>
+          <View className="flex-1 h-px bg-slate-700" />
+        </View>
+
+        {SOCIAL_PROVIDERS.map((provider) => (
+          <SocialAuthButton
+            key={provider}
+            provider={provider}
+            label={t(`social.${provider}` as never)}
+            onPress={() => onSocialSignIn(provider)}
+            disabled={loading}
+          />
+        ))}
+
+        <View className="flex-row justify-center mt-6">
+          <Text className="text-slate-400 text-sm">{t('noAccount')} </Text>
+          <TouchableOpacity onPress={onSignUp} accessibilityRole="button">
+            <Text className="text-primary-400 text-sm font-semibold">
+              {t('signUp')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Card>
     </ScrollView>
   );
 }
