@@ -148,7 +148,7 @@ export const landing = {
       'Nos encantaría saber de ti. Escríbenos con preguntas, comentarios o solicitudes de soporte.',
     back: 'Volver',
     emailLabel: 'Email',
-    email: 'contact@financialmanagement.app',
+    email: 'gutierrezmayamiguelangel@gmail.com',
     responseTime: 'Generalmente respondemos en 24–48 horas.',
     sections: {
       support: {

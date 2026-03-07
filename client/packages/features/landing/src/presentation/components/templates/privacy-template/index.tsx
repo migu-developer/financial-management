@@ -77,7 +77,7 @@ const SECTIONS = [
   {
     key: 'contactInfo',
     paragraphs: [
-      'If you have questions about this Privacy Policy, please contact us at contact@financialmanagement.app.',
+      'If you have questions about this Privacy Policy, please contact us at gutierrezmayamiguelangel@gmail.com.',
     ],
   },
 ] as const;

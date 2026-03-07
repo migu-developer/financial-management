@@ -26,11 +26,13 @@ function StatusBarMobile(): React.ReactNode {
 export default function RootLayout() {
   return (
     <>
-      <Stack>
-        <Stack.Screen
-          name={ROUTE_NAMES.index}
-          options={{ headerShown: false }}
-        />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name={ROUTE_NAMES.index} />
+        <Stack.Screen name={ROUTE_NAMES.landing} />
+        <Stack.Screen name={ROUTE_NAMES.privacy} />
+        <Stack.Screen name={ROUTE_NAMES.terms} />
+        <Stack.Screen name={ROUTE_NAMES.contact} />
+        <Stack.Screen name={ROUTE_NAMES.notFound} />
       </Stack>
       {isWeb() ? <StatusBarWeb /> : <StatusBarMobile />}
     </>

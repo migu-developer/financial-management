@@ -85,7 +85,7 @@ const SECTIONS = [
   {
     key: 'contactInfo',
     paragraphs: [
-      'For questions about these Terms of Service, please contact us at contact@financialmanagement.app.',
+      'For questions about these Terms of Service, please contact us at gutierrezmayamiguelangel@gmail.com.',
     ],
   },
 ] as const;

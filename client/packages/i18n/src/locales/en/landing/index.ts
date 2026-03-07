@@ -145,7 +145,7 @@ export const landing = {
       "We'd love to hear from you. Reach out with questions, feedback, or support requests.",
     back: 'Back',
     emailLabel: 'Email',
-    email: 'contact@financialmanagement.app',
+    email: 'gutierrezmayamiguelangel@gmail.com',
     responseTime: 'We typically respond within 24–48 hours.',
     sections: {
       support: {
