@@ -17,6 +17,8 @@ const config: Config = {
     '^@packages/i18n$': '<rootDir>/../packages/i18n/src/index.ts',
     '^@packages/i18n/(.*)$': '<rootDir>/../packages/i18n/src/$1',
     '^@packages/utils$': '<rootDir>/../packages/utils/src/index.ts',
+    '^@features/auth$': '<rootDir>/../packages/features/auth/src/index.ts',
+    '^@features/auth/(.*)$': '<rootDir>/../packages/features/auth/src/$1',
     '^@features/landing$':
       '<rootDir>/../packages/features/landing/src/index.ts',
     '^@features/landing/(.*)$': '<rootDir>/../packages/features/landing/src/$1',

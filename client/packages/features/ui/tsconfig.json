@@ -2,7 +2,7 @@
   "extends": "@packages/config/tsconfig.expo.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "paths": {
       "@features/ui": ["./src/index.ts"],
       "@features/ui/components/*": ["./src/components/*"],
@@ -10,6 +10,6 @@
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"]
     }
   },
-  "include": ["src", "nativewind-env.d.ts"],
+  "include": ["src", "nativewind-env.d.ts", "eslint.config.ts"],
   "exclude": ["node_modules", ".turbo"]
 }

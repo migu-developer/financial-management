@@ -2,12 +2,12 @@
   "extends": "@packages/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@custom-message/*": ["./src/custom-message/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "eslint.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -3,6 +3,7 @@ const noop = () => null;
 module.exports = {
   View: noop,
   Text: noop,
+  TextInput: noop,
   TouchableOpacity: noop,
   Pressable: noop,
   ScrollView: noop,

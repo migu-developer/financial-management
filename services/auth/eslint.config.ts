@@ -1,3 +1,7 @@
-import { nodeConfig } from '@packages/config/eslint';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-export default nodeConfig;
+import { getNodeConfig } from '@packages/config/eslint';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export default getNodeConfig(__dirname);

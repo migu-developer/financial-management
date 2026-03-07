@@ -2,13 +2,24 @@ import { LandingTemplate } from '@features/landing/presentation/components/templ
 
 interface LandingPageProps {
   onNavigateToAuth: () => void;
+  onNavigateToPrivacy?: () => void;
+  onNavigateToTerms?: () => void;
+  onNavigateToContact?: () => void;
 }
 
-export function LandingPage({ onNavigateToAuth }: LandingPageProps) {
+export function LandingPage({
+  onNavigateToAuth,
+  onNavigateToPrivacy,
+  onNavigateToTerms,
+  onNavigateToContact,
+}: LandingPageProps) {
   return (
     <LandingTemplate
       onLoginPress={onNavigateToAuth}
       onGetStartedPress={onNavigateToAuth}
+      onPrivacyPress={onNavigateToPrivacy}
+      onTermsPress={onNavigateToTerms}
+      onContactPress={onNavigateToContact}
     />
   );
 }
