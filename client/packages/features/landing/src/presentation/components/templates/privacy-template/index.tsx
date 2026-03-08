@@ -3,7 +3,8 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { LegalPageHeader, LegalSection } from '@features/ui';
+import { LegalPageHeader } from '@features/landing/presentation/components/molecules/legal-page-header';
+import { LegalSection } from '@features/landing/presentation/components/molecules/legal-section';
 
 interface PrivacyTemplateProps {
   onBackPress?: () => void;

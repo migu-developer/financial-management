@@ -3,7 +3,9 @@ import { Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { FeatureCard, primary, accent, success, warning } from '@features/ui';
+import { primary, accent, success, warning } from '@features/ui';
+
+import { FeatureCard } from '@features/landing/presentation/components/molecules/feature-card';
 
 type FeatureKey = 'expenses' | 'analytics' | 'multiCurrency' | 'security';
 
