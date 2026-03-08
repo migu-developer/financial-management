@@ -103,7 +103,9 @@ export function PrivacyTemplate({ onBackPress }: PrivacyTemplateProps) {
         {SECTIONS.map(({ key, paragraphs }) => (
           <LegalSection
             key={key}
-            title={t(`privacy.sections.${key}` as `privacy.sections.${typeof key}`)}
+            title={t(
+              `privacy.sections.${key}` as `privacy.sections.${typeof key}`,
+            )}
             paragraphs={paragraphs}
           />
         ))}

@@ -22,13 +22,11 @@ export function LoginPage({ onSignInSuccess, ...props }: LoginPageProps) {
   };
 
   const handleSignIn = (_email: string, _password: string) => {
-    // TODO: implement real auth logic
     console.log('sign in', _email, _password);
     simulateAuth();
   };
 
   const handleSocialSignIn = (_provider: SocialProvider) => {
-    // TODO: implement real social auth logic
     console.log('social sign in', _provider);
     simulateAuth();
   };

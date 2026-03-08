@@ -7,7 +7,9 @@
       "@/*": ["./*"],
       "@features/auth": ["./node_modules/@features/auth/src/index.ts"],
       "@features/auth/*": ["./node_modules/@features/auth/src/*"],
-      "@features/dashboard": ["./node_modules/@features/dashboard/src/index.ts"],
+      "@features/dashboard": [
+        "./node_modules/@features/dashboard/src/index.ts"
+      ],
       "@features/dashboard/*": ["./node_modules/@features/dashboard/src/*"],
       "@features/landing/*": ["./node_modules/@features/landing/src/*"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],
