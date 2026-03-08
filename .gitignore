@@ -8,10 +8,8 @@ node_modules
 dist
 *.js.map
 *.d.ts
-!client/main/eslint-config-expo.d.ts
-!client/main/nativewind-env.d.ts
-!client/packages/features/ui/nativewind-env.d.ts
-!client/packages/features/landing/nativewind-env.d.ts
+!**/eslint-config-expo.d.ts
+!**/nativewind-env.d.ts
 !commitlint.config.ts
 
 # TypeScript

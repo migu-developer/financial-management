@@ -11,6 +11,9 @@ import { HowItWorksSection } from '@features/landing/presentation/components/org
 interface LandingTemplateProps {
   onLoginPress?: () => void;
   onGetStartedPress?: () => void;
+  onPrivacyPress?: () => void;
+  onTermsPress?: () => void;
+  onContactPress?: () => void;
 }
 
 const assetsUrl = process.env.EXPO_PUBLIC_ASSETS_URL ?? '';
@@ -19,6 +22,9 @@ const logoUrl = `${assetsUrl}/financial-management/300x300.webp`;
 export function LandingTemplate({
   onLoginPress,
   onGetStartedPress,
+  onPrivacyPress,
+  onTermsPress,
+  onContactPress,
 }: LandingTemplateProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const featuresSectionY = useRef<number>(0);
@@ -80,7 +86,12 @@ export function LandingTemplate({
         </View>
 
         <CTASection onGetStartedPress={onGetStartedPress} />
-        <LandingFooter logoUrl={logoUrl ?? ''} />
+        <LandingFooter
+          logoUrl={logoUrl ?? ''}
+          onPrivacyPress={onPrivacyPress}
+          onTermsPress={onTermsPress}
+          onContactPress={onContactPress}
+        />
       </ScrollView>
     </View>
   );

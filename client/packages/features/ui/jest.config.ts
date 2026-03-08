@@ -11,6 +11,8 @@ const config: Config = {
     '^@features/ui$': '<rootDir>/src/index.ts',
     '^@features/ui/utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@features/ui/components/(.*)$': '<rootDir>/src/components/$1',
+    '^@features/ui/hooks/(.*)$': '<rootDir>/src/hooks/$1',
+    '^@packages/utils$': '<rootDir>/../../utils/src/index.ts',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',

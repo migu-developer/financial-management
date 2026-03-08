@@ -5,10 +5,17 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./*"],
+      "@features/auth": ["./node_modules/@features/auth/src/index.ts"],
+      "@features/auth/*": ["./node_modules/@features/auth/src/*"],
+      "@features/dashboard": [
+        "./node_modules/@features/dashboard/src/index.ts"
+      ],
+      "@features/dashboard/*": ["./node_modules/@features/dashboard/src/*"],
       "@features/landing/*": ["./node_modules/@features/landing/src/*"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
-      "@utils/*": ["./node_modules/@utils/*"]
+      "@packages/utils": ["./node_modules/@packages/utils/src/index.ts"],
+      "@packages/utils/*": ["./node_modules/@packages/utils/src/*"]
     }
   },
   "include": [

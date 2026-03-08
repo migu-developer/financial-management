@@ -22,6 +22,7 @@
   "dependencies": {
     "@expo/vector-icons": "catalog:",
     "@features/auth": "workspace:*",
+    "@features/dashboard": "workspace:*",
     "@features/landing": "workspace:*",
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",

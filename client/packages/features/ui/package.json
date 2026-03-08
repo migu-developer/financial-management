@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "catalog:",
-    "@packages/i18n": "workspace:*"
+    "@packages/i18n": "workspace:*",
+    "@packages/utils": "workspace:*"
   },
   "peerDependencies": {
     "react": "catalog:",

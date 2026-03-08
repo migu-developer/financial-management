@@ -12,6 +12,13 @@
 export const generic = {
   white: '#FFFFFF',
   black: '#000000',
+  error: '#EF4444',
+  providers: {
+    google: '#EA4335',
+    facebook: '#1877F2',
+    microsoft: '#00A4EF',
+    apple: '#FFFFFF',
+  },
 };
 
 // ─── Brand Primary — teal / blue-green ───────────────────────────────────────

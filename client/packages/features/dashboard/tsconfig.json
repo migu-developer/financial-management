@@ -1,0 +1,21 @@
+{
+  "extends": "@packages/config/tsconfig.expo.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@features/dashboard": ["./src/index.ts"],
+      "@features/dashboard/presentation/*": ["./src/presentation/*"],
+      "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
+      "@features/ui": ["./node_modules/@features/ui/src/index.ts"],
+      "@features/ui/*": ["./node_modules/@features/ui/src/*"],
+      "@features/ui/components/*": [
+        "./node_modules/@features/ui/src/components/*"
+      ],
+      "@features/ui/utils/*": ["./node_modules/@features/ui/src/utils/*"]
+    }
+  },
+  "include": ["src", "nativewind-env.d.ts", "eslint.config.ts"],
+  "exclude": ["node_modules", ".turbo"]
+}

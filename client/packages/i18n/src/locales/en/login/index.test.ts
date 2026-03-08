@@ -7,8 +7,14 @@ describe('en/login namespace', () => {
     expect(typeof login).toBe('object');
   });
 
-  it('is an empty namespace ready for translations', () => {
-    expect(Object.keys(login)).toHaveLength(0);
+  it('has required top-level keys', () => {
+    expect(login).toHaveProperty('title');
+    expect(login).toHaveProperty('emailLabel');
+    expect(login).toHaveProperty('passwordLabel');
+    expect(login).toHaveProperty('signInButton');
+    expect(login).toHaveProperty('social');
+    expect(login).toHaveProperty('register');
+    expect(login).toHaveProperty('forgotPasswordPage');
   });
 
   it('satisfies the LoginTranslation type', () => {

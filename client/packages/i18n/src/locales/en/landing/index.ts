@@ -105,6 +105,63 @@ export const landing = {
     copyright: '© {{year}} Financial Management. All rights reserved.',
     tagline: 'Made with ♥ for personal finance management',
   },
+  privacy: {
+    title: 'Privacy Policy',
+    lastUpdated: 'March 7, 2026',
+    back: 'Back',
+    sections: {
+      intro: 'Introduction',
+      dataCollection: 'Information We Collect',
+      dataUse: 'How We Use Your Information',
+      dataSharing: 'Data Sharing',
+      dataSecurity: 'Data Security',
+      thirdPartyAuth: 'Third-Party Authentication',
+      userRights: 'Your Rights',
+      policyChanges: 'Policy Changes',
+      contactInfo: 'Contact',
+    },
+  },
+  terms: {
+    title: 'Terms of Service',
+    lastUpdated: 'March 7, 2026',
+    back: 'Back',
+    sections: {
+      intro: 'Introduction',
+      acceptance: 'Acceptance of Terms',
+      serviceDescription: 'Service Description',
+      useOfServices: 'Use of Services',
+      userContent: 'User Content',
+      thirdPartyServices: 'Third-Party Services',
+      liabilityLimitation: 'Limitation of Liability',
+      modifications: 'Modifications',
+      termination: 'Termination',
+      applicableLaw: 'Applicable Law',
+      contactInfo: 'Contact',
+    },
+  },
+  contact: {
+    title: 'Contact Us',
+    subtitle:
+      "We'd love to hear from you. Reach out with questions, feedback, or support requests.",
+    back: 'Back',
+    emailLabel: 'Email',
+    email: 'gutierrezmayamiguelangel@gmail.com',
+    responseTime: 'We typically respond within 24–48 hours.',
+    sections: {
+      support: {
+        title: 'Technical Support',
+        body: 'For technical issues, app bugs, or feature requests, send us an email and we will get back to you promptly.',
+      },
+      privacyInquiries: {
+        title: 'Privacy & Data',
+        body: 'For questions about how we handle your data or to exercise your data rights, contact our privacy team.',
+      },
+      business: {
+        title: 'Business',
+        body: 'For partnerships, press inquiries, or business opportunities, reach out to our team.',
+      },
+    },
+  },
   notFound: {
     code: '404',
     title: 'Page not found',

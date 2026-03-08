@@ -1,14 +1,17 @@
-import { nodeConfig } from '@packages/config/eslint';
+import { getNodeConfig } from '@packages/config/eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import { defineConfig } from 'eslint/config';
 
-const base = Array.isArray(nodeConfig) ? nodeConfig : [nodeConfig];
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig([
   { ignores: ['.react-email/**', 'coverage/**', 'node_modules/**'] },
-  ...base,
+  ...getNodeConfig(__dirname),
   {
     files: ['**/*.tsx'],
     plugins: {
@@ -18,6 +21,7 @@ export default defineConfig([
     },
     languageOptions: {
       parserOptions: {
+        tsconfigRootDir: __dirname,
         ecmaFeatures: { jsx: true },
       },
       globals: {
