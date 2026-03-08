@@ -19,6 +19,10 @@ const config: Config = {
     '^@packages/utils$': '<rootDir>/../packages/utils/src/index.ts',
     '^@features/auth$': '<rootDir>/../packages/features/auth/src/index.ts',
     '^@features/auth/(.*)$': '<rootDir>/../packages/features/auth/src/$1',
+    '^@features/dashboard$':
+      '<rootDir>/../packages/features/dashboard/src/index.ts',
+    '^@features/dashboard/(.*)$':
+      '<rootDir>/../packages/features/dashboard/src/$1',
     '^@features/landing$':
       '<rootDir>/../packages/features/landing/src/index.ts',
     '^@features/landing/(.*)$': '<rootDir>/../packages/features/landing/src/$1',

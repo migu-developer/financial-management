@@ -10,6 +10,7 @@ export default function LoginScreen() {
     <LoginPage
       onForgotPassword={() => router.push(ROUTES.authForgotPassword as never)}
       onSignUp={() => router.push(ROUTES.authRegister as never)}
+      onSignInSuccess={() => router.replace(ROUTES.dashboardHome as never)}
     />
   );
 }

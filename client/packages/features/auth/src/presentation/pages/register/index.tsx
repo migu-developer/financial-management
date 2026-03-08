@@ -1,4 +1,4 @@
-import { RegisterTemplate } from '@features/auth/presentation/components/templates/register-template';
+import { RegisterTemplate } from '@features/auth/presentation/components/shared/templates/register-template';
 
 interface RegisterPageProps {
   onBack: () => void;

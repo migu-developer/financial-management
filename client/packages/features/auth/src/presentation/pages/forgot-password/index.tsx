@@ -1,4 +1,4 @@
-import { ForgotPasswordTemplate } from '@features/auth/presentation/components/templates/forgot-password-template';
+import { ForgotPasswordTemplate } from '@features/auth/presentation/components/shared/templates/forgot-password-template';
 
 interface ForgotPasswordPageProps {
   onBack: () => void;

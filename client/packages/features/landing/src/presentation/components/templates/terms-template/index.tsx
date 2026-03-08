@@ -111,8 +111,8 @@ export function TermsTemplate({ onBackPress }: TermsTemplateProps) {
         {SECTIONS.map(({ key, paragraphs }) => (
           <LegalSection
             key={key}
-            title={t(`terms.sections.${key}` as never)}
-            paragraphs={paragraphs as unknown as string[]}
+            title={t(`terms.sections.${key}` as `terms.sections.${typeof key}`)}
+            paragraphs={paragraphs}
           />
         ))}
       </ScrollView>

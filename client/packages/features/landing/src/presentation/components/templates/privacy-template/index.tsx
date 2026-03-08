@@ -103,8 +103,8 @@ export function PrivacyTemplate({ onBackPress }: PrivacyTemplateProps) {
         {SECTIONS.map(({ key, paragraphs }) => (
           <LegalSection
             key={key}
-            title={t(`privacy.sections.${key}` as never)}
-            paragraphs={paragraphs as unknown as string[]}
+            title={t(`privacy.sections.${key}` as `privacy.sections.${typeof key}`)}
+            paragraphs={paragraphs}
           />
         ))}
       </ScrollView>

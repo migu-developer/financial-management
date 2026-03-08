@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Screen name={ROUTE_NAMES.index} />
         <Stack.Screen name={ROUTE_NAMES.landing} />
         <Stack.Screen name={ROUTE_NAMES.auth} />
+        <Stack.Screen name={ROUTE_NAMES.dashboard} />
         <Stack.Screen name={ROUTE_NAMES.privacy} />
         <Stack.Screen name={ROUTE_NAMES.terms} />
         <Stack.Screen name={ROUTE_NAMES.contact} />
