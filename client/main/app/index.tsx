@@ -1,7 +1,13 @@
-import { ROUTES } from '@/utils/route';
 import { Redirect } from 'expo-router';
+import type { Href } from 'expo-router';
+
+import { isWeb } from '@packages/utils';
+import { ROUTES } from '@/utils/route';
 
 export default function Index() {
-  // Web: show landing page. Mobile: also landing until auth is implemented.
-  return <Redirect href={ROUTES.landing as never} />;
+  if (isWeb()) {
+    return <Redirect href={ROUTES.landing as Href} />;
+  }
+
+  return <Redirect href={ROUTES.authLogin as Href} />;
 }
