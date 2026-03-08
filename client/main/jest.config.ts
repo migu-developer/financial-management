@@ -33,7 +33,10 @@ const config: Config = {
     '^react-native-reanimated$':
       '<rootDir>/tests/__mocks__/react-native-reanimated.ts',
     '^expo-router$': '<rootDir>/tests/__mocks__/expo-router.ts',
+    '^expo-splash-screen$': '<rootDir>/tests/__mocks__/expo-splash-screen.ts',
     '^expo-status-bar$': '<rootDir>/tests/__mocks__/expo-status-bar.ts',
+    '^@react-native-async-storage/async-storage$':
+      '<rootDir>/tests/__mocks__/async-storage.ts',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/tests/__mocks__/nativewind.ts',
   },

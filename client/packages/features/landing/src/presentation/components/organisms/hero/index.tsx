@@ -18,7 +18,7 @@ export function HeroSection({
 
   return (
     <View
-      className="w-full bg-slate-900 px-6 py-20"
+      className="w-full bg-slate-50 dark:bg-slate-900 px-6 py-20"
       accessibilityRole="none"
       accessible={false}
     >
@@ -36,7 +36,7 @@ export function HeroSection({
 
         {/* Headline */}
         <Text
-          className="text-white font-extrabold text-4xl web:text-6xl leading-tight mb-6"
+          className="text-slate-900 dark:text-white font-extrabold text-4xl web:text-6xl leading-tight mb-6"
           accessibilityRole="header"
           aria-level={1}
         >
@@ -46,7 +46,7 @@ export function HeroSection({
         </Text>
 
         {/* Subtitle */}
-        <Text className="text-slate-400 text-lg web:text-xl leading-relaxed mb-10">
+        <Text className="text-slate-500 dark:text-slate-400 text-lg web:text-xl leading-relaxed mb-10">
           {t('hero.subtitle')}
         </Text>
 
@@ -70,20 +70,20 @@ export function HeroSection({
         </View>
 
         {/* Social proof stats */}
-        <View className="flex-row gap-8 flex-wrap border-t border-slate-800 pt-8">
+        <View className="flex-row gap-8 flex-wrap border-t border-slate-200 dark:border-slate-800 pt-8">
           <View>
-            <Text className="text-white font-bold text-2xl">
+            <Text className="text-slate-900 dark:text-white font-bold text-2xl">
               {t('hero.stats.rating.value')}
             </Text>
-            <Text className="text-slate-500 text-sm">
+            <Text className="text-slate-600 dark:text-slate-500 text-sm">
               {t('hero.stats.rating.label')}
             </Text>
           </View>
           <View>
-            <Text className="text-white font-bold text-2xl">
+            <Text className="text-slate-900 dark:text-white font-bold text-2xl">
               {t('hero.stats.uptime.value')}
             </Text>
-            <Text className="text-slate-500 text-sm">
+            <Text className="text-slate-600 dark:text-slate-500 text-sm">
               {t('hero.stats.uptime.label')}
             </Text>
           </View>

@@ -13,7 +13,7 @@ export function NotFoundTemplate({ onGoHomePress }: NotFoundTemplateProps) {
   const { t } = useTranslation('landing');
 
   return (
-    <View className="flex-1 bg-slate-900 items-center justify-center px-6">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900 items-center justify-center px-6">
       <Text
         className="text-center font-bold"
         style={{ fontSize: 96, lineHeight: 112, color: primary[600] }}
@@ -21,11 +21,11 @@ export function NotFoundTemplate({ onGoHomePress }: NotFoundTemplateProps) {
         {t('notFound.code')}
       </Text>
 
-      <Text className="text-white font-bold text-2xl text-center mt-2 mb-4">
+      <Text className="text-slate-900 dark:text-white font-bold text-2xl text-center mt-2 mb-4">
         {t('notFound.title')}
       </Text>
 
-      <Text className="text-slate-400 text-base text-center mb-8">
+      <Text className="text-slate-500 dark:text-slate-400 text-base text-center mb-8">
         {t('notFound.description')}
       </Text>
 

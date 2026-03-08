@@ -32,7 +32,7 @@ export function LandingFooter({
 
   return (
     <View
-      className="w-full bg-slate-900 border-t border-slate-800 px-6 py-10"
+      className="w-full bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-10"
       accessibilityRole="none"
     >
       <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
@@ -47,7 +47,7 @@ export function LandingFooter({
                 accessibilityElementsHidden
               />
             )}
-            <Text className="text-white font-bold text-base">
+            <Text className="text-slate-900 dark:text-white font-bold text-base">
               {t('footer.logo')}
             </Text>
           </View>
@@ -61,7 +61,7 @@ export function LandingFooter({
                 accessibilityLabel={t(`footer.links.${key}.a11y`)}
                 onPress={onPressMap[key]}
               >
-                <Text className="text-slate-400 text-sm">
+                <Text className="text-slate-500 dark:text-slate-400 text-sm">
                   {t(`footer.links.${key}.label`)}
                 </Text>
               </TouchableOpacity>
@@ -70,14 +70,16 @@ export function LandingFooter({
         </View>
 
         {/* Divider */}
-        <View className="border-t border-slate-800 mb-6" />
+        <View className="border-t border-slate-200 dark:border-slate-800 mb-6" />
 
         {/* Bottom row: copyright + tagline */}
         <View className="flex-row items-center justify-between flex-wrap gap-2">
-          <Text className="text-slate-500 text-sm">
+          <Text className="text-slate-600 dark:text-slate-500 text-sm">
             {t('footer.copyright', { year: currentYear })}
           </Text>
-          <Text className="text-slate-600 text-xs">{t('footer.tagline')}</Text>
+          <Text className="text-slate-500 dark:text-slate-600 text-xs">
+            {t('footer.tagline')}
+          </Text>
         </View>
       </View>
     </View>

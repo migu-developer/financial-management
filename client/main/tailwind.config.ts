@@ -23,6 +23,8 @@ function resolvePackageSrc(name: string): string {
 const config: Config = {
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
+    resolvePackageSrc('@features/auth'),
+    resolvePackageSrc('@features/dashboard'),
     resolvePackageSrc('@features/landing'),
     resolvePackageSrc('@features/ui'),
   ],

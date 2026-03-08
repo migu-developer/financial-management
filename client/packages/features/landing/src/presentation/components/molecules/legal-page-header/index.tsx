@@ -16,7 +16,7 @@ export function LegalPageHeader({
   onBackPress,
 }: LegalPageHeaderProps) {
   return (
-    <View className="bg-slate-900 px-6 pt-12 pb-4 border-b border-slate-800 flex-row items-center">
+    <View className="bg-slate-50 dark:bg-slate-900 px-6 pt-12 pb-4 border-b border-slate-200 dark:border-slate-800 flex-row items-center">
       {onBackPress && (
         <TouchableOpacity
           onPress={onBackPress}
@@ -27,7 +27,9 @@ export function LegalPageHeader({
           <MaterialIcons name="arrow-back" size={24} color={primary[400]} />
         </TouchableOpacity>
       )}
-      <Text className="text-white font-bold text-2xl flex-1">{title}</Text>
+      <Text className="text-slate-900 dark:text-white font-bold text-2xl flex-1">
+        {title}
+      </Text>
     </View>
   );
 }

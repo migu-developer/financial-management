@@ -21,7 +21,7 @@ export function LandingHeader({
   const { t } = useTranslation('landing');
 
   return (
-    <View className="w-full bg-slate-900 px-6 py-4 flex-row items-center justify-between">
+    <View className="w-full bg-slate-50 dark:bg-slate-900 px-6 py-4 flex-row items-center justify-between">
       {/* Logo */}
       <View
         className="flex-row items-center gap-2"
@@ -36,7 +36,7 @@ export function LandingHeader({
             accessibilityElementsHidden
           />
         )}
-        <Text className="text-white font-bold text-lg tracking-tight">
+        <Text className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">
           {t('header.logo')}
         </Text>
       </View>
@@ -52,7 +52,7 @@ export function LandingHeader({
           accessibilityLabel={t('header.a11y.navFeatures')}
           onPress={onFeaturesPress}
         >
-          <Text className="text-slate-300 text-sm font-medium">
+          <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
             {t('header.nav.features')}
           </Text>
         </TouchableOpacity>
@@ -61,7 +61,7 @@ export function LandingHeader({
           accessibilityLabel={t('header.a11y.navHowItWorks')}
           onPress={onHowItWorksPress}
         >
-          <Text className="text-slate-300 text-sm font-medium">
+          <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
             {t('header.nav.howItWorks')}
           </Text>
         </TouchableOpacity>

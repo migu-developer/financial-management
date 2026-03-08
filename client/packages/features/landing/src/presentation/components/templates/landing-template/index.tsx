@@ -45,7 +45,7 @@ export function LandingTemplate({
   };
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
       <ScrollView
         ref={scrollViewRef}
         stickyHeaderIndices={[0]}

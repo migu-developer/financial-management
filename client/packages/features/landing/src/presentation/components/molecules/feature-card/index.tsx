@@ -28,7 +28,7 @@ export function FeatureCard({
 }: FeatureCardProps) {
   return (
     <View
-      className={`bg-white rounded-2xl p-6 shadow-sm ${className}`}
+      className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm ${className}`}
       style={style}
       accessible
       accessibilityRole="none"

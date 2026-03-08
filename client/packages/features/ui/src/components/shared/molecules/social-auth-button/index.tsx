@@ -43,7 +43,7 @@ export function SocialAuthButton({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled}
-      className={`flex-row items-center justify-center bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 mb-3 ${
+      className={`flex-row items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 mb-3 ${
         disabled ? 'opacity-50' : ''
       }`}
       accessibilityRole="button"
@@ -52,7 +52,9 @@ export function SocialAuthButton({
       <View className="mr-3">
         <MaterialCommunityIcons name={iconName} size={20} color={iconColor} />
       </View>
-      <Text className="text-white text-base font-medium">{label}</Text>
+      <Text className="text-slate-900 dark:text-white text-base font-medium">
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
