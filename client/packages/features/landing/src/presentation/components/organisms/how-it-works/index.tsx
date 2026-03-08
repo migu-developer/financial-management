@@ -21,7 +21,10 @@ export function HowItWorksSection() {
   const { t } = useTranslation('landing');
 
   return (
-    <View className="w-full bg-slate-50 px-6 py-20" accessible={false}>
+    <View
+      className="w-full bg-slate-50 dark:bg-slate-800 px-6 py-20"
+      accessible={false}
+    >
       <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
         {/* Section label */}
         <Text className="text-primary-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
@@ -30,7 +33,7 @@ export function HowItWorksSection() {
 
         {/* Section title */}
         <Text
-          className="text-slate-900 font-bold text-3xl web:text-4xl text-center mb-4"
+          className="text-slate-900 dark:text-white font-bold text-3xl web:text-4xl text-center mb-4"
           accessibilityRole="header"
           aria-level={2}
         >
@@ -38,7 +41,7 @@ export function HowItWorksSection() {
         </Text>
 
         <Text
-          className="text-slate-500 text-lg text-center mb-14"
+          className="text-slate-500 dark:text-slate-400 text-lg text-center mb-14"
           style={{ maxWidth: 480, alignSelf: 'center' }}
         >
           {t('howItWorks.subtitle')}
@@ -65,7 +68,7 @@ export function HowItWorksSection() {
               >
                 {/* Step number + icon */}
                 <View className="relative mb-5">
-                  <View className="w-20 h-20 rounded-2xl bg-white shadow-sm items-center justify-center">
+                  <View className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-700 shadow-sm items-center justify-center">
                     <MaterialIcons
                       name={step.icon}
                       size={36}
@@ -73,7 +76,7 @@ export function HowItWorksSection() {
                     />
                   </View>
                   <View
-                    className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-slate-900 items-center justify-center"
+                    className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-slate-900 dark:bg-slate-600 items-center justify-center"
                     accessible={false}
                   >
                     <Text className="text-white text-xs font-bold">
@@ -83,12 +86,12 @@ export function HowItWorksSection() {
                 </View>
 
                 {/* Step title */}
-                <Text className="text-slate-900 font-semibold text-lg text-center mb-2">
+                <Text className="text-slate-900 dark:text-white font-semibold text-lg text-center mb-2">
                   {title}
                 </Text>
 
                 {/* Step description */}
-                <Text className="text-slate-500 text-sm text-center leading-relaxed">
+                <Text className="text-slate-500 dark:text-slate-400 text-sm text-center leading-relaxed">
                   {description}
                 </Text>
               </View>

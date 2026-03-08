@@ -14,20 +14,20 @@ export function RegisterTemplate({ onBack }: RegisterTemplateProps) {
   const { t } = useTranslation('login');
 
   return (
-    <View className="flex-1 bg-slate-900 items-center justify-center px-8">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900 items-center justify-center px-8">
       <Icon
         name="construction"
         size={64}
         color={primary[400]}
         containerClassName="mb-6"
       />
-      <Text className="text-white font-bold text-2xl mb-3 text-center">
+      <Text className="text-slate-900 dark:text-white font-bold text-2xl mb-3 text-center">
         {t('register.title')}
       </Text>
       <Text className="text-primary-400 font-semibold text-lg mb-4 text-center">
         {t('register.comingSoon')}
       </Text>
-      <Text className="text-slate-400 text-base text-center mb-8">
+      <Text className="text-slate-500 dark:text-slate-400 text-base text-center mb-8">
         {t('register.description')}
       </Text>
       <TouchableOpacity

@@ -50,7 +50,9 @@ export function FormInput({
 
   return (
     <View className="mb-4">
-      <Text className="text-slate-300 text-sm font-medium mb-1">{label}</Text>
+      <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium mb-1">
+        {label}
+      </Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -60,7 +62,7 @@ export function FormInput({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         editable={!disabled}
-        className={`bg-slate-800 text-white rounded-xl px-4 py-3 text-base border ${
+        className={`bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-base border ${
           disabled ? 'opacity-50' : ''
         }`}
         style={{ borderColor: error ? generic.error : getBorderColor() }}

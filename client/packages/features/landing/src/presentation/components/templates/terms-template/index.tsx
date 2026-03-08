@@ -95,7 +95,7 @@ export function TermsTemplate({ onBackPress }: TermsTemplateProps) {
   const { t } = useTranslation('landing');
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
       <LegalPageHeader
         title={t('terms.title')}
         backLabel={t('terms.back')}
@@ -105,7 +105,7 @@ export function TermsTemplate({ onBackPress }: TermsTemplateProps) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
       >
-        <Text className="text-slate-500 text-sm mb-8">
+        <Text className="text-slate-600 dark:text-slate-500 text-sm mb-8">
           {t('terms.lastUpdated')}
         </Text>
         {SECTIONS.map(({ key, paragraphs }) => (

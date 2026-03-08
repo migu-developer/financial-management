@@ -36,7 +36,7 @@ export function LoginTemplate({
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-900"
+      className="flex-1 bg-slate-50 dark:bg-slate-900"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
@@ -48,10 +48,12 @@ export function LoginTemplate({
     >
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-8">
-          <Text className="text-white font-bold text-3xl mb-2">
+          <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
             {t('title')}
           </Text>
-          <Text className="text-slate-400 text-base">{t('subtitle')}</Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-base">
+            {t('subtitle')}
+          </Text>
         </View>
 
         {error ? (
@@ -95,9 +97,11 @@ export function LoginTemplate({
         />
 
         <View className="flex-row items-center mb-6">
-          <View className="flex-1 h-px bg-slate-700" />
-          <Text className="text-slate-500 text-sm mx-4">{t('or')}</Text>
-          <View className="flex-1 h-px bg-slate-700" />
+          <View className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+          <Text className="text-slate-500 dark:text-slate-500 text-sm mx-4">
+            {t('or')}
+          </Text>
+          <View className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
         </View>
 
         {SOCIAL_PROVIDERS.map((provider) => (
@@ -111,7 +115,9 @@ export function LoginTemplate({
         ))}
 
         <View className="flex-row justify-center mt-6">
-          <Text className="text-slate-400 text-sm">{t('noAccount')} </Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-sm">
+            {t('noAccount')}{' '}
+          </Text>
           <TouchableOpacity onPress={onSignUp} accessibilityRole="button">
             <Text className="text-primary-400 text-sm font-semibold">
               {t('signUp')}

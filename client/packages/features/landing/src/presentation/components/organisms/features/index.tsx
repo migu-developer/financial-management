@@ -49,7 +49,10 @@ export function FeaturesSection() {
   const { t } = useTranslation('landing');
 
   return (
-    <View className="w-full bg-white px-6 py-20" accessible={false}>
+    <View
+      className="w-full bg-white dark:bg-slate-900 px-6 py-20"
+      accessible={false}
+    >
       <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
         {/* Section label */}
         <Text className="text-primary-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
@@ -58,7 +61,7 @@ export function FeaturesSection() {
 
         {/* Section title */}
         <Text
-          className="text-slate-900 font-bold text-3xl web:text-4xl text-center mb-4"
+          className="text-slate-900 dark:text-white font-bold text-3xl web:text-4xl text-center mb-4"
           accessibilityRole="header"
           aria-level={2}
         >
@@ -67,7 +70,7 @@ export function FeaturesSection() {
 
         {/* Section subtitle */}
         <Text
-          className="text-slate-500 text-lg text-center mb-14"
+          className="text-slate-500 dark:text-slate-400 text-lg text-center mb-14"
           style={{ maxWidth: 560, alignSelf: 'center' }}
         >
           {t('features.subtitle')}

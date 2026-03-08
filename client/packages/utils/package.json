@@ -9,6 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "catalog:",
     "react-native": "catalog:"
   },
   "devDependencies": {

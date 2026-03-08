@@ -87,7 +87,7 @@ export function PrivacyTemplate({ onBackPress }: PrivacyTemplateProps) {
   const { t } = useTranslation('landing');
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-900">
       <LegalPageHeader
         title={t('privacy.title')}
         backLabel={t('privacy.back')}
@@ -97,7 +97,7 @@ export function PrivacyTemplate({ onBackPress }: PrivacyTemplateProps) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
       >
-        <Text className="text-slate-500 text-sm mb-8">
+        <Text className="text-slate-600 dark:text-slate-500 text-sm mb-8">
           {t('privacy.lastUpdated')}
         </Text>
         {SECTIONS.map(({ key, paragraphs }) => (

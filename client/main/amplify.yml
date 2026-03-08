@@ -10,7 +10,8 @@ applications:
           commands:
             - corepack enable
             - corepack prepare pnpm@10.29.3 --activate
-            - pnpm install --frozen-lockfile
+            - pnpm config set store-dir .pnpm-store
+            - pnpm install --frozen-lockfile --filter @client/main...
         build:
           commands:
             - echo "EXPO_PUBLIC_USER_POOL_ID=$USER_POOL_ID" > client/main/.env
@@ -27,4 +28,4 @@ applications:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/*
+          - .pnpm-store/**/*

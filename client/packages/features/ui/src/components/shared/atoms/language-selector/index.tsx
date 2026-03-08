@@ -26,20 +26,22 @@ export function LanguageSelector() {
     <View style={{ position: 'relative', zIndex: 50 }}>
       <Pressable
         onPress={() => setIsOpen((v) => !v)}
-        className="h-9 px-3 rounded-xl flex-row items-center gap-1 bg-slate-700/60"
+        className="h-9 px-3 rounded-xl flex-row items-center gap-1 bg-slate-200/60 dark:bg-slate-700/60"
         accessibilityRole="button"
         accessibilityLabel={t('languageSelector.label')}
         accessibilityState={{ expanded: isOpen }}
       >
-        <Text className="text-white text-xs font-bold">
+        <Text className="text-slate-900 dark:text-white text-xs font-bold">
           {currentLang.slice(0, 2).toUpperCase()}
         </Text>
-        <Text className="text-slate-300 text-xs">{isOpen ? '▴' : '▾'}</Text>
+        <Text className="text-slate-600 dark:text-slate-300 text-xs">
+          {isOpen ? '▴' : '▾'}
+        </Text>
       </Pressable>
 
       {isOpen && (
         <View
-          className="absolute right-0 bg-slate-800 rounded-xl overflow-hidden border border-slate-700"
+          className="absolute right-0 bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700"
           style={{ top: 40, minWidth: 140, zIndex: 100 }}
         >
           {LANGUAGES.map((lang) => (
@@ -47,14 +49,16 @@ export function LanguageSelector() {
               key={lang}
               onPress={() => handleSelect(lang)}
               className={`px-4 py-3 flex-row items-center justify-between ${
-                lang === currentLang ? 'bg-slate-700' : ''
+                lang === currentLang ? 'bg-slate-100 dark:bg-slate-700' : ''
               }`}
               accessibilityRole="menuitem"
               accessibilityLabel={getLangName(lang)}
             >
               <Text
                 className={`text-sm font-medium ${
-                  lang === currentLang ? 'text-white' : 'text-slate-300'
+                  lang === currentLang
+                    ? 'text-slate-900 dark:text-white'
+                    : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {getLangName(lang)}
