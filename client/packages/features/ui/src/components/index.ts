@@ -5,8 +5,5 @@ export { Icon } from './shared/atoms/icon';
 export { LanguageSelector } from './shared/atoms/language-selector';
 export { Text } from './shared/atoms/text';
 export { ThemeToggle } from './shared/atoms/theme-toggle';
-export { FeatureCard } from './shared/molecules/feature-card';
-export { LegalSection } from './shared/molecules/legal-section';
-export { LegalPageHeader } from './shared/molecules/legal-page-header';
 export { SocialAuthButton } from './shared/molecules/social-auth-button';
 export type { SocialProvider } from './shared/molecules/social-auth-button';

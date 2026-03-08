@@ -3,9 +3,7 @@ import React from 'react';
 import { View } from 'react-native';
 import type { ViewStyle } from 'react-native';
 
-import { Icon } from '@features/ui/components/shared/atoms/icon';
-import { Text } from '@features/ui/components/shared/atoms/text';
-import { primary } from '@features/ui/utils/colors';
+import { Icon, Text, primary } from '@features/ui';
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
