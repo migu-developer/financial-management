@@ -5,13 +5,15 @@ describe('constants — design system enums', () => {
     it('has LIGHT and DARK values', () => {
       expect(ColorScheme.LIGHT).toBe('light');
       expect(ColorScheme.DARK).toBe('dark');
+      expect(ColorScheme.SYSTEM).toBe('system');
     });
 
     it('only has two members', () => {
       const keys = Object.keys(ColorScheme).filter((k) => isNaN(Number(k)));
-      expect(keys).toHaveLength(2);
+      expect(keys).toHaveLength(3);
       expect(keys).toContain('LIGHT');
       expect(keys).toContain('DARK');
+      expect(keys).toContain('SYSTEM');
     });
   });
 
