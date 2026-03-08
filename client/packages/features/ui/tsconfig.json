@@ -5,9 +5,12 @@
     "rootDir": ".",
     "paths": {
       "@features/ui": ["./src/index.ts"],
+      "@features/ui/*": ["./src/*"],
       "@features/ui/components/*": ["./src/components/*"],
       "@features/ui/utils/*": ["./src/utils/*"],
-      "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"]
+      "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
+      "@packages/utils": ["./node_modules/@packages/utils/src/index.ts"],
+      "@packages/utils/*": ["./node_modules/@packages/utils/src/*"]
     }
   },
   "include": ["src", "nativewind-env.d.ts", "eslint.config.ts"],

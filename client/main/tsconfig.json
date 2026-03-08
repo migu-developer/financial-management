@@ -14,7 +14,8 @@
       "@features/landing/*": ["./node_modules/@features/landing/src/*"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
-      "@utils/*": ["./node_modules/@utils/*"]
+      "@packages/utils": ["./node_modules/@packages/utils/src/index.ts"],
+      "@packages/utils/*": ["./node_modules/@packages/utils/src/*"]
     }
   },
   "include": [

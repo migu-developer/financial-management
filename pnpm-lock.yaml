@@ -553,6 +553,9 @@ importers:
       '@packages/i18n':
         specifier: workspace:*
         version: link:../../i18n
+      '@packages/utils':
+        specifier: workspace:*
+        version: link:../../utils
       react:
         specifier: 'catalog:'
         version: 19.1.0
