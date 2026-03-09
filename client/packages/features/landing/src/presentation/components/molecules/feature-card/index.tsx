@@ -39,10 +39,10 @@ export function FeatureCard({
         color={iconColor}
         containerClassName={`w-14 h-14 rounded-xl items-center justify-center mb-4 ${iconBgClassName}`}
       />
-      <Text variant="h4" className="text-slate-900 mb-2">
+      <Text variant="h4" className="text-slate-900 dark:text-white mb-2">
         {title}
       </Text>
-      <Text variant="body-sm" className="text-slate-500">
+      <Text variant="body-sm" className="text-slate-500 dark:text-slate-400">
         {description}
       </Text>
     </View>

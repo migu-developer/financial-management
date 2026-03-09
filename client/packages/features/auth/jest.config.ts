@@ -12,6 +12,7 @@ const config: Config = {
     '^@packages/i18n/(.*)$': '<rootDir>/../../i18n/src/$1',
     '^@packages/utils$': '<rootDir>/../../utils/src/index.ts',
     '^@features/ui$': '<rootDir>/../ui/src/index.ts',
+    '^@features/ui/contexts/(.*)$': '<rootDir>/../ui/src/contexts/$1',
     '^@features/ui/hooks/(.*)$': '<rootDir>/../ui/src/hooks/$1',
     '^@features/ui/utils/(.*)$': '<rootDir>/../ui/src/utils/$1',
     '^@features/ui/components/(.*)$': '<rootDir>/../ui/src/components/$1',

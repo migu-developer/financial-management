@@ -1,11 +1,9 @@
 import React from 'react';
 import { Text, TextInput, View } from 'react-native';
-import type { ColorSchemeName, KeyboardTypeOptions } from 'react-native';
+import type { KeyboardTypeOptions } from 'react-native';
+import { useColorScheme } from 'nativewind';
 
 import { generic, surface } from '@features/ui/utils/colors';
-import { isWeb } from '@packages/utils';
-import { useColorScheme } from '@features/ui/hooks/use-color-scheme';
-import { useColorScheme as useWebColorScheme } from '@features/ui/hooks/use-color-scheme.web';
 import { ColorScheme } from '@features/ui/utils/constants';
 
 interface FormInputProps {
@@ -20,14 +18,6 @@ interface FormInputProps {
   disabled?: boolean;
 }
 
-const getColorScheme = (): ColorSchemeName => {
-  if (isWeb()) {
-    return useWebColorScheme();
-  }
-
-  return useColorScheme();
-};
-
 export function FormInput({
   label,
   value,
@@ -39,14 +29,13 @@ export function FormInput({
   error,
   disabled = false,
 }: FormInputProps) {
-  const colorScheme = getColorScheme();
+  const { colorScheme } = useColorScheme();
 
-  const getBorderColor = () => {
-    if (colorScheme === ColorScheme.DARK) {
-      return surface.dark.border;
-    }
-    return surface.light.border;
-  };
+  const borderColor = error
+    ? generic.error
+    : colorScheme === ColorScheme.DARK
+      ? surface.dark.border
+      : surface.light.border;
 
   return (
     <View className="mb-4">
@@ -65,7 +54,7 @@ export function FormInput({
         className={`bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-base border ${
           disabled ? 'opacity-50' : ''
         }`}
-        style={{ borderColor: error ? generic.error : getBorderColor() }}
+        style={{ borderColor }}
         accessibilityLabel={label}
       />
       {error ? (

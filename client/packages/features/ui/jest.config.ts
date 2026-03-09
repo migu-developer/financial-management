@@ -9,6 +9,7 @@ const config: Config = {
   },
   moduleNameMapper: {
     '^@features/ui$': '<rootDir>/src/index.ts',
+    '^@features/ui/contexts/(.*)$': '<rootDir>/src/contexts/$1',
     '^@features/ui/utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@features/ui/components/(.*)$': '<rootDir>/src/components/$1',
     '^@features/ui/hooks/(.*)$': '<rootDir>/src/hooks/$1',
