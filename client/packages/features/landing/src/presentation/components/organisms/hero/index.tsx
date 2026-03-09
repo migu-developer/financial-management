@@ -51,7 +51,7 @@ export function HeroSection({
         </Text>
 
         {/* CTA buttons */}
-        <View className="flex-row gap-4 flex-wrap mb-16">
+        <View className="flex-row gap-4 flex-wrap mb-16 justify-center md:justify-start">
           <Button
             label={t('hero.cta.getStarted')}
             size="lg"
@@ -70,7 +70,7 @@ export function HeroSection({
         </View>
 
         {/* Social proof stats */}
-        <View className="flex-row gap-8 flex-wrap border-t border-slate-200 dark:border-slate-800 pt-8">
+        <View className="flex-row gap-8 flex-wrap border-t border-slate-200 dark:border-slate-800 pt-8 justify-center md:justify-start">
           <View>
             <Text className="text-slate-900 dark:text-white font-bold text-2xl">
               {t('hero.stats.rating.value')}

@@ -21,63 +21,69 @@ export function LandingHeader({
   const { t } = useTranslation('landing');
 
   return (
-    <View className="w-full bg-slate-50 dark:bg-slate-900 px-6 py-4 flex-row items-center justify-between">
-      {/* Logo */}
-      <View
-        className="flex-row items-center gap-2"
-        accessible
-        accessibilityRole="none"
-        accessibilityLabel={t('header.logo')}
-      >
-        {logoUrl && (
-          <Image
-            source={{ uri: logoUrl }}
-            style={{ width: 36, height: 36, borderRadius: 8 }}
-            accessibilityElementsHidden
+    <View className="w-full bg-slate-50 dark:bg-slate-900 px-4 md:px-6 py-4">
+      {/* Main row: logo + nav (md+) + controls */}
+      <View className="flex-row items-center justify-between">
+        {/* Logo */}
+        <View
+          className="flex-row items-center gap-2"
+          accessible
+          accessibilityRole="none"
+          accessibilityLabel={t('header.logo')}
+        >
+          {logoUrl && (
+            <Image
+              source={{ uri: logoUrl }}
+              style={{ width: 36, height: 36, borderRadius: 8 }}
+              accessibilityElementsHidden
+            />
+          )}
+          {/* App name: hidden on small screens to prevent overflow */}
+          <View className="hidden sm:flex">
+            <Text className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">
+              {t('header.logo')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Nav links — md and above */}
+        <View
+          className="hidden md:flex flex-row gap-8"
+          accessibilityRole="none"
+          aria-label={t('header.a11y.nav')}
+        >
+          <TouchableOpacity
+            accessibilityRole="link"
+            accessibilityLabel={t('header.a11y.navFeatures')}
+            onPress={onFeaturesPress}
+          >
+            <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+              {t('header.nav.features')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="link"
+            accessibilityLabel={t('header.a11y.navHowItWorks')}
+            onPress={onHowItWorksPress}
+          >
+            <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+              {t('header.nav.howItWorks')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Right controls — always visible */}
+        <View className="flex-row items-center gap-2 md:gap-3">
+          <LanguageSelector />
+          <ThemeToggle />
+          <Button
+            label={t('header.cta')}
+            size="sm"
+            variant="primary"
+            onPress={onLoginPress}
+            accessibilityLabel={t('header.a11y.cta')}
           />
-        )}
-        <Text className="text-slate-900 dark:text-white font-bold text-lg tracking-tight">
-          {t('header.logo')}
-        </Text>
-      </View>
-
-      {/* Nav links — visible only on web */}
-      <View
-        className="hidden web:flex flex-row gap-8"
-        accessibilityRole="none"
-        aria-label={t('header.a11y.nav')}
-      >
-        <TouchableOpacity
-          accessibilityRole="link"
-          accessibilityLabel={t('header.a11y.navFeatures')}
-          onPress={onFeaturesPress}
-        >
-          <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
-            {t('header.nav.features')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="link"
-          accessibilityLabel={t('header.a11y.navHowItWorks')}
-          onPress={onHowItWorksPress}
-        >
-          <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
-            {t('header.nav.howItWorks')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* CTA + language selector + theme toggle */}
-      <View className="flex-row items-center gap-3">
-        <LanguageSelector />
-        <ThemeToggle />
-        <Button
-          label={t('header.cta')}
-          size="sm"
-          variant="primary"
-          onPress={onLoginPress}
-          accessibilityLabel={t('header.a11y.cta')}
-        />
+        </View>
       </View>
     </View>
   );
