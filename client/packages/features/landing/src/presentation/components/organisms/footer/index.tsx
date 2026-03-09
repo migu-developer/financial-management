@@ -37,7 +37,7 @@ export function LandingFooter({
     >
       <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
         {/* Top row: logo + links */}
-        <View className="flex-row items-center justify-between flex-wrap gap-4 mb-6">
+        <View className="flex-row items-center justify-center md:justify-between flex-wrap gap-4 mb-6">
           {/* Logo */}
           <View className="flex-row items-center gap-2">
             {logoUrl && (

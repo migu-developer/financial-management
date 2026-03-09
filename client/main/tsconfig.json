@@ -12,6 +12,7 @@
       ],
       "@features/dashboard/*": ["./node_modules/@features/dashboard/src/*"],
       "@features/landing/*": ["./node_modules/@features/landing/src/*"],
+      "@features/ui": ["./node_modules/@features/ui/src/index.ts"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
       "@packages/utils": ["./node_modules/@packages/utils/src/index.ts"],
