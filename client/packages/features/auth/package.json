@@ -13,7 +13,15 @@
   "dependencies": {
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",
-    "@packages/utils": "workspace:*"
+    "@packages/utils": "workspace:*",
+    "amazon-cognito-identity-js": "catalog:",
+    "expo-auth-session": "catalog:",
+    "expo-secure-store": "catalog:",
+    "expo-web-browser": "catalog:",
+    "expo-linking": "catalog:",
+    "libphonenumber-js": "catalog:",
+    "react-native-qrcode-svg": "catalog:",
+    "react-native-svg": "catalog:"
   },
   "peerDependencies": {
     "react": "catalog:",

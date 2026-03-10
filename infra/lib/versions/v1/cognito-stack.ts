@@ -93,6 +93,7 @@ export interface CognitoStackProps extends BaseStackProps {
 export class CognitoStack extends BaseStack {
   public readonly userPool: UserPool;
   public readonly userPoolClient: UserPoolClient;
+  public readonly userPoolDomain: UserPoolDomain;
   public readonly identityPoolId: string;
 
   private readonly microsoftUrl: string = `https://login.microsoftonline.com`;
@@ -375,7 +376,7 @@ export class CognitoStack extends BaseStack {
 
     // ── User Pool Domain ───────────────────────────────
 
-    new UserPoolDomain(this, 'UserPoolDomain', {
+    this.userPoolDomain = new UserPoolDomain(this, 'UserPoolDomain', {
       userPool: this.userPool,
       cognitoDomain: { domainPrefix: props.domainPrefix },
     });
@@ -448,6 +449,13 @@ export class CognitoStack extends BaseStack {
       this,
       'UserPoolArn',
       this.userPool.userPoolArn,
+      version,
+      'Auth',
+    );
+    exportForCrossVersion(
+      this,
+      'CognitoDomain',
+      this.userPoolDomain.domainName,
       version,
       'Auth',
     );

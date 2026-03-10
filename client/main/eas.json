@@ -1,0 +1,58 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "distribution": "store",
+      "environment": "development",
+      "channel": "development",
+      "env": {
+        "APP_VARIANT": "development"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true
+    },
+    "production": {
+      "distribution": "store",
+      "environment": "production",
+      "channel": "production",
+      "env": {
+        "APP_VARIANT": "production"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "development": {
+      "ios": {
+        "ascAppId": "6760325928"
+      },
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "6760325948"
+      },
+      "android": {
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
+  }
+}

@@ -89,7 +89,9 @@ jest.mock('aws-cdk-lib/aws-cognito', () => {
     ...actual,
     UserPool: jest.fn().mockImplementation(() => mockUserPool),
     UserPoolClient: jest.fn().mockImplementation(() => mockUserPoolClient),
-    UserPoolDomain: jest.fn().mockImplementation(() => ({})),
+    UserPoolDomain: jest.fn().mockImplementation(() => ({
+      domainName: 'example.auth.us-east-1.amazoncognito.com',
+    })),
     UserPoolIdentityProviderGoogle: jest
       .fn()
       .mockImplementation(() => ({ node: {} })),
@@ -162,7 +164,7 @@ describe('CognitoStack', () => {
     expect(stack.identityPoolId).toBe('mock-identity-id');
   });
 
-  test('calls exportForCrossVersion four times with correct keys and Auth stack name', () => {
+  test('calls exportForCrossVersion five times with correct keys and Auth stack name', () => {
     const app = { node: { tryGetContext: jest.fn(), children: [] } };
     new CognitoStack(
       app as unknown as Construct,
@@ -170,7 +172,7 @@ describe('CognitoStack', () => {
       defaultProps,
     );
 
-    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(4);
+    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(5);
 
     expect(mockExportForCrossVersion).toHaveBeenCalledWith(
       expect.anything(),
@@ -197,6 +199,13 @@ describe('CognitoStack', () => {
       expect.anything(),
       'UserPoolArn',
       'mock-pool-arn',
+      'v1',
+      'Auth',
+    );
+    expect(mockExportForCrossVersion).toHaveBeenCalledWith(
+      expect.anything(),
+      'CognitoDomain',
+      'example.auth.us-east-1.amazoncognito.com',
       'v1',
       'Auth',
     );
