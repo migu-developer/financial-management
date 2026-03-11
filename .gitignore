@@ -56,3 +56,6 @@ CLAUDE.md
 .claude/settings.local.json
 .gemini/skills/
 .codex/skills/
+
+# Pnpm
+.pnpm-store/
