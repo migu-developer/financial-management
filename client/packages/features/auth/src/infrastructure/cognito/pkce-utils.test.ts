@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import { generatePkce } from './pkce-utils';
 
 describe('generatePkce', () => {
@@ -16,11 +18,10 @@ describe('generatePkce', () => {
     expect(codeVerifier).toMatch(/^[A-Za-z0-9\-_]+$/);
   });
 
-  it('codeChallenge is a non-empty base64url string (S256)', async () => {
+  it('codeChallenge is a 43-char base64url string (SHA-256 output, no padding)', async () => {
     const { codeChallenge } = await generatePkce();
     expect(typeof codeChallenge).toBe('string');
-    expect(codeChallenge.length).toBeGreaterThan(0);
-    // SHA-256 → 32 bytes → 43 base64url chars (no padding)
+    // SHA-256 → 32 bytes → 43 base64url chars (stripped padding)
     expect(codeChallenge.length).toBe(43);
     expect(codeChallenge).toMatch(/^[A-Za-z0-9\-_]+$/);
   });
@@ -39,16 +40,14 @@ describe('generatePkce', () => {
     expect(pkce1.state).not.toBe(pkce2.state);
   });
 
-  it('codeChallenge is deterministic for the same codeVerifier', async () => {
-    // Verify the S256 relationship: same input → same output
-    const pkce = await generatePkce();
-    // Recompute challenge from the same verifier using the same algorithm
-    const data = new TextEncoder().encode(pkce.codeVerifier);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    const expectedChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+  it('codeChallenge is the S256 (SHA-256 base64url) of codeVerifier', async () => {
+    const { codeVerifier, codeChallenge } = await generatePkce();
+    const expected = createHash('sha256')
+      .update(codeVerifier, 'utf8')
+      .digest('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
-    expect(pkce.codeChallenge).toBe(expectedChallenge);
+    expect(codeChallenge).toBe(expected);
   });
 });

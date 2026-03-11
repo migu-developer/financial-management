@@ -24,6 +24,7 @@ const config: Config = {
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
+    '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
   },
   setupFiles: ['<rootDir>/src/__mocks__/env.ts'],
   transformIgnorePatterns: ['/node_modules/(?!(i18next|react-i18next)/)/'],

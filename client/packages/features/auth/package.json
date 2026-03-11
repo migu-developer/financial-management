@@ -15,6 +15,7 @@
     "@packages/i18n": "workspace:*",
     "@packages/utils": "workspace:*",
     "amazon-cognito-identity-js": "catalog:",
+    "expo-crypto": "catalog:",
     "expo-auth-session": "catalog:",
     "expo-secure-store": "catalog:",
     "expo-web-browser": "catalog:",
