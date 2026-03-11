@@ -25,20 +25,31 @@ export interface ForgotPasswordDelivery {
   readonly medium: 'email' | 'sms';
 }
 
+export enum AuthChallengeType {
+  SESSION = 'SESSION',
+  NEW_PASSWORD_REQUIRED = 'NEW_PASSWORD_REQUIRED',
+  SOFTWARE_TOKEN_MFA = 'SOFTWARE_TOKEN_MFA',
+  SMS_MFA = 'SMS_MFA',
+  MFA_SETUP = 'MFA_SETUP',
+}
+
 export type AuthChallengeResult =
-  | { readonly type: 'SESSION'; readonly session: AuthSession }
+  | { readonly type: AuthChallengeType.SESSION; readonly session: AuthSession }
   | {
-      readonly type: 'NEW_PASSWORD_REQUIRED';
+      readonly type: AuthChallengeType.NEW_PASSWORD_REQUIRED;
       readonly session: string;
       readonly username: string;
     }
-  | { readonly type: 'SOFTWARE_TOKEN_MFA'; readonly session: string }
   | {
-      readonly type: 'SMS_MFA';
+      readonly type: AuthChallengeType.SOFTWARE_TOKEN_MFA;
+      readonly session: string;
+    }
+  | {
+      readonly type: AuthChallengeType.SMS_MFA;
       readonly session: string;
       readonly destination: string;
     }
-  | { readonly type: 'MFA_SETUP'; readonly session: string };
+  | { readonly type: AuthChallengeType.MFA_SETUP; readonly session: string };
 
 export interface AuthRepository {
   signIn(identifier: string, password: string): Promise<AuthChallengeResult>;

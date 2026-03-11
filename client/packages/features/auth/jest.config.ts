@@ -25,6 +25,7 @@ const config: Config = {
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
   },
+  setupFiles: ['<rootDir>/src/__mocks__/env.ts'],
   transformIgnorePatterns: ['/node_modules/(?!(i18next|react-i18next)/)/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [

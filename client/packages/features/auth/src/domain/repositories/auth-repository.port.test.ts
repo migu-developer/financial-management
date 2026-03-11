@@ -1,10 +1,11 @@
-import type {
-  AuthChallengeResult,
-  ForgotPasswordDelivery,
-  MfaType,
-  PkceParams,
-  SignUpDto,
-  SocialProvider,
+import {
+  AuthChallengeType,
+  type AuthChallengeResult,
+  type ForgotPasswordDelivery,
+  type MfaType,
+  type PkceParams,
+  type SignUpDto,
+  type SocialProvider,
 } from '@features/auth/domain/repositories/auth-repository.port';
 import type { AuthSession } from '@features/auth/domain/entities/auth-session';
 
@@ -19,11 +20,11 @@ const mockSession: AuthSession = {
 describe('AuthChallengeResult discriminated union', () => {
   it('SESSION variant contains an AuthSession', () => {
     const result: AuthChallengeResult = {
-      type: 'SESSION',
+      type: AuthChallengeType.SESSION,
       session: mockSession,
     };
-    expect(result.type).toBe('SESSION');
-    if (result.type === 'SESSION') {
+    expect(result.type).toBe(AuthChallengeType.SESSION);
+    if (result.type === AuthChallengeType.SESSION) {
       expect(result.session.accessToken).toBe('access-token');
       expect(result.session.userId).toBe('user-123');
     }
@@ -31,7 +32,7 @@ describe('AuthChallengeResult discriminated union', () => {
 
   it('NEW_PASSWORD_REQUIRED variant contains session string and username', () => {
     const result: AuthChallengeResult = {
-      type: 'NEW_PASSWORD_REQUIRED',
+      type: AuthChallengeType.NEW_PASSWORD_REQUIRED,
       session: 'challenge-session',
       username: 'user@example.com',
     };
@@ -44,22 +45,22 @@ describe('AuthChallengeResult discriminated union', () => {
 
   it('SOFTWARE_TOKEN_MFA variant contains only session', () => {
     const result: AuthChallengeResult = {
-      type: 'SOFTWARE_TOKEN_MFA',
+      type: AuthChallengeType.SOFTWARE_TOKEN_MFA,
       session: 'mfa-session',
     };
-    expect(result.type).toBe('SOFTWARE_TOKEN_MFA');
-    if (result.type === 'SOFTWARE_TOKEN_MFA') {
+    expect(result.type).toBe(AuthChallengeType.SOFTWARE_TOKEN_MFA);
+    if (result.type === AuthChallengeType.SOFTWARE_TOKEN_MFA) {
       expect(result.session).toBe('mfa-session');
     }
   });
 
   it('SMS_MFA variant contains session and destination', () => {
     const result: AuthChallengeResult = {
-      type: 'SMS_MFA',
+      type: AuthChallengeType.SMS_MFA,
       session: 'sms-session',
       destination: '+57***4567',
     };
-    expect(result.type).toBe('SMS_MFA');
+    expect(result.type).toBe(AuthChallengeType.SMS_MFA);
     if (result.type === 'SMS_MFA') {
       expect(result.session).toBe('sms-session');
       expect(result.destination).toBe('+57***4567');
@@ -68,11 +69,11 @@ describe('AuthChallengeResult discriminated union', () => {
 
   it('MFA_SETUP variant contains only session', () => {
     const result: AuthChallengeResult = {
-      type: 'MFA_SETUP',
+      type: AuthChallengeType.MFA_SETUP,
       session: 'setup-session',
     };
-    expect(result.type).toBe('MFA_SETUP');
-    if (result.type === 'MFA_SETUP') {
+    expect(result.type).toBe(AuthChallengeType.MFA_SETUP);
+    if (result.type === AuthChallengeType.MFA_SETUP) {
       expect(result.session).toBe('setup-session');
     }
   });
@@ -86,11 +87,15 @@ describe('AuthChallengeResult discriminated union', () => {
       'MFA_SETUP',
     ];
     const results: AuthChallengeResult[] = [
-      { type: 'SESSION', session: mockSession },
-      { type: 'NEW_PASSWORD_REQUIRED', session: 's', username: 'u' },
-      { type: 'SOFTWARE_TOKEN_MFA', session: 's' },
-      { type: 'SMS_MFA', session: 's', destination: 'd' },
-      { type: 'MFA_SETUP', session: 's' },
+      { type: AuthChallengeType.SESSION, session: mockSession },
+      {
+        type: AuthChallengeType.NEW_PASSWORD_REQUIRED,
+        session: 's',
+        username: 'u',
+      },
+      { type: AuthChallengeType.SOFTWARE_TOKEN_MFA, session: 's' },
+      { type: AuthChallengeType.SMS_MFA, session: 's', destination: 'd' },
+      { type: AuthChallengeType.MFA_SETUP, session: 's' },
     ];
     results.forEach((r, i) => expect(r.type).toBe(types[i]));
   });

@@ -5,6 +5,7 @@ import {
 import { createMockAuthRepository } from './__mocks__/auth-repository.mock';
 import { InvalidPasswordException } from '@features/auth/domain/errors/auth-errors';
 import type { AuthSession } from '@features/auth/domain/entities/auth-session';
+import { AuthChallengeType } from '@features/auth/domain/repositories/auth-repository.port';
 
 const mockSession: AuthSession = {
   accessToken: 'access',
@@ -18,7 +19,7 @@ describe('RespondToNewPasswordChallengeUseCase', () => {
   it('calls repository when new password is valid', async () => {
     const repo = createMockAuthRepository();
     repo.respondToNewPasswordChallenge.mockResolvedValue({
-      type: 'SESSION',
+      type: AuthChallengeType.SESSION,
       session: mockSession,
     });
 

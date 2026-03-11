@@ -1,6 +1,9 @@
 import { SignInUseCase } from '@features/auth/application/use-cases/sign-in.use-case';
 import { createMockAuthRepository } from './__mocks__/auth-repository.mock';
-import type { AuthChallengeResult } from '@features/auth/domain/repositories/auth-repository.port';
+import {
+  AuthChallengeType,
+  type AuthChallengeResult,
+} from '@features/auth/domain/repositories/auth-repository.port';
 import type { AuthSession } from '@features/auth/domain/entities/auth-session';
 
 const mockSession: AuthSession = {
@@ -12,7 +15,7 @@ const mockSession: AuthSession = {
 };
 
 const sessionResult: AuthChallengeResult = {
-  type: 'SESSION',
+  type: AuthChallengeType.SESSION,
   session: mockSession,
 };
 
@@ -38,7 +41,7 @@ describe('SignInUseCase', () => {
   it('returns the challenge result from repository', async () => {
     const repo = createMockAuthRepository();
     const mfaResult: AuthChallengeResult = {
-      type: 'SOFTWARE_TOKEN_MFA',
+      type: AuthChallengeType.SOFTWARE_TOKEN_MFA,
       session: 'sess',
     };
     repo.signIn.mockResolvedValue(mfaResult);

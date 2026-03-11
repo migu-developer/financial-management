@@ -1,6 +1,14 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
+ * `newArchEnabled` is not yet in the official ExpoConfig typings for all SDK
+ * versions, so we extend the type to avoid TypeScript errors.
+ */
+type ExpoConfigWithNewArch = ExpoConfig & {
+  newArchEnabled?: boolean;
+};
+
+/**
  * Sincronized with the design system colors.
  * reference: @features/ui/src/utils/colors.ts
  */
@@ -19,18 +27,20 @@ const colors = {
 };
 
 /**
- * `newArchEnabled` is not yet in the official ExpoConfig typings for all SDK
- * versions, so we extend the type to avoid TypeScript errors.
- */
-type ExpoConfigWithNewArch = ExpoConfig & {
-  newArchEnabled?: boolean;
-};
-
-/**
  * EAS project ID.
  * No security sensitive, it's public.
  */
 const EAS_PROJECT_ID = 'b3d6baaa-5bfb-4085-b5eb-ff956ca852f1';
+
+/**
+ * Development variant.
+ */
+const APP_VARIANT_DEV = 'development';
+
+/**
+ * Assets image path.
+ */
+const ASSETS_IMAGE_PATH = './assets/images';
 
 /**
  * Returns the unique app identifier (bundle ID / package name / URL scheme)
@@ -38,7 +48,7 @@ const EAS_PROJECT_ID = 'b3d6baaa-5bfb-4085-b5eb-ff956ca852f1';
  * be tested with different variants by setting the env before calling.
  */
 export const getAppId = (variant = process.env.APP_VARIANT): string =>
-  variant === 'development'
+  variant === APP_VARIANT_DEV
     ? 'com.migudev.dev.financialmanagement.app'
     : 'com.migudev.prod.financialmanagement.app';
 
@@ -46,7 +56,7 @@ export const getAppId = (variant = process.env.APP_VARIANT): string =>
  * Returns the human-readable app name based on the build variant.
  */
 export const getAppName = (variant = process.env.APP_VARIANT): string =>
-  variant === 'development'
+  variant === APP_VARIANT_DEV
     ? 'Financial Management (Development)'
     : 'Financial Management';
 
@@ -57,7 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArch => ({
   slug: 'financial-management',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: `${ASSETS_IMAGE_PATH}/icon.png`,
   scheme: getAppId(),
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
@@ -73,9 +83,9 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArch => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/images/android-icon-foreground.png',
+      foregroundImage: `${ASSETS_IMAGE_PATH}/android-icon-foreground.png`,
       backgroundColor: colors.primary[50],
-      monochromeImage: './assets/images/android-icon-monochrome.png',
+      monochromeImage: `${ASSETS_IMAGE_PATH}/android-icon-monochrome.png`,
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -83,7 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArch => ({
   },
   web: {
     output: 'static',
-    favicon: './assets/images/favicon.png',
+    favicon: `${ASSETS_IMAGE_PATH}/favicon.png`,
   },
   plugins: [
     'expo-router',
@@ -92,7 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfigWithNewArch => ({
     [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        image: `${ASSETS_IMAGE_PATH}/splash-icon.png`,
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: colors.surface.light.card,
