@@ -424,6 +424,9 @@ importers:
 
   client/packages/features/auth:
     dependencies:
+      '@expo/vector-icons':
+        specifier: 'catalog:'
+        version: 15.1.1(expo-font@14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@features/ui':
         specifier: workspace:*
         version: link:../ui
@@ -467,9 +470,6 @@ importers:
         specifier: 'catalog:'
         version: 15.15.3(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
     devDependencies:
-      '@expo/vector-icons':
-        specifier: 'catalog:'
-        version: 15.1.1(expo-font@14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@packages/config':
         specifier: workspace:*
         version: link:../../../../packages/config
@@ -613,6 +613,9 @@ importers:
       '@packages/utils':
         specifier: workspace:*
         version: link:../../utils
+      libphonenumber-js:
+        specifier: 'catalog:'
+        version: 1.12.38
       react:
         specifier: 'catalog:'
         version: 19.1.0

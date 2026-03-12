@@ -108,7 +108,7 @@ export function LoginTemplate({
           <SocialAuthButton
             key={provider}
             provider={provider}
-            label={t(`social.${provider}` as never)}
+            label={t(`social.${provider}`)}
             onPress={() => onSocialSignIn(provider)}
             disabled={loading}
           />

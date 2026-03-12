@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo/vector-icons": "catalog:",
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",
     "@packages/utils": "workspace:*",
@@ -29,7 +30,6 @@
     "react-native": "catalog:"
   },
   "devDependencies": {
-    "@expo/vector-icons": "catalog:",
     "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",

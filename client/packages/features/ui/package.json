@@ -13,7 +13,8 @@
   "dependencies": {
     "@expo/vector-icons": "catalog:",
     "@packages/i18n": "workspace:*",
-    "@packages/utils": "workspace:*"
+    "@packages/utils": "workspace:*",
+    "libphonenumber-js": "catalog:"
   },
   "peerDependencies": {
     "react": "catalog:",

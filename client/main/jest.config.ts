@@ -39,6 +39,9 @@ const config: Config = {
       '<rootDir>/tests/__mocks__/async-storage.ts',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/tests/__mocks__/nativewind.ts',
+    '^expo-linking$': '<rootDir>/tests/__mocks__/expo-linking.ts',
+    '^react-native-qrcode-svg$':
+      '<rootDir>/tests/__mocks__/react-native-qrcode-svg.ts',
   },
   transformIgnorePatterns: ['/node_modules/(?!(i18next|react-i18next)/)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

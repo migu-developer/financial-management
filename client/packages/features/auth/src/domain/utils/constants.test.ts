@@ -4,6 +4,7 @@ import {
   SPECIAL_CHARS_REGEX,
   PHONE_FORMAT_REGEX,
   DEFAULT_COUNTRY,
+  KeyEventNames,
 } from '@features/auth/domain/utils/constants';
 
 describe('EMAIL_REGEX', () => {
@@ -125,5 +126,11 @@ describe('PHONE_FORMAT_REGEX', () => {
 describe('DEFAULT_COUNTRY', () => {
   it('returns "US" as default country code', () => {
     expect(DEFAULT_COUNTRY).toBe('US');
+  });
+});
+
+describe('KeyEventNames', () => {
+  it('returns "Backspace" as key event name', () => {
+    expect(KeyEventNames.BACKSPACE).toBe('Backspace');
   });
 });

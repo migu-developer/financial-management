@@ -35,6 +35,7 @@ export const login = {
     subtitle: 'Join us today. It only takes a minute.',
     nameLabel: 'Full name',
     namePlaceholder: 'John Doe',
+    smsLabel: 'SMS',
     emailLabel: 'Email',
     emailPlaceholder: 'your@email.com',
     phoneLabel: 'Phone number (optional)',
@@ -55,6 +56,8 @@ export const login = {
       fair: 'Fair',
       good: 'Good',
       strong: 'Strong',
+      met: 'Met',
+      notMet: 'Not met',
     },
     passwordRequirements: {
       minLength: 'At least 8 characters',
@@ -63,6 +66,20 @@ export const login = {
       number: 'One number',
       special: 'One special character',
     },
+    notificationPreference: 'How would you like to receive notifications?',
+    notificationBoth: 'Both',
+  },
+
+  // ── Phone picker ──────────────────────────────────────────────────────────
+  phonePicker: {
+    title: 'Select Country',
+    searchPlaceholder: 'Search country...',
+    done: 'Done',
+  },
+
+  // ── QR code ───────────────────────────────────────────────────────────────
+  qrCode: {
+    accessibilityLabel: 'QR code',
   },
 
   // ── Confirm sign-up ───────────────────────────────────────────────────────

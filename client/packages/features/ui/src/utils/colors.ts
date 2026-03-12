@@ -13,6 +13,7 @@ export const generic = {
   white: '#FFFFFF',
   black: '#000000',
   error: '#EF4444',
+  subtle: '#e2e8f0',
   providers: {
     google: '#EA4335',
     facebook: '#1877F2',

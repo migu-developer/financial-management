@@ -29,6 +29,7 @@ describe('es/login namespace', () => {
     expect(login.register).toHaveProperty('title');
     expect(login.register).toHaveProperty('subtitle');
     expect(login.register).toHaveProperty('nameLabel');
+    expect(login.register).toHaveProperty('smsLabel');
     expect(login.register).toHaveProperty('emailLabel');
     expect(login.register).toHaveProperty('passwordLabel');
     expect(login.register).toHaveProperty('confirmPasswordLabel');
@@ -36,6 +37,8 @@ describe('es/login namespace', () => {
     expect(login.register).toHaveProperty('submitButton');
     expect(login.register).toHaveProperty('passwordStrength');
     expect(login.register).toHaveProperty('passwordRequirements');
+    expect(login.register).toHaveProperty('notificationPreference');
+    expect(login.register).toHaveProperty('notificationBoth');
   });
 
   it('has confirmSignUp section', () => {
@@ -105,6 +108,16 @@ describe('es/login namespace', () => {
     expect(login.errors).toHaveProperty('tooManyRequests');
     expect(login.errors).toHaveProperty('networkError');
     expect(login.errors).toHaveProperty('unknown');
+  });
+
+  it('has phonePicker section', () => {
+    expect(login.phonePicker).toHaveProperty('title');
+    expect(login.phonePicker).toHaveProperty('searchPlaceholder');
+    expect(login.phonePicker).toHaveProperty('done');
+  });
+
+  it('has qrCode section', () => {
+    expect(login.qrCode).toHaveProperty('accessibilityLabel');
   });
 
   it('satisfies the LoginTranslation type', () => {

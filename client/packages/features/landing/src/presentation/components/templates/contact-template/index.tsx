@@ -35,10 +35,10 @@ export function ContactTemplate({ onBackPress }: ContactTemplateProps) {
         {SECTION_KEYS.map((key) => (
           <View key={key} className="mb-8">
             <Text className="text-slate-900 dark:text-white font-bold text-xl mb-2">
-              {t(`contact.sections.${key}.title` as never)}
+              {t(`contact.sections.${key}.title`)}
             </Text>
             <Text className="text-slate-600 dark:text-slate-300 text-base">
-              {t(`contact.sections.${key}.body` as never)}
+              {t(`contact.sections.${key}.body`)}
             </Text>
           </View>
         ))}

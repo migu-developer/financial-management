@@ -25,6 +25,10 @@ const config: Config = {
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
     '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
+    '^expo-linking$': '<rootDir>/src/__mocks__/expo-linking.ts',
+    '^react-native-qrcode-svg$':
+      '<rootDir>/src/__mocks__/react-native-qrcode-svg.ts',
+    // libphonenumber-js is pure JS — no mock needed, real module works in Node
   },
   setupFiles: ['<rootDir>/src/__mocks__/env.ts'],
   transformIgnorePatterns: ['/node_modules/(?!(i18next|react-i18next)/)/'],
