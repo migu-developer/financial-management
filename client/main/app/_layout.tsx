@@ -1,7 +1,7 @@
 import '@packages/i18n';
 
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
 import { StatusBar, StatusBarStyle } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
@@ -11,7 +11,7 @@ import '@/styles/global.css';
 import { ROUTE_NAMES } from '@/utils/route';
 import { PreferencesProvider } from './providers/preferences-provider';
 
-SplashScreen.preventAutoHideAsync();
+preventAutoHideAsync();
 
 function StatusBarDisplay(): React.ReactNode {
   const { colorScheme } = useColorScheme();
@@ -24,7 +24,7 @@ export default function RootLayout() {
 
   const handleReady = useCallback(async () => {
     setReady(true);
-    await SplashScreen.hideAsync();
+    await hideAsync();
   }, []);
 
   return (

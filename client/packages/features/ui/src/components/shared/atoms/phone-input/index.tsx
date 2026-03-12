@@ -11,7 +11,12 @@ import {
 } from 'libphonenumber-js/min';
 
 import { useTranslation } from '@packages/i18n';
-import { generic, surface } from '@features/ui/utils/colors';
+import {
+  generic,
+  surface,
+  textTokens,
+  uiTokens,
+} from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
 import { TextInputBase } from '@features/ui/components/shared/atoms/text-input-base';
 import { COUNTRY_CODES, COUNTRY_NAMES } from '@features/ui/utils/countries';
@@ -153,7 +158,11 @@ export function PhoneInput({
           <MaterialCommunityIcons
             name="chevron-down"
             size={14}
-            color={colorScheme === ColorScheme.DARK ? '#94a3b8' : '#64748b'}
+            color={
+              colorScheme === ColorScheme.DARK
+                ? uiTokens.moonColor
+                : textTokens.light.muted
+            }
             style={{ marginLeft: 2 }}
           />
         </TouchableOpacity>
