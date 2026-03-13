@@ -1,23 +1,8 @@
 /**
  * Priority country codes — shown first in the phone country picker.
+ * Supported countries: Colombia, Mexico, Argentina, Uruguay, Finland.
  */
-export const COUNTRY_CODES = [
-  'CO',
-  'US',
-  'MX',
-  'ES',
-  'AR',
-  'PE',
-  'CL',
-  'BR',
-  'EC',
-  'VE',
-  'GB',
-  'DE',
-  'FR',
-  'CA',
-  'AU',
-];
+export const COUNTRY_CODES = ['CO', 'MX', 'AR', 'UY', 'FI'];
 
 /**
  * Country names keyed by ISO 3166-1 alpha-2 code.

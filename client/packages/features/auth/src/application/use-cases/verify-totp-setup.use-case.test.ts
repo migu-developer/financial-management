@@ -4,7 +4,13 @@ import { createMockAuthRepository } from './__mocks__/auth-repository.mock';
 describe('VerifyTotpSetupUseCase', () => {
   it('delegates to repository with all params', async () => {
     const repo = createMockAuthRepository();
-    repo.verifySoftwareToken.mockResolvedValue(undefined);
+    repo.verifySoftwareToken.mockResolvedValue({
+      accessToken: 'access-token',
+      idToken: 'id-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 3600_000),
+      userId: 'user-1',
+    });
 
     await new VerifyTotpSetupUseCase(repo).execute(
       'session-token',

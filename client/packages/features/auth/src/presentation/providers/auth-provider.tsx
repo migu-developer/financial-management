@@ -379,13 +379,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifySoftwareToken = useCallback(
     async (session: string, code: string, deviceName: string) => {
-      await cognitoAuthRepository.verifySoftwareToken(
-        session,
-        code,
-        deviceName,
-      );
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+      try {
+        const authSession = await cognitoAuthRepository.verifySoftwareToken(
+          session,
+          code,
+          deviceName,
+        );
+        const user = await cognitoAuthRepository.getCurrentUser();
+        setState({
+          session: authSession,
+          user,
+          pendingChallenge: null,
+          loading: false,
+          error: null,
+        });
+        scheduleRefresh(authSession);
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: error as Error,
+        }));
+        throw error;
+      }
     },
-    [],
+    [scheduleRefresh],
   );
 
   const clearError = useCallback(

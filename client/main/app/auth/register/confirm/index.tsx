@@ -10,6 +10,7 @@ export default function RegisterConfirmScreen() {
   const { confirmSignUp, resendConfirmation } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [success, setSuccess] = useState(false);
 
   const id = String(identifier);
   const medium = id.startsWith('+')
@@ -22,7 +23,10 @@ export default function RegisterConfirmScreen() {
       setLoading(true);
       try {
         await confirmSignUp(id, code);
-        router.replace(ROUTES.authLogin as never);
+        setSuccess(true);
+        setTimeout(() => {
+          router.replace(ROUTES.authLogin as never);
+        }, 1500);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -49,6 +53,7 @@ export default function RegisterConfirmScreen() {
       onBack={() => router.replace(ROUTES.authRegister as never)}
       loading={loading}
       error={error}
+      success={success}
     />
   );
 }

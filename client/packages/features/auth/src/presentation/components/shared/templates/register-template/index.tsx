@@ -3,7 +3,14 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card, FormInput, SocialAuthButton } from '@features/ui';
+import {
+  Button,
+  Card,
+  FormInput,
+  LanguageSelector,
+  SocialAuthButton,
+  ThemeToggle,
+} from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
 import { PasswordStrength } from '@features/auth/presentation/components/shared/atoms/password-strength';
@@ -33,6 +40,8 @@ const SOCIAL_PROVIDERS: SocialProvider[] = [
   'apple',
 ];
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function RegisterTemplate({
   onRegister,
   onSignIn,
@@ -46,12 +55,20 @@ export function RegisterTemplate({
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [notificationChannel, setNotificationChannel] =
     useState<NotificationChannel>(NotificationChannelEnum.EMAIL);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  const isEmailValid = email.trim() === '' || EMAIL_REGEX.test(email.trim());
+  const emailError =
+    emailTouched && !isEmailValid ? t('register.emailInvalid') : undefined;
+
+  const phoneRequiredForSms =
+    notificationChannel !== NotificationChannelEnum.EMAIL && phone === '';
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -60,11 +77,20 @@ export function RegisterTemplate({
     () =>
       name.trim() !== '' &&
       email.trim() !== '' &&
+      EMAIL_REGEX.test(email.trim()) &&
       password !== '' &&
       confirmPassword !== '' &&
       password === confirmPassword &&
+      termsAccepted &&
+      !phoneRequiredForSms,
+    [
+      name,
+      email,
+      password,
+      confirmPassword,
       termsAccepted,
-    [name, email, password, confirmPassword, termsAccepted],
+      phoneRequiredForSms,
+    ],
   );
 
   const handleSubmit = useCallback(() => {
@@ -93,6 +119,15 @@ export function RegisterTemplate({
         padding: 24,
       }}
     >
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: 448 }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
@@ -121,11 +156,15 @@ export function RegisterTemplate({
         <FormInput
           label={t('register.emailLabel')}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => {
+            setEmail(v);
+            if (!emailTouched) setEmailTouched(true);
+          }}
           placeholder={t('register.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           disabled={loading}
+          error={emailError}
         />
 
         <PhoneInput
@@ -134,15 +173,16 @@ export function RegisterTemplate({
           onChange={handlePhoneChange}
           placeholder={t('register.phonePlaceholder')}
           disabled={loading}
+          error={
+            phoneRequiredForSms ? t('register.phoneRequiredForSms') : undefined
+          }
         />
 
-        {phone.length > 0 && (
-          <NotificationPreference
-            value={notificationChannel}
-            onChange={setNotificationChannel}
-            disabled={loading}
-          />
-        )}
+        <NotificationPreference
+          value={notificationChannel}
+          onChange={setNotificationChannel}
+          disabled={loading}
+        />
 
         <FormInput
           label={t('register.passwordLabel')}
@@ -150,6 +190,7 @@ export function RegisterTemplate({
           onChangeText={setPassword}
           placeholder={t('register.passwordPlaceholder')}
           secureTextEntry
+          showPasswordToggle
           disabled={loading}
         />
 
@@ -161,6 +202,7 @@ export function RegisterTemplate({
           onChangeText={setConfirmPassword}
           placeholder={t('register.confirmPasswordPlaceholder')}
           secureTextEntry
+          showPasswordToggle
           error={
             passwordMismatch ? t('newPassword.passwordMismatch') : undefined
           }

@@ -3,7 +3,13 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card, FormInput } from '@features/ui';
+import {
+  Button,
+  Card,
+  FormInput,
+  LanguageSelector,
+  ThemeToggle,
+} from '@features/ui';
 
 import { OtpInput } from '@features/auth/presentation/components/shared/atoms/otp-input';
 import { QrCode } from '@features/auth/presentation/components/shared/atoms/qr-code';
@@ -46,6 +52,15 @@ export function MfaSetupTemplate({
         paddingTop: 40,
       }}
     >
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: 448 }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-6">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">

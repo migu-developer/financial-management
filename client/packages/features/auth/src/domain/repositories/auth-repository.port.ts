@@ -57,7 +57,6 @@ export interface AuthRepository {
   respondToNewPasswordChallenge(
     session: string,
     newPassword: string,
-    username: string,
   ): Promise<AuthChallengeResult>;
 
   respondToMfaChallenge(
@@ -99,7 +98,7 @@ export interface AuthRepository {
     session: string,
     code: string,
     deviceName: string,
-  ): Promise<void>;
+  ): Promise<AuthSession>;
 
   getCurrentUser(): Promise<User | null>;
 

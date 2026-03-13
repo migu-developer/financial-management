@@ -26,7 +26,6 @@ describe('RespondToNewPasswordChallengeUseCase', () => {
     await new RespondToNewPasswordChallengeUseCase(repo).execute(
       'sess',
       'SecureP@ss1',
-      'user',
     );
 
     expect(repo.respondToNewPasswordChallenge).toHaveBeenCalledWith(
@@ -40,11 +39,7 @@ describe('RespondToNewPasswordChallengeUseCase', () => {
     const repo = createMockAuthRepository();
 
     await expect(
-      new RespondToNewPasswordChallengeUseCase(repo).execute(
-        'sess',
-        'weak',
-        'user',
-      ),
+      new RespondToNewPasswordChallengeUseCase(repo).execute('sess', 'weak'),
     ).rejects.toThrow(InvalidPasswordException);
 
     expect(repo.respondToNewPasswordChallenge).not.toHaveBeenCalled();

@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card } from '@features/ui';
+import { Button, Card, LanguageSelector, ThemeToggle } from '@features/ui';
 
 import { OtpInput } from '@features/auth/presentation/components/shared/atoms/otp-input';
 import { IdentifierType } from '@features/auth/domain/utils/constants';
@@ -20,6 +20,7 @@ export interface ConfirmSignUpTemplateProps {
   onBack: () => void;
   loading?: boolean;
   error?: string;
+  success?: boolean;
 }
 
 export function ConfirmSignUpTemplate({
@@ -30,6 +31,7 @@ export function ConfirmSignUpTemplate({
   onBack,
   loading = false,
   error,
+  success = false,
 }: ConfirmSignUpTemplateProps) {
   const { t } = useTranslation('login');
   const [code, setCode] = useState('');
@@ -68,6 +70,15 @@ export function ConfirmSignUpTemplate({
         padding: 24,
       }}
     >
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: 448 }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
@@ -77,6 +88,14 @@ export function ConfirmSignUpTemplate({
             {subtitle}
           </Text>
         </View>
+
+        {success ? (
+          <View className="bg-emerald-900/30 border border-emerald-600 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-emerald-400 text-sm font-medium">
+              {t('confirmSignUp.success')}
+            </Text>
+          </View>
+        ) : null}
 
         {error ? (
           <View className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 mb-4">

@@ -8,7 +8,7 @@ export default function MfaSetupScreen() {
 
   return (
     <MfaSetupPage
-      onSetupSuccess={() => router.replace(ROUTES.authMfa as never)}
+      onSetupSuccess={() => router.replace(ROUTES.dashboard.home as never)}
       onSkip={() => router.replace(ROUTES.dashboard.home as never)}
     />
   );

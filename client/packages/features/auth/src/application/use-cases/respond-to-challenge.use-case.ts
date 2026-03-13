@@ -13,7 +13,6 @@ export class RespondToNewPasswordChallengeUseCase {
   async execute(
     session: string,
     newPassword: string,
-    username: string,
   ): Promise<AuthChallengeResult> {
     if (!Password.isValid(newPassword)) {
       throw new InvalidPasswordException();
@@ -21,7 +20,6 @@ export class RespondToNewPasswordChallengeUseCase {
     return this.authRepository.respondToNewPasswordChallenge(
       session,
       newPassword,
-      username,
     );
   }
 }

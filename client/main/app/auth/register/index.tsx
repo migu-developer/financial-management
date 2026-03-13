@@ -1,8 +1,11 @@
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
+import { Linking } from 'react-native';
 
 import { RegisterPage } from '@features/auth';
 import { ROUTES } from '@/utils/route';
+
+const APP_URL = process.env.EXPO_PUBLIC_APPLICATION_URL ?? '';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -21,8 +24,8 @@ export default function RegisterScreen() {
     <RegisterPage
       onSignIn={() => router.replace(ROUTES.authLogin as never)}
       onRegisterSuccess={handleRegisterSuccess}
-      onPressTerms={() => router.push(ROUTES.terms as never)}
-      onPressPrivacy={() => router.push(ROUTES.privacy as never)}
+      onPressTerms={() => void Linking.openURL(`${APP_URL}/terms`)}
+      onPressPrivacy={() => void Linking.openURL(`${APP_URL}/privacy`)}
     />
   );
 }

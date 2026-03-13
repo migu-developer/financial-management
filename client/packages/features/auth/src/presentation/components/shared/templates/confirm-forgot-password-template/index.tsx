@@ -3,7 +3,13 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card, FormInput } from '@features/ui';
+import {
+  Button,
+  Card,
+  FormInput,
+  LanguageSelector,
+  ThemeToggle,
+} from '@features/ui';
 
 import { OtpInput } from '@features/auth/presentation/components/shared/atoms/otp-input';
 import { PasswordStrength } from '@features/auth/presentation/components/shared/atoms/password-strength';
@@ -69,6 +75,15 @@ export function ConfirmForgotPasswordTemplate({
         padding: 24,
       }}
     >
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: 448 }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
@@ -120,6 +135,7 @@ export function ConfirmForgotPasswordTemplate({
           onChangeText={setNewPassword}
           placeholder={t('confirmForgotPassword.newPasswordPlaceholder')}
           secureTextEntry
+          showPasswordToggle
           disabled={loading}
         />
 
@@ -131,6 +147,7 @@ export function ConfirmForgotPasswordTemplate({
           onChangeText={setConfirmPassword}
           placeholder={t('confirmForgotPassword.confirmPasswordPlaceholder')}
           secureTextEntry
+          showPasswordToggle
           error={
             passwordMismatch
               ? t('confirmForgotPassword.passwordMismatch')

@@ -1,3 +1,4 @@
+import { AuthSession } from '@features/auth/domain/entities/auth-session';
 import type { AuthRepository } from '@features/auth/domain/repositories/auth-repository.port';
 
 export class VerifyTotpSetupUseCase {
@@ -7,7 +8,7 @@ export class VerifyTotpSetupUseCase {
     session: string,
     code: string,
     deviceName: string,
-  ): Promise<void> {
+  ): Promise<AuthSession> {
     return this.authRepository.verifySoftwareToken(session, code, deviceName);
   }
 }

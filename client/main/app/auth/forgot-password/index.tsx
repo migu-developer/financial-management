@@ -8,10 +8,10 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
 
   const handleSubmitSuccess = useCallback(
-    (destination: string, medium: string) => {
+    (destination: string, medium: string, identifier: string) => {
       router.push({
         pathname: ROUTES.authForgotPasswordConfirm as never,
-        params: { destination, medium },
+        params: { destination, medium, identifier },
       });
     },
     [router],

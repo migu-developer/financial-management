@@ -21,7 +21,7 @@ export const login = {
   // ── Identifier input ──────────────────────────────────────────────────────
   identifierInput: {
     label: 'Correo o número de teléfono',
-    placeholder: 'tu@correo.com o +1 234 567 8900',
+    placeholder: 'tu@correo.com',
     emailDetected: 'Correo electrónico detectado',
     phoneDetected: 'Número de teléfono detectado',
     invalidEmail: 'Por favor ingresa un correo válido',
@@ -40,7 +40,10 @@ export const login = {
     emailLabel: 'Correo electrónico',
     emailPlaceholder: 'tu@correo.com',
     phoneLabel: 'Número de teléfono (opcional)',
-    phonePlaceholder: '+1 234 567 8900',
+    phonePlaceholder: 'Ingresa tu número de teléfono',
+    phoneRequiredForSms:
+      'El número de teléfono es requerido para notificaciones por SMS o Ambos',
+    emailInvalid: 'Por favor ingresa una dirección de correo válida',
     passwordLabel: 'Contraseña',
     passwordPlaceholder: 'Al menos 8 caracteres',
     confirmPasswordLabel: 'Confirmar contraseña',
@@ -96,6 +99,7 @@ export const login = {
     resendButton: 'Reenviar código',
     resendCooldown: 'Reenviar en {{seconds}}s',
     back: 'Volver al inicio de sesión',
+    success: '¡Cuenta verificada! Redirigiendo al inicio de sesión...',
   },
 
   // ── Forced new password ───────────────────────────────────────────────────

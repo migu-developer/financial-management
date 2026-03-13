@@ -21,7 +21,7 @@ export const login = {
   // ── Identifier input ──────────────────────────────────────────────────────
   identifierInput: {
     label: 'Email or phone number',
-    placeholder: 'your@email.com or +1 234 567 8900',
+    placeholder: 'your@email.com',
     emailDetected: 'Email detected',
     phoneDetected: 'Phone number detected',
     invalidEmail: 'Please enter a valid email',
@@ -39,7 +39,10 @@ export const login = {
     emailLabel: 'Email',
     emailPlaceholder: 'your@email.com',
     phoneLabel: 'Phone number (optional)',
-    phonePlaceholder: '+1 234 567 8900',
+    phonePlaceholder: 'Enter your phone number',
+    phoneRequiredForSms:
+      'Phone number is required for SMS or Both notifications',
+    emailInvalid: 'Please enter a valid email address',
     passwordLabel: 'Password',
     passwordPlaceholder: 'At least 8 characters',
     confirmPasswordLabel: 'Confirm password',
@@ -94,6 +97,7 @@ export const login = {
     resendButton: 'Resend code',
     resendCooldown: 'Resend in {{seconds}}s',
     back: 'Back to sign in',
+    success: 'Account verified! Redirecting to sign in...',
   },
 
   // ── Forced new password ───────────────────────────────────────────────────
