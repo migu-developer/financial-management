@@ -150,3 +150,9 @@ export const colors = {
   link: primary[600],
   'link-hover': primary[500],
 };
+
+// ─── RGBA colors ───────────────────────────────────────────────────────
+
+export const rgba = {
+  black50: '#00000080', // 50% opacity black
+};
