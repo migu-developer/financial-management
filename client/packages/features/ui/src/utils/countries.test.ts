@@ -1,4 +1,4 @@
-import { COUNTRY_CODES, COUNTRY_NAMES } from './countries';
+import { COUNTRY_CODES, COUNTRY_NAMES, DEFAULT_COUNTRY } from './countries';
 
 describe('countries constants', () => {
   describe('COUNTRY_CODES', () => {
@@ -64,6 +64,12 @@ describe('countries constants', () => {
       for (const code of COUNTRY_CODES) {
         expect(COUNTRY_NAMES).toHaveProperty(code);
       }
+    });
+  });
+
+  describe('DEFAULT_COUNTRY', () => {
+    it('returns "CO" as default country code', () => {
+      expect(DEFAULT_COUNTRY).toBe('CO');
     });
   });
 });

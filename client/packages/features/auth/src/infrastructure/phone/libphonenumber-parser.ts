@@ -5,7 +5,7 @@ import {
   type CountryCode,
 } from 'libphonenumber-js/min';
 
-import { DEFAULT_COUNTRY } from '@features/auth/domain/utils/constants';
+import { DEFAULT_COUNTRY } from '@features/ui/utils/countries';
 
 import type {
   IPhoneNumberParser,

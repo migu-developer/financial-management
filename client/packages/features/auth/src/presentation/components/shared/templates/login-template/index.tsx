@@ -3,10 +3,22 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card, FormInput, SocialAuthButton } from '@features/ui';
+import {
+  Button,
+  Card,
+  FormInput,
+  LanguageSelector,
+  SocialAuthButton,
+  ThemeToggle,
+} from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
 import { IdentifierInput } from '@features/auth/presentation/components/shared/molecules/identifier-input';
+
+import { IdentifierType as IdentifierTypeEnum } from '@features/auth/domain/utils/constants';
+
+type IdentifierType =
+  (typeof IdentifierTypeEnum)[keyof typeof IdentifierTypeEnum];
 
 export interface LoginTemplateProps {
   onSignIn: (identifier: string, password: string) => void;
@@ -34,11 +46,23 @@ export function LoginTemplate({
 }: LoginTemplateProps) {
   const { t } = useTranslation('login');
   const [identifier, setIdentifier] = useState('');
+  const [identifierError, setIdentifierError] = useState<string | undefined>();
   const [password, setPassword] = useState('');
 
-  const handleIdentifierChange = useCallback((value: string) => {
-    setIdentifier(value);
-  }, []);
+  const handleIdentifierChange = useCallback(
+    (value: string, type: IdentifierType) => {
+      setIdentifier(value);
+      if (type === IdentifierTypeEnum.EMAIL && value.length > 0) {
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+        setIdentifierError(
+          valid ? undefined : t('identifierInput.invalidEmail'),
+        );
+      } else {
+        setIdentifierError(undefined);
+      }
+    },
+    [t],
+  );
 
   const handleSubmit = useCallback(() => {
     onSignIn(identifier, password);
@@ -56,6 +80,15 @@ export function LoginTemplate({
         padding: 24,
       }}
     >
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: 448 }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
       <Card className="w-full p-6" style={{ maxWidth: 448 }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
@@ -75,6 +108,7 @@ export function LoginTemplate({
         <IdentifierInput
           value={identifier}
           onChangeIdentifier={handleIdentifierChange}
+          error={identifierError}
           disabled={loading}
         />
 
@@ -84,6 +118,7 @@ export function LoginTemplate({
           onChangeText={setPassword}
           placeholder={t('passwordPlaceholder')}
           secureTextEntry
+          showPasswordToggle
           disabled={loading}
         />
 

@@ -4,8 +4,14 @@ import type { KeyboardTypeOptions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 
-import { generic, surface, textTokens, uiTokens } from '@features/ui/utils/colors';
+import {
+  generic,
+  surface,
+  textTokens,
+  uiTokens,
+} from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
+import { useTranslation } from '@packages/i18n';
 
 interface FormInputProps {
   label: string;
@@ -36,6 +42,7 @@ export function FormInput({
   error,
   disabled = false,
 }: FormInputProps) {
+  const { t } = useTranslation('ui');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === ColorScheme.DARK;
@@ -78,7 +85,9 @@ export function FormInput({
             onPress={() => setIsPasswordVisible((v) => !v)}
             className="px-3 py-3"
             accessibilityRole="button"
-            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
+            accessibilityLabel={
+              isPasswordVisible ? t('hidePassword') : t('showPassword')
+            }
           >
             <MaterialCommunityIcons
               name={isPasswordVisible ? 'eye-off' : 'eye'}

@@ -73,3 +73,8 @@ export const COUNTRY_NAMES: Record<string, string> = {
   VE: 'Venezuela',
   VN: 'Vietnam',
 };
+
+/**
+ * Default country code
+ */
+export const DEFAULT_COUNTRY = 'CO';

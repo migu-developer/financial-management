@@ -3,7 +3,6 @@ import {
   PHONE_START_REGEX,
   SPECIAL_CHARS_REGEX,
   PHONE_FORMAT_REGEX,
-  DEFAULT_COUNTRY,
   KeyEventNames,
   IdentifierType,
 } from '@features/auth/domain/utils/constants';
@@ -121,12 +120,6 @@ describe('PHONE_FORMAT_REGEX', () => {
 
   test.each(invalid)('rejects invalid phone format: %s', (input) => {
     expect(PHONE_FORMAT_REGEX.test(input)).toBe(false);
-  });
-});
-
-describe('DEFAULT_COUNTRY', () => {
-  it('returns "US" as default country code', () => {
-    expect(DEFAULT_COUNTRY).toBe('US');
   });
 });
 

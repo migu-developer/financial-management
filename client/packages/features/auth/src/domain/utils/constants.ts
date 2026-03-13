@@ -19,11 +19,6 @@ export const SPECIAL_CHARS_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 export const PHONE_FORMAT_REGEX = /^\+?[\d\s\-().]{7,20}$/;
 
 /**
- * Default country code for phone number.
- */
-export const DEFAULT_COUNTRY = 'US';
-
-/**
  * Key event names.
  */
 export enum KeyEventNames {
