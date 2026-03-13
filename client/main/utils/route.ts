@@ -5,6 +5,8 @@ export const ROUTES = {
   authLogin: '/auth/login',
   authRegister: '/auth/register',
   authForgotPassword: '/auth/forgot-password',
+  authForgotPasswordConfirm: '/auth/forgot-password/confirm',
+  authRegisterConfirm: '/auth/register/confirm',
   dashboard: {
     index: '/dashboard',
     home: '/dashboard/home',
