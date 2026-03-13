@@ -31,7 +31,6 @@ describe('RespondToNewPasswordChallengeUseCase', () => {
     expect(repo.respondToNewPasswordChallenge).toHaveBeenCalledWith(
       'sess',
       'SecureP@ss1',
-      'user',
     );
   });
 

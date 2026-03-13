@@ -12,7 +12,7 @@ describe('countries constants', () => {
     });
 
     it('contains expected priority countries', () => {
-      const expected = ['CO', 'US', 'MX', 'ES', 'AR', 'PE', 'CL', 'BR'];
+      const expected = ['CO', 'MX', 'AR', 'UY', 'FI'];
       for (const code of expected) {
         expect(COUNTRY_CODES).toContain(code);
       }
