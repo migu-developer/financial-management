@@ -1,3 +1,10 @@
+// Auth Provider + context
+export { AuthProvider, useAuth } from './presentation/providers/auth-provider';
+export type {
+  AuthState,
+  AuthContextValue,
+} from './presentation/providers/auth-provider';
+
 // Pages
 export { LoginPage } from './presentation/pages/login';
 export { RegisterPage } from './presentation/pages/register';

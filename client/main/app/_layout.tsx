@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 
 import '@/styles/global.css';
 import { ROUTE_NAMES } from '@/utils/route';
+import { AuthProvider } from '@features/auth';
 import { PreferencesProvider } from './providers/preferences-provider';
 
 preventAutoHideAsync();
@@ -29,21 +30,23 @@ export default function RootLayout() {
 
   return (
     <PreferencesProvider onReady={handleReady}>
-      {ready && (
-        <>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name={ROUTE_NAMES.index} />
-            <Stack.Screen name={ROUTE_NAMES.landing} />
-            <Stack.Screen name={ROUTE_NAMES.auth} />
-            <Stack.Screen name={ROUTE_NAMES.dashboard} />
-            <Stack.Screen name={ROUTE_NAMES.privacy} />
-            <Stack.Screen name={ROUTE_NAMES.terms} />
-            <Stack.Screen name={ROUTE_NAMES.contact} />
-            <Stack.Screen name={ROUTE_NAMES.notFound} />
-          </Stack>
-          <StatusBarDisplay />
-        </>
-      )}
+      <AuthProvider>
+        {ready && (
+          <>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name={ROUTE_NAMES.index} />
+              <Stack.Screen name={ROUTE_NAMES.landing} />
+              <Stack.Screen name={ROUTE_NAMES.auth} />
+              <Stack.Screen name={ROUTE_NAMES.dashboard} />
+              <Stack.Screen name={ROUTE_NAMES.privacy} />
+              <Stack.Screen name={ROUTE_NAMES.terms} />
+              <Stack.Screen name={ROUTE_NAMES.contact} />
+              <Stack.Screen name={ROUTE_NAMES.notFound} />
+            </Stack>
+            <StatusBarDisplay />
+          </>
+        )}
+      </AuthProvider>
     </PreferencesProvider>
   );
 }
