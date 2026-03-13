@@ -17,7 +17,6 @@ export interface SignUpDto {
   readonly phoneNumber?: string;
   readonly name?: string;
   readonly locale?: string;
-  readonly notificationPreference?: 'email' | 'sms' | 'both';
 }
 
 export interface ForgotPasswordDelivery {

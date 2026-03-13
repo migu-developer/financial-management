@@ -39,11 +39,14 @@ export const login = {
     smsLabel: 'SMS',
     emailLabel: 'Correo electrónico',
     emailPlaceholder: 'tu@correo.com',
-    phoneLabel: 'Número de teléfono (opcional)',
+    phoneLabel: 'Número de teléfono',
     phonePlaceholder: 'Ingresa tu número de teléfono',
-    phoneRequiredForSms:
-      'El número de teléfono es requerido para notificaciones por SMS o Ambos',
     emailInvalid: 'Por favor ingresa una dirección de correo válida',
+    addPhoneToggle: 'Agregar número de teléfono',
+    addPhoneInfoTitle: 'Número de teléfono y verificación',
+    addPhoneInfoBody:
+      'Si agregas un número de teléfono, el código de verificación de tu cuenta se enviará por SMS.\n\nSi prefieres recibirlo por correo electrónico, deja este campo vacío — siempre puedes agregar tu teléfono más adelante desde tu perfil.',
+    addPhoneInfoClose: 'Entendido',
     passwordLabel: 'Contraseña',
     passwordPlaceholder: 'Al menos 8 caracteres',
     confirmPasswordLabel: 'Confirmar contraseña',
@@ -70,8 +73,6 @@ export const login = {
       number: 'Un número',
       special: 'Un carácter especial',
     },
-    notificationPreference: '¿Cómo deseas recibir notificaciones?',
-    notificationBoth: 'Ambos',
   },
 
   // ── Phone picker ──────────────────────────────────────────────────────────

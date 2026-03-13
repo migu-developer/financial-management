@@ -379,15 +379,15 @@ export class CognitoAuthRepository implements AuthRepository {
     session: string,
     code: string,
     deviceName: string,
-  ): Promise<void> {
+  ): Promise<AuthSession> {
     const entry = this.pending.get(session);
     if (!entry) throw new NotAuthorizedException();
 
     return new Promise((resolve, reject) => {
       entry.user.verifySoftwareToken(code, deviceName, {
-        onSuccess: () => {
+        onSuccess: (cognitoSession) => {
           this.pending.delete(session);
-          resolve();
+          resolve(this.mapSession(cognitoSession));
         },
         onFailure: (err) => reject(this.mapError(err)),
       });

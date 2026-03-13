@@ -168,7 +168,6 @@ describe('SignUpDto', () => {
     expect(dto.email).toBe('user@example.com');
     expect(dto.phoneNumber).toBeUndefined();
     expect(dto.locale).toBeUndefined();
-    expect(dto.notificationPreference).toBeUndefined();
   });
 
   it('accepts all optional fields', () => {
@@ -178,9 +177,7 @@ describe('SignUpDto', () => {
       phoneNumber: '+573001234567',
       name: 'John Doe',
       locale: 'es',
-      notificationPreference: 'both',
     };
     expect(dto.phoneNumber).toBe('+573001234567');
-    expect(dto.notificationPreference).toBe('both');
   });
 });

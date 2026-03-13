@@ -38,11 +38,14 @@ export const login = {
     smsLabel: 'SMS',
     emailLabel: 'Email',
     emailPlaceholder: 'your@email.com',
-    phoneLabel: 'Phone number (optional)',
+    phoneLabel: 'Phone number',
     phonePlaceholder: 'Enter your phone number',
-    phoneRequiredForSms:
-      'Phone number is required for SMS or Both notifications',
     emailInvalid: 'Please enter a valid email address',
+    addPhoneToggle: 'Add phone number',
+    addPhoneInfoTitle: 'Phone number & verification',
+    addPhoneInfoBody:
+      'If you add a phone number, your account verification code will be sent via SMS.\n\nIf you prefer to receive it by email, leave this field empty — you can always add your phone later from your profile.',
+    addPhoneInfoClose: 'Got it',
     passwordLabel: 'Password',
     passwordPlaceholder: 'At least 8 characters',
     confirmPasswordLabel: 'Confirm password',
@@ -69,8 +72,6 @@ export const login = {
       number: 'One number',
       special: 'One special character',
     },
-    notificationPreference: 'How would you like to receive notifications?',
-    notificationBoth: 'Both',
   },
 
   // ── Phone picker ──────────────────────────────────────────────────────────
