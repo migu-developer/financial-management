@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
@@ -6,8 +6,10 @@ import { useTranslation } from '@packages/i18n';
 import { Button, Card, FormInput, SocialAuthButton } from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
-interface LoginTemplateProps {
-  onSignIn: (email: string, password: string) => void;
+import { IdentifierInput } from '@features/auth/presentation/components/shared/molecules/identifier-input';
+
+export interface LoginTemplateProps {
+  onSignIn: (identifier: string, password: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
   onSocialSignIn: (provider: SocialProvider) => void;
@@ -31,8 +33,16 @@ export function LoginTemplate({
   error,
 }: LoginTemplateProps) {
   const { t } = useTranslation('login');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+
+  const handleIdentifierChange = useCallback((value: string) => {
+    setIdentifier(value);
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    onSignIn(identifier, password);
+  }, [identifier, password, onSignIn]);
 
   return (
     <ScrollView
@@ -62,13 +72,10 @@ export function LoginTemplate({
           </View>
         ) : null}
 
-        <FormInput
-          label={t('emailLabel')}
-          value={email}
-          onChangeText={setEmail}
-          placeholder={t('emailPlaceholder')}
-          keyboardType="email-address"
-          autoCapitalize="none"
+        <IdentifierInput
+          value={identifier}
+          onChangeIdentifier={handleIdentifierChange}
+          disabled={loading}
         />
 
         <FormInput
@@ -77,6 +84,7 @@ export function LoginTemplate({
           onChangeText={setPassword}
           placeholder={t('passwordPlaceholder')}
           secureTextEntry
+          disabled={loading}
         />
 
         <TouchableOpacity
@@ -91,7 +99,7 @@ export function LoginTemplate({
 
         <Button
           label={t('signInButton')}
-          onPress={() => onSignIn(email, password)}
+          onPress={handleSubmit}
           loading={loading}
           className="mb-6"
         />

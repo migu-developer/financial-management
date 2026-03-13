@@ -3,7 +3,7 @@ import { Text, TextInput, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 import { useColorScheme } from 'nativewind';
 
-import { generic, surface } from '@features/ui/utils/colors';
+import { generic, surface, textTokens } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
 
 interface FormInputProps {
@@ -11,8 +11,10 @@ interface FormInputProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  placeholderTextColor?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  className?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
   disabled?: boolean;
@@ -26,6 +28,8 @@ export function FormInput({
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  placeholderTextColor,
+  className,
   error,
   disabled = false,
 }: FormInputProps) {
@@ -38,7 +42,7 @@ export function FormInput({
       : surface.light.border;
 
   return (
-    <View className="mb-4">
+    <View className={className ?? 'mb-4'}>
       <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium mb-1">
         {label}
       </Text>
@@ -46,7 +50,7 @@ export function FormInput({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#64748B"
+        placeholderTextColor={placeholderTextColor ?? textTokens.dark.muted}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}

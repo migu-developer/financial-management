@@ -1,9 +1,8 @@
 import { ForgotPasswordTemplate } from '@features/auth/presentation/components/shared/templates/forgot-password-template';
+import type { ForgotPasswordTemplateProps } from '@features/auth/presentation/components/shared/templates/forgot-password-template';
 
-interface ForgotPasswordPageProps {
-  onBack: () => void;
-}
+export type ForgotPasswordPageProps = ForgotPasswordTemplateProps;
 
-export function ForgotPasswordPage({ onBack }: ForgotPasswordPageProps) {
-  return <ForgotPasswordTemplate onBack={onBack} />;
+export function ForgotPasswordPage(props: ForgotPasswordPageProps) {
+  return <ForgotPasswordTemplate {...props} />;
 }

@@ -1,9 +1,8 @@
 import { RegisterTemplate } from '@features/auth/presentation/components/shared/templates/register-template';
+import type { RegisterTemplateProps } from '@features/auth/presentation/components/shared/templates/register-template';
 
-interface RegisterPageProps {
-  onBack: () => void;
-}
+export type RegisterPageProps = RegisterTemplateProps;
 
-export function RegisterPage({ onBack }: RegisterPageProps) {
-  return <RegisterTemplate onBack={onBack} />;
+export function RegisterPage(props: RegisterPageProps) {
+  return <RegisterTemplate {...props} />;
 }

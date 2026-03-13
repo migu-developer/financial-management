@@ -12,8 +12,21 @@ export { ForgotPasswordPage } from './presentation/pages/forgot-password';
 
 // Templates
 export { LoginTemplate } from './presentation/components/shared/templates/login-template';
+export type { LoginTemplateProps } from './presentation/components/shared/templates/login-template';
 export { RegisterTemplate } from './presentation/components/shared/templates/register-template';
+export type { RegisterTemplateProps } from './presentation/components/shared/templates/register-template';
 export { ForgotPasswordTemplate } from './presentation/components/shared/templates/forgot-password-template';
+export type { ForgotPasswordTemplateProps } from './presentation/components/shared/templates/forgot-password-template';
+export { ConfirmSignUpTemplate } from './presentation/components/shared/templates/confirm-sign-up-template';
+export type { ConfirmSignUpTemplateProps } from './presentation/components/shared/templates/confirm-sign-up-template';
+export { ConfirmForgotPasswordTemplate } from './presentation/components/shared/templates/confirm-forgot-password-template';
+export type { ConfirmForgotPasswordTemplateProps } from './presentation/components/shared/templates/confirm-forgot-password-template';
+export { NewPasswordTemplate } from './presentation/components/shared/templates/new-password-template';
+export type { NewPasswordTemplateProps } from './presentation/components/shared/templates/new-password-template';
+export { MfaVerifyTemplate } from './presentation/components/shared/templates/mfa-verify-template';
+export type { MfaVerifyTemplateProps } from './presentation/components/shared/templates/mfa-verify-template';
+export { MfaSetupTemplate } from './presentation/components/shared/templates/mfa-setup-template';
+export type { MfaSetupTemplateProps } from './presentation/components/shared/templates/mfa-setup-template';
 
 // Atoms
 export { OtpInput } from './presentation/components/shared/atoms/otp-input';

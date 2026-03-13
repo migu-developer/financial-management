@@ -5,6 +5,7 @@ import {
   PHONE_FORMAT_REGEX,
   DEFAULT_COUNTRY,
   KeyEventNames,
+  IdentifierType,
 } from '@features/auth/domain/utils/constants';
 
 describe('EMAIL_REGEX', () => {
@@ -132,5 +133,15 @@ describe('DEFAULT_COUNTRY', () => {
 describe('KeyEventNames', () => {
   it('returns "Backspace" as key event name', () => {
     expect(KeyEventNames.BACKSPACE).toBe('Backspace');
+  });
+});
+
+describe('IdentifierType', () => {
+  it('returns "email" as identifier type', () => {
+    expect(IdentifierType.EMAIL).toBe('email');
+  });
+
+  it('returns "phone" as identifier type', () => {
+    expect(IdentifierType.PHONE).toBe('phone');
   });
 });

@@ -1,47 +1,88 @@
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Icon } from '@features/ui';
-import { primary } from '@features/ui/utils/colors';
+import { Button, Card } from '@features/ui';
 
-interface ForgotPasswordTemplateProps {
+import { IdentifierInput } from '@features/auth/presentation/components/shared/molecules/identifier-input';
+
+export interface ForgotPasswordTemplateProps {
+  onSubmit: (identifier: string) => void;
   onBack: () => void;
+  loading?: boolean;
+  error?: string;
 }
 
 export function ForgotPasswordTemplate({
+  onSubmit,
   onBack,
+  loading = false,
+  error,
 }: ForgotPasswordTemplateProps) {
   const { t } = useTranslation('login');
+  const [identifier, setIdentifier] = useState('');
+
+  const handleIdentifierChange = useCallback((value: string) => {
+    setIdentifier(value);
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    onSubmit(identifier);
+  }, [identifier, onSubmit]);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-900 items-center justify-center px-8">
-      <Icon
-        name="lock-outline"
-        size={64}
-        color={primary[400]}
-        containerClassName="mb-6"
-      />
-      <Text className="text-slate-900 dark:text-white font-bold text-2xl mb-3 text-center">
-        {t('forgotPasswordPage.title')}
-      </Text>
-      <Text className="text-primary-400 font-semibold text-lg mb-4 text-center">
-        {t('forgotPasswordPage.comingSoon')}
-      </Text>
-      <Text className="text-slate-500 dark:text-slate-400 text-base text-center mb-8">
-        {t('forgotPasswordPage.description')}
-      </Text>
-      <TouchableOpacity
-        onPress={onBack}
-        className="border border-primary-600 rounded-xl px-6 py-3"
-        accessibilityRole="button"
-        accessibilityLabel={t('forgotPasswordPage.back')}
-      >
-        <Text className="text-primary-400 font-semibold">
-          {t('forgotPasswordPage.back')}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <ScrollView
+      className="flex-1 bg-slate-50 dark:bg-slate-900"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+      }}
+    >
+      <Card className="w-full p-6" style={{ maxWidth: 448 }}>
+        <View className="mb-8">
+          <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
+            {t('forgotPasswordPage.title')}
+          </Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-base">
+            {t('forgotPasswordPage.subtitle')}
+          </Text>
+        </View>
+
+        {error ? (
+          <View className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-400 text-sm">{error}</Text>
+          </View>
+        ) : null}
+
+        <IdentifierInput
+          value={identifier}
+          onChangeIdentifier={handleIdentifierChange}
+          disabled={loading}
+        />
+
+        <Button
+          label={t('forgotPasswordPage.submitButton')}
+          onPress={handleSubmit}
+          loading={loading}
+          disabled={identifier.trim() === ''}
+          className="mb-6 mt-2"
+        />
+
+        <TouchableOpacity
+          onPress={onBack}
+          className="items-center"
+          accessibilityRole="button"
+        >
+          <Text className="text-primary-400 text-sm">
+            {t('forgotPasswordPage.back')}
+          </Text>
+        </TouchableOpacity>
+      </Card>
+    </ScrollView>
   );
 }

@@ -29,3 +29,11 @@ export const DEFAULT_COUNTRY = 'US';
 export enum KeyEventNames {
   BACKSPACE = 'Backspace',
 }
+
+/**
+ * Identifier type.
+ */
+export enum IdentifierType {
+  EMAIL = 'email',
+  PHONE = 'phone',
+}

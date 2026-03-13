@@ -3,12 +3,9 @@ import React, { useCallback } from 'react';
 import { useTranslation } from '@packages/i18n';
 import { FormInput } from '@features/ui';
 
-import { PhoneInput } from '@features/auth/presentation/components/shared/atoms/phone-input';
+import { IdentifierType as IdentifierTypeEnum } from '@features/auth/domain/utils/constants';
 
-enum IdentifierTypeEnum {
-  EMAIL = 'email',
-  PHONE = 'phone',
-}
+import { PhoneInput } from '@features/auth/presentation/components/shared/atoms/phone-input';
 
 export type IdentifierType =
   (typeof IdentifierTypeEnum)[keyof typeof IdentifierTypeEnum];
