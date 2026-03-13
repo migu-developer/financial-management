@@ -76,7 +76,7 @@ export function OtpInput({
       : surface.light.border;
 
   return (
-    <View className="flex-row justify-between gap-2">
+    <View className="flex-row justify-center gap-2">
       {chars.map((char, index) => (
         <TextInputBase
           key={index}
@@ -92,8 +92,8 @@ export function OtpInput({
           selectTextOnFocus
           editable={!disabled}
           error={error}
-          className="flex-1 text-xl font-bold text-center"
-          style={{ borderColor, aspectRatio: 1 }}
+          className="text-xl font-bold text-center"
+          style={{ borderColor, width: 48, height: 48 }}
           accessibilityLabel={`Digit ${index + 1} of ${OTP_LENGTH}`}
           accessibilityRole="none"
           testID={`otp-input-${index}`}

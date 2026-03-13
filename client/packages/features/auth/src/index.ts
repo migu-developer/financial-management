@@ -7,8 +7,17 @@ export type {
 
 // Pages
 export { LoginPage } from './presentation/pages/login';
+export type { LoginPageProps } from './presentation/pages/login';
 export { RegisterPage } from './presentation/pages/register';
+export type { RegisterPageProps } from './presentation/pages/register';
 export { ForgotPasswordPage } from './presentation/pages/forgot-password';
+export type { ForgotPasswordPageProps } from './presentation/pages/forgot-password';
+export { MfaVerifyPage } from './presentation/pages/mfa-verify';
+export type { MfaVerifyPageProps } from './presentation/pages/mfa-verify';
+export { MfaSetupPage } from './presentation/pages/mfa-setup';
+export type { MfaSetupPageProps } from './presentation/pages/mfa-setup';
+export { NewPasswordPage } from './presentation/pages/new-password';
+export type { NewPasswordPageProps } from './presentation/pages/new-password';
 
 // Templates
 export { LoginTemplate } from './presentation/components/shared/templates/login-template';
@@ -46,10 +55,8 @@ export {
   IdentifierInput,
   detectIdentifierType,
 } from './presentation/components/shared/molecules/identifier-input';
-export type {
-  IdentifierInputProps,
-  IdentifierType,
-} from './presentation/components/shared/molecules/identifier-input';
+export type { IdentifierInputProps } from './presentation/components/shared/molecules/identifier-input';
+export { IdentifierType } from './domain/utils/constants';
 export { TermsConsent } from './presentation/components/shared/molecules/terms-consent';
 export type { TermsConsentProps } from './presentation/components/shared/molecules/terms-consent';
 export { NotificationPreference } from './presentation/components/shared/molecules/notification-preference';

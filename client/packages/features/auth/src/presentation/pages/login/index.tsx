@@ -1,42 +1,75 @@
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 
-import { LoginTemplate } from '@features/auth/presentation/components/shared/templates/login-template';
 import type { SocialProvider } from '@features/ui';
 
-interface LoginPageProps {
+import { LoginTemplate } from '@features/auth/presentation/components/shared/templates/login-template';
+import { AuthChallengeType } from '@features/auth/domain/repositories/auth-repository.port';
+import { useAuth } from '@features/auth/presentation/providers/auth-provider';
+
+export interface LoginPageProps {
   onForgotPassword: () => void;
   onSignUp: () => void;
-  onSignInSuccess?: () => void;
-  error?: string;
+  onSignInSuccess: () => void;
+  onNewPasswordRequired: () => void;
+  onMfaRequired: () => void;
+  onMfaSetupRequired: () => void;
 }
 
-export function LoginPage({ onSignInSuccess, ...props }: LoginPageProps) {
-  const [loading, setLoading] = useState(false);
+export function LoginPage({
+  onForgotPassword,
+  onSignUp,
+  onSignInSuccess,
+  onNewPasswordRequired,
+  onMfaRequired,
+  onMfaSetupRequired,
+}: LoginPageProps) {
+  const { signIn, loading, error } = useAuth();
 
-  const simulateAuth = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onSignInSuccess?.();
-    }, 1500);
-  };
+  const handleSignIn = useCallback(
+    async (identifier: string, password: string) => {
+      try {
+        const result = await signIn(identifier, password);
+        switch (result.type) {
+          case AuthChallengeType.SESSION:
+            onSignInSuccess();
+            break;
+          case AuthChallengeType.NEW_PASSWORD_REQUIRED:
+            onNewPasswordRequired();
+            break;
+          case AuthChallengeType.SOFTWARE_TOKEN_MFA:
+          case AuthChallengeType.SMS_MFA:
+            onMfaRequired();
+            break;
+          case AuthChallengeType.MFA_SETUP:
+            onMfaSetupRequired();
+            break;
+        }
+      } catch {
+        // error stored in auth state
+      }
+    },
+    [
+      signIn,
+      onSignInSuccess,
+      onNewPasswordRequired,
+      onMfaRequired,
+      onMfaSetupRequired,
+    ],
+  );
 
-  const handleSignIn = (_email: string, _password: string) => {
-    console.log('sign in', _email, _password);
-    simulateAuth();
-  };
-
-  const handleSocialSignIn = (_provider: SocialProvider) => {
+  const handleSocialSignIn = useCallback((_provider: SocialProvider) => {
+    // OAuth flow — Fase 7 (social)
     console.log('social sign in', _provider);
-    simulateAuth();
-  };
+  }, []);
 
   return (
     <LoginTemplate
       onSignIn={handleSignIn}
       onSocialSignIn={handleSocialSignIn}
+      onForgotPassword={onForgotPassword}
+      onSignUp={onSignUp}
       loading={loading}
-      {...props}
+      error={error?.message}
     />
   );
 }

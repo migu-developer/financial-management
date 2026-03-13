@@ -2,6 +2,8 @@ import React, { useCallback, useState } from 'react';
 
 import type { SocialProvider } from '@features/ui';
 
+import { useTranslation } from '@packages/i18n';
+
 import { RegisterTemplate } from '@features/auth/presentation/components/shared/templates/register-template';
 import type { SignUpDto } from '@features/auth/domain/repositories/auth-repository.port';
 
@@ -21,6 +23,7 @@ export function RegisterPage({
   onPressPrivacy,
 }: RegisterPageProps) {
   const { signUp } = useAuth();
+  const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -29,7 +32,7 @@ export function RegisterPage({
       setError(undefined);
       setLoading(true);
       try {
-        await signUp(dto);
+        await signUp({ ...dto, locale: i18n.language });
         onRegisterSuccess(dto.email);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
@@ -37,7 +40,7 @@ export function RegisterPage({
         setLoading(false);
       }
     },
-    [signUp, onRegisterSuccess],
+    [signUp, onRegisterSuccess, i18n],
   );
 
   const handleSocialSignIn = useCallback((_provider: SocialProvider) => {

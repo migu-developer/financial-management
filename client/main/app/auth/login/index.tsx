@@ -11,6 +11,9 @@ export default function LoginScreen() {
       onForgotPassword={() => router.push(ROUTES.authForgotPassword as never)}
       onSignUp={() => router.push(ROUTES.authRegister as never)}
       onSignInSuccess={() => router.replace(ROUTES.dashboard.home as never)}
+      onNewPasswordRequired={() => router.push(ROUTES.authNewPassword as never)}
+      onMfaRequired={() => router.push(ROUTES.authMfa as never)}
+      onMfaSetupRequired={() => router.push(ROUTES.authMfaSetup as never)}
     />
   );
 }
