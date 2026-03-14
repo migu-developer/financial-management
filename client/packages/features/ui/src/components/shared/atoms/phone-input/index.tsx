@@ -184,6 +184,8 @@ export function PhoneInput({
         ? surface.dark.border
         : surface.light.border;
 
+  const containerBg = isDark ? surface.dark.card : surface.light.card;
+
   return (
     <View className="mb-4">
       {label ? (
@@ -268,8 +270,8 @@ export function PhoneInput({
             }}
           >
             <Animated.View
-              className="bg-white dark:bg-slate-800"
               style={{
+                backgroundColor: containerBg,
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
                 maxHeight: '70%',

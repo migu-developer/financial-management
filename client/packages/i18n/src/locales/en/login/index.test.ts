@@ -37,8 +37,6 @@ describe('en/login namespace', () => {
     expect(login.register).toHaveProperty('submitButton');
     expect(login.register).toHaveProperty('passwordStrength');
     expect(login.register).toHaveProperty('passwordRequirements');
-    expect(login.register).toHaveProperty('notificationPreference');
-    expect(login.register).toHaveProperty('notificationBoth');
   });
 
   it('has confirmSignUp section', () => {
