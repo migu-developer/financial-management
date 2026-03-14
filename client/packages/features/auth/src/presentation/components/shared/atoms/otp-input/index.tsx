@@ -4,10 +4,9 @@ import type {
   TextInputKeyPressEvent,
 } from 'react-native';
 import { View } from 'react-native';
-import { useColorScheme } from 'nativewind';
 
 import { generic, surface } from '@features/ui/utils/colors';
-import { ColorScheme, TextInputBase } from '@features/ui';
+import { ColorScheme, TextInputBase, useThemeActions } from '@features/ui';
 import { KeyEventNames } from '@features/auth/domain/utils/constants';
 
 const OTP_LENGTH = 6;
@@ -25,7 +24,7 @@ export function OtpInput({
   disabled = false,
   error = false,
 }: OtpInputProps) {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useThemeActions();
   const inputRefs = useRef<(RNTextInput | null)[]>(
     Array(OTP_LENGTH).fill(null),
   );

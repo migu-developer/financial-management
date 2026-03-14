@@ -3,7 +3,6 @@ import '@packages/i18n';
 import { Stack } from 'expo-router';
 import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
 import { StatusBar, StatusBarStyle } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useState } from 'react';
 import 'react-native-reanimated';
 
@@ -11,11 +10,12 @@ import '@/styles/global.css';
 import { ROUTE_NAMES } from '@/utils/route';
 import { AuthProvider } from '@features/auth';
 import { PreferencesProvider } from './providers/preferences-provider';
+import { useThemeActions } from '@features/ui';
 
 preventAutoHideAsync();
 
 function StatusBarDisplay(): React.ReactNode {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useThemeActions();
 
   return <StatusBar style={colorScheme as StatusBarStyle} />;
 }

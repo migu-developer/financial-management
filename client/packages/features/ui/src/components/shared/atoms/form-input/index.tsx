@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
 
 import {
   generic,
@@ -12,6 +11,7 @@ import {
 } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
 import { useTranslation } from '@packages/i18n';
+import { useThemeActions } from '@features/ui/contexts/theme-context';
 
 interface FormInputProps {
   label: string;
@@ -44,7 +44,7 @@ export function FormInput({
 }: FormInputProps) {
   const { t } = useTranslation('ui');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useThemeActions();
   const isDark = colorScheme === ColorScheme.DARK;
 
   const borderColor = error

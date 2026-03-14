@@ -1,10 +1,10 @@
 import React from 'react';
 import type { TextInput as RNTextInput, TextInputProps } from 'react-native';
 import { TextInput } from 'react-native';
-import { useColorScheme } from 'nativewind';
 
 import { generic, surface, textTokens } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
+import { useThemeActions } from '@features/ui/contexts/theme-context';
 
 export interface TextInputBaseProps extends TextInputProps {
   error?: boolean;
@@ -15,7 +15,7 @@ export const TextInputBase = React.forwardRef<RNTextInput, TextInputBaseProps>(
     { error = false, editable = true, className = '', style, ...props },
     ref,
   ) => {
-    const { colorScheme } = useColorScheme();
+    const { colorScheme } = useThemeActions();
     const isDisabled = !editable;
 
     const borderColor = error
