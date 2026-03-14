@@ -1,6 +1,7 @@
 import { rgba } from '@features/ui/utils/colors';
 import React from 'react';
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { maxWidth } from '@features/ui/utils/spacing';
 
 export interface InfoPopupProps {
   visible: boolean;
@@ -39,7 +40,7 @@ export function InfoPopup({
         {/* Stops tap from closing when pressing inside the card */}
         <TouchableOpacity
           activeOpacity={1}
-          style={{ maxWidth: 320, width: '85%' }}
+          style={{ maxWidth: maxWidth.popup, width: '85%' }}
         >
           <View className="bg-white dark:bg-slate-800 rounded-2xl p-6">
             <Text className="text-slate-900 dark:text-white font-bold text-lg mb-3">

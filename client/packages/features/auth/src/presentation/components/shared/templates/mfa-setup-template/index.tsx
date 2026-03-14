@@ -8,6 +8,8 @@ import {
   Card,
   FormInput,
   LanguageSelector,
+  maxWidth,
+  space,
   ThemeToggle,
 } from '@features/ui';
 
@@ -48,20 +50,20 @@ export function MfaSetupTemplate({
       contentContainerStyle={{
         flexGrow: 1,
         alignItems: 'center',
-        padding: 24,
-        paddingTop: 40,
+        padding: space.lg,
+        paddingTop: space.s40,
       }}
     >
       {/* Language / Theme bar */}
       <View
         className="w-full flex-row justify-end gap-2 mb-4"
-        style={{ maxWidth: 448 }}
+        style={{ maxWidth: maxWidth.form }}
       >
         <LanguageSelector />
         <ThemeToggle />
       </View>
 
-      <Card className="w-full p-6" style={{ maxWidth: 448 }}>
+      <Card className="w-full p-6" style={{ maxWidth: maxWidth.form }}>
         <View className="mb-6">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
             {t('mfaSetup.title')}

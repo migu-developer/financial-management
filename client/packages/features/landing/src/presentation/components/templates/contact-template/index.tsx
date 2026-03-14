@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useTranslation } from '@packages/i18n';
 
 import { LegalPageHeader } from '@features/landing/presentation/components/molecules/legal-page-header';
+import { space } from '@features/ui';
 
 interface ContactTemplateProps {
   onBackPress?: () => void;
@@ -25,7 +26,10 @@ export function ContactTemplate({ onBackPress }: ContactTemplateProps) {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
+        contentContainerStyle={{
+          padding: space.lg,
+          paddingBottom: space['2xl'],
+        }}
       >
         <Text className="text-slate-600 dark:text-slate-300 text-base mb-8">
           {t('contact.subtitle')}

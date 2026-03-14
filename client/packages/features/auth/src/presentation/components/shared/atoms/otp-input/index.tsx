@@ -6,7 +6,12 @@ import type {
 import { View } from 'react-native';
 
 import { generic, surface } from '@features/ui/utils/colors';
-import { ColorScheme, TextInputBase, useThemeActions } from '@features/ui';
+import {
+  ColorScheme,
+  space,
+  TextInputBase,
+  useThemeActions,
+} from '@features/ui';
 import { KeyEventNames } from '@features/auth/domain/utils/constants';
 
 const OTP_LENGTH = 6;
@@ -92,7 +97,7 @@ export function OtpInput({
           editable={!disabled}
           error={error}
           className="text-xl font-bold text-center"
-          style={{ borderColor, width: 48, height: 48 }}
+          style={{ borderColor, width: space['2xl'], height: space['2xl'] }}
           accessibilityLabel={`Digit ${index + 1} of ${OTP_LENGTH}`}
           accessibilityRole="none"
           testID={`otp-input-${index}`}

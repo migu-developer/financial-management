@@ -34,6 +34,12 @@ import {
   DEFAULT_COUNTRY,
 } from '@features/ui/utils/countries';
 import { isWeb } from '@packages/utils';
+import {
+  fontSizeScale,
+  maxWidth,
+  radius,
+  space,
+} from '@features/ui/utils/spacing';
 
 function getCountryFlag(code: string): string {
   return [...code.toUpperCase()]
@@ -216,9 +222,9 @@ export function PhoneInput({
           </Text>
           <MaterialCommunityIcons
             name="chevron-down"
-            size={14}
+            size={fontSizeScale.xs}
             color={isDark ? uiTokens.moonColor : textTokens.light.muted}
-            style={{ marginLeft: 2 }}
+            style={{ marginLeft: space.s2 }}
           />
         </TouchableOpacity>
 
@@ -234,7 +240,7 @@ export function PhoneInput({
           onBlur={() => setIsFocused(false)}
           className="flex-1 px-3 py-3 rounded-none border-0"
           style={[
-            { borderWidth: 0 },
+            { borderWidth: space.zero },
             isPlatformWeb ? { outlineStyle: 'none' as never } : undefined,
           ]}
           accessibilityLabel={label}
@@ -258,10 +264,10 @@ export function PhoneInput({
           <Animated.View
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              top: space.zero,
+              left: space.zero,
+              right: space.zero,
+              bottom: space.zero,
               backgroundColor: rgba.black50,
               opacity: backdropAnim,
             }}
@@ -278,10 +284,10 @@ export function PhoneInput({
             <Animated.View
               style={{
                 backgroundColor: containerBg,
-                borderTopLeftRadius: 16,
-                borderTopRightRadius: 16,
+                borderTopLeftRadius: radius.xl,
+                borderTopRightRadius: radius.xl,
                 maxHeight: '70%',
-                maxWidth: 448,
+                maxWidth: maxWidth.form,
                 width: '100%',
                 transform: [
                   {

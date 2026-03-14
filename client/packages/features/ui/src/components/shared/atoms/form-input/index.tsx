@@ -7,6 +7,7 @@ import { ColorScheme } from '@features/ui/utils/constants';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
 import { TextInputBase } from '@features/ui/components/shared/atoms/text-input-base';
 import { isWeb } from '@packages/utils';
+import { space } from '@features/ui/utils/spacing';
 
 export interface FormInputProps {
   label: string;
@@ -72,7 +73,7 @@ export function FormInput({
           accessibilityLabel={label}
           style={[
             { borderColor },
-            icon ? { paddingRight: 48 } : undefined,
+            icon ? { paddingRight: space['2xl'] } : undefined,
             isPlatformWeb ? { outlineStyle: 'none' as never } : undefined,
           ]}
         />
@@ -84,7 +85,7 @@ export function FormInput({
               top: 0,
               bottom: 0,
               justifyContent: 'center',
-              paddingHorizontal: 12,
+              paddingHorizontal: space.sm,
             }}
             pointerEvents="box-none"
           >

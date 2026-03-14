@@ -7,7 +7,9 @@ import {
   Button,
   Card,
   LanguageSelector,
+  maxWidth,
   PasswordInput,
+  space,
   ThemeToggle,
 } from '@features/ui';
 
@@ -72,19 +74,19 @@ export function ConfirmForgotPasswordTemplate({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 24,
+        padding: space.lg,
       }}
     >
       {/* Language / Theme bar */}
       <View
         className="w-full flex-row justify-end gap-2 mb-4"
-        style={{ maxWidth: 448 }}
+        style={{ maxWidth: maxWidth.form }}
       >
         <LanguageSelector />
         <ThemeToggle />
       </View>
 
-      <Card className="w-full p-6" style={{ maxWidth: 448 }}>
+      <Card className="w-full p-6" style={{ maxWidth: maxWidth.form }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
             {t('confirmForgotPassword.title')}

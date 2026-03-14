@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { useTranslation } from '@packages/i18n';
 
 import { Button } from '@features/ui';
+import { maxWidth } from '@features/ui/utils/spacing';
 
 interface CTASectionProps {
   onGetStartedPress?: () => void;
@@ -16,7 +17,7 @@ export function CTASection({ onGetStartedPress }: CTASectionProps) {
     <View className="w-full bg-primary-600 px-6 py-20" accessible={false}>
       <View
         style={{
-          maxWidth: 640,
+          maxWidth: maxWidth.sm,
           alignSelf: 'center',
           width: '100%',
           alignItems: 'center',

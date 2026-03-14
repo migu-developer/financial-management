@@ -5,6 +5,7 @@ import { useTranslation } from '@packages/i18n';
 
 import { LegalPageHeader } from '@features/landing/presentation/components/molecules/legal-page-header';
 import { LegalSection } from '@features/landing/presentation/components/molecules/legal-section';
+import { space } from '@features/ui';
 
 interface PrivacyTemplateProps {
   onBackPress?: () => void;
@@ -95,7 +96,10 @@ export function PrivacyTemplate({ onBackPress }: PrivacyTemplateProps) {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
+        contentContainerStyle={{
+          padding: space.lg,
+          paddingBottom: space['2xl'],
+        }}
       >
         <Text className="text-slate-600 dark:text-slate-500 text-sm mb-8">
           {t('privacy.lastUpdated')}
