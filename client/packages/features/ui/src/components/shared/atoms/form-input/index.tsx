@@ -1,31 +1,25 @@
-import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import {
-  generic,
-  surface,
-  textTokens,
-  uiTokens,
-} from '@features/ui/utils/colors';
+import { generic, primary, surface } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
-import { useTranslation } from '@packages/i18n';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
+import { TextInputBase } from '@features/ui/components/shared/atoms/text-input-base';
+import { isWeb } from '@packages/utils';
 
-interface FormInputProps {
+export interface FormInputProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-  placeholderTextColor?: string;
   secureTextEntry?: boolean;
-  showPasswordToggle?: boolean;
   keyboardType?: KeyboardTypeOptions;
   className?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
   disabled?: boolean;
+  icon?: React.ReactNode;
 }
 
 export function FormInput({
@@ -34,27 +28,26 @@ export function FormInput({
   onChangeText,
   placeholder,
   secureTextEntry = false,
-  showPasswordToggle = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
-  placeholderTextColor,
   className,
   error,
   disabled = false,
+  icon,
 }: FormInputProps) {
-  const { t } = useTranslation('ui');
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { colorScheme } = useThemeActions();
   const isDark = colorScheme === ColorScheme.DARK;
+  const [isFocused, setIsFocused] = useState(false);
+
+  const isPlatformWeb = useMemo(() => isWeb(), []);
 
   const borderColor = error
     ? generic.error
-    : isDark
-      ? surface.dark.border
-      : surface.light.border;
-
-  const iconColor = isDark ? uiTokens.moonColor : textTokens.light.muted;
-  const isSecure = secureTextEntry && !isPasswordVisible;
+    : isFocused
+      ? primary[400]
+      : isDark
+        ? surface.dark.border
+        : surface.light.border;
 
   return (
     <View className={className ?? 'mb-4'}>
@@ -62,39 +55,41 @@ export function FormInput({
         {label}
       </Text>
       <View
-        className={`bg-slate-100 dark:bg-slate-800 rounded-xl flex-row items-center border overflow-hidden ${
-          disabled ? 'opacity-50' : ''
-        }`}
-        style={{ borderColor }}
+        style={{ position: 'relative' }}
+        className={disabled ? 'opacity-50' : ''}
       >
-        <TextInput
+        <TextInputBase
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={placeholderTextColor ?? textTokens.dark.muted}
-          secureTextEntry={isSecure}
+          secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           editable={!disabled}
-          className="flex-1 px-4 py-3 text-base text-slate-900 dark:text-white"
-          style={{ borderWidth: 0 }}
+          error={!!error}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           accessibilityLabel={label}
+          style={[
+            { borderColor },
+            icon ? { paddingRight: 48 } : undefined,
+            isPlatformWeb ? { outlineStyle: 'none' as never } : undefined,
+          ]}
         />
-        {secureTextEntry && showPasswordToggle ? (
-          <TouchableOpacity
-            onPress={() => setIsPasswordVisible((v) => !v)}
-            className="px-3 py-3"
-            accessibilityRole="button"
-            accessibilityLabel={
-              isPasswordVisible ? t('hidePassword') : t('showPassword')
-            }
+        {icon ? (
+          <View
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              paddingHorizontal: 12,
+            }}
+            pointerEvents="box-none"
           >
-            <MaterialCommunityIcons
-              name={isPasswordVisible ? 'eye-off' : 'eye'}
-              size={20}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            {icon}
+          </View>
         ) : null}
       </View>
       {error ? (

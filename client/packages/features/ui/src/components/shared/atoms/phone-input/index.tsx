@@ -33,6 +33,7 @@ import {
   COUNTRY_NAMES,
   DEFAULT_COUNTRY,
 } from '@features/ui/utils/countries';
+import { isWeb } from '@packages/utils';
 
 function getCountryFlag(code: string): string {
   return [...code.toUpperCase()]
@@ -77,6 +78,8 @@ export function PhoneInput({
   );
   const [localDigits, setLocalDigits] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
+
+  const isPlatformWeb = useMemo(() => isWeb(), []);
 
   // Animated backdrop value (0 = hidden, 1 = visible)
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -230,7 +233,10 @@ export function PhoneInput({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className="flex-1 px-3 py-3 rounded-none border-0"
-          style={{ borderWidth: 0 }}
+          style={[
+            { borderWidth: 0 },
+            isPlatformWeb ? { outlineStyle: 'none' as never } : undefined,
+          ]}
           accessibilityLabel={label}
           testID="phone-input-number"
         />
