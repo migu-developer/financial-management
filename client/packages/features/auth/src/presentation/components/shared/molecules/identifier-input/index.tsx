@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 
 import { useTranslation } from '@packages/i18n';
 import { FormInput } from '@features/ui';
@@ -38,6 +38,20 @@ export function IdentifierInput({
 
   const identifierType = detectIdentifierType(value);
 
+  // Transfer focus when the input type switches while the field is focused
+  const focusedRef = useRef(false);
+  const prevTypeRef = useRef<IdentifierType>(identifierType);
+  const shouldTransferFocus =
+    prevTypeRef.current !== identifierType && focusedRef.current;
+  prevTypeRef.current = identifierType;
+
+  const handleFocus = useCallback(() => {
+    focusedRef.current = true;
+  }, []);
+  const handleBlur = useCallback(() => {
+    focusedRef.current = false;
+  }, []);
+
   const handleEmailChange = useCallback(
     (text: string) => {
       onChangeIdentifier(text, IdentifierTypeEnum.EMAIL);
@@ -61,6 +75,9 @@ export function IdentifierInput({
         placeholder={t('identifierInput.placeholder')}
         error={error}
         disabled={disabled}
+        autoFocus={shouldTransferFocus}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
       />
     );
   }
@@ -75,6 +92,9 @@ export function IdentifierInput({
       autoCapitalize="none"
       error={error}
       disabled={disabled}
+      autoFocus={shouldTransferFocus}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
     />
   );
 }

@@ -18,7 +18,10 @@ const applicationUrl = config.APPLICATION_URL;
 
 export function EmailHeader() {
   return (
-    <Section className="bg-primary-dark py-6 px-6 text-center">
+    <Section
+      className="bg-primary-dark py-6 px-6 text-center"
+      style={{ width: '100%' }}
+    >
       <img
         src={`${baseUrl}/financial-management/300x300.webp`}
         width={80}

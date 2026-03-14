@@ -62,6 +62,9 @@ export interface PhoneInputProps {
   error?: string;
   disabled?: boolean;
   defaultCountry?: string;
+  autoFocus?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function PhoneInput({
@@ -72,6 +75,9 @@ export function PhoneInput({
   error,
   disabled = false,
   defaultCountry,
+  autoFocus,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }: PhoneInputProps) {
   const { colorScheme } = useThemeActions();
   const { t } = useTranslation('login');
@@ -234,10 +240,17 @@ export function PhoneInput({
           onChangeText={handleDigitsChange}
           placeholder={placeholder}
           keyboardType="phone-pad"
+          autoFocus={autoFocus}
           editable={!disabled}
           error={!!error}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={() => {
+            setIsFocused(true);
+            onFocusProp?.();
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            onBlurProp?.();
+          }}
           className="flex-1 px-3 py-3 rounded-none border-0"
           style={[
             { borderWidth: space.zero },

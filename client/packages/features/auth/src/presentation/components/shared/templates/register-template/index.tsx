@@ -88,8 +88,9 @@ export function RegisterTemplate({
       password !== '' &&
       confirmPassword !== '' &&
       password === confirmPassword &&
-      termsAccepted,
-    [name, email, password, confirmPassword, termsAccepted],
+      termsAccepted &&
+      (!showPhone || phone.trim() !== ''),
+    [name, email, password, confirmPassword, termsAccepted, showPhone, phone],
   );
 
   const handleSubmit = useCallback(() => {

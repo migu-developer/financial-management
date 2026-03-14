@@ -18,9 +18,12 @@ export interface FormInputProps {
   keyboardType?: KeyboardTypeOptions;
   className?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoFocus?: boolean;
   error?: string;
   disabled?: boolean;
   icon?: React.ReactNode;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function FormInput({
@@ -31,10 +34,13 @@ export function FormInput({
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  autoFocus,
   className,
   error,
   disabled = false,
   icon,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }: FormInputProps) {
   const { colorScheme } = useThemeActions();
   const isDark = colorScheme === ColorScheme.DARK;
@@ -66,10 +72,17 @@ export function FormInput({
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          autoFocus={autoFocus}
           editable={!disabled}
           error={!!error}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={() => {
+            setIsFocused(true);
+            onFocusProp?.();
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            onBlurProp?.();
+          }}
           accessibilityLabel={label}
           style={[
             { borderColor },
