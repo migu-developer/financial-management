@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useTranslation } from '@packages/i18n';
 
@@ -7,20 +8,24 @@ import {
   Button,
   Card,
   FormInput,
+  InfoPopup,
   LanguageSelector,
   SocialAuthButton,
   ThemeToggle,
+  useThemeActions,
 } from '@features/ui';
 import type { SocialProvider } from '@features/ui';
+import {
+  generic,
+  primary,
+  textTokens,
+  uiTokens,
+} from '@features/ui/utils/colors';
+import { ColorScheme } from '@features/ui/utils/constants';
 
 import { PasswordStrength } from '@features/auth/presentation/components/shared/atoms/password-strength';
 import { PhoneInput } from '@features/auth/presentation/components/shared/atoms/phone-input';
-import {
-  NotificationChannelEnum,
-  NotificationPreference,
-} from '@features/auth/presentation/components/shared/molecules/notification-preference';
 import { TermsConsent } from '@features/auth/presentation/components/shared/molecules/terms-consent';
-import type { NotificationChannel } from '@features/auth/presentation/components/shared/molecules/notification-preference';
 import type { SignUpDto } from '@features/auth/domain/repositories/auth-repository.port';
 
 export interface RegisterTemplateProps {
@@ -52,23 +57,22 @@ export function RegisterTemplate({
   error,
 }: RegisterTemplateProps) {
   const { t } = useTranslation('login');
+  const { colorScheme } = useThemeActions();
+  const isDark = colorScheme === ColorScheme.DARK;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
   const [phone, setPhone] = useState('');
+  const [showPhone, setShowPhone] = useState(false);
+  const [phoneInfoVisible, setPhoneInfoVisible] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [notificationChannel, setNotificationChannel] =
-    useState<NotificationChannel>(NotificationChannelEnum.EMAIL);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const isEmailValid = email.trim() === '' || EMAIL_REGEX.test(email.trim());
   const emailError =
     emailTouched && !isEmailValid ? t('register.emailInvalid') : undefined;
-
-  const phoneRequiredForSms =
-    notificationChannel !== NotificationChannelEnum.EMAIL && phone === '';
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -81,16 +85,8 @@ export function RegisterTemplate({
       password !== '' &&
       confirmPassword !== '' &&
       password === confirmPassword &&
-      termsAccepted &&
-      !phoneRequiredForSms,
-    [
-      name,
-      email,
-      password,
-      confirmPassword,
       termsAccepted,
-      phoneRequiredForSms,
-    ],
+    [name, email, password, confirmPassword, termsAccepted],
   );
 
   const handleSubmit = useCallback(() => {
@@ -99,13 +95,21 @@ export function RegisterTemplate({
       password,
       name: name.trim() || undefined,
       phoneNumber: phone || undefined,
-      notificationPreference: phone ? notificationChannel : undefined,
     });
-  }, [email, password, name, phone, notificationChannel, onRegister]);
+  }, [email, password, name, phone, onRegister]);
 
   const handlePhoneChange = useCallback((e164: string) => {
     setPhone(e164);
   }, []);
+
+  const handleTogglePhone = useCallback((value: boolean) => {
+    setShowPhone(value);
+    if (!value) {
+      setPhone('');
+    }
+  }, []);
+
+  const iconColor = isDark ? uiTokens.moonColor : textTokens.light.muted;
 
   return (
     <ScrollView
@@ -167,22 +171,50 @@ export function RegisterTemplate({
           error={emailError}
         />
 
-        <PhoneInput
-          label={t('register.phoneLabel')}
-          value={phone}
-          onChange={handlePhoneChange}
-          placeholder={t('register.phonePlaceholder')}
-          disabled={loading}
-          error={
-            phoneRequiredForSms ? t('register.phoneRequiredForSms') : undefined
-          }
-        />
+        {/* Phone toggle + conditional input */}
+        <View className="mb-4">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+                {t('register.addPhoneToggle')}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPhoneInfoVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('register.addPhoneInfoTitle')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={16}
+                  color={iconColor}
+                />
+              </TouchableOpacity>
+            </View>
+            <Switch
+              value={showPhone}
+              onValueChange={handleTogglePhone}
+              disabled={loading}
+              trackColor={{
+                false: textTokens.dark.secondary,
+                true: primary[400],
+              }}
+              thumbColor={generic.white}
+            />
+          </View>
 
-        <NotificationPreference
-          value={notificationChannel}
-          onChange={setNotificationChannel}
-          disabled={loading}
-        />
+          {showPhone ? (
+            <View className="mt-3">
+              <PhoneInput
+                label={t('register.phoneLabel')}
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder={t('register.phonePlaceholder')}
+                disabled={loading}
+              />
+            </View>
+          ) : null}
+        </View>
 
         <FormInput
           label={t('register.passwordLabel')}
@@ -253,6 +285,14 @@ export function RegisterTemplate({
           </TouchableOpacity>
         </View>
       </Card>
+
+      <InfoPopup
+        visible={phoneInfoVisible}
+        onClose={() => setPhoneInfoVisible(false)}
+        title={t('register.addPhoneInfoTitle')}
+        body={t('register.addPhoneInfoBody')}
+        closeLabel={t('register.addPhoneInfoClose')}
+      />
     </ScrollView>
   );
 }
