@@ -3,15 +3,30 @@ import { Dimensions, Modal, Pressable, Text, View } from 'react-native';
 
 import { resources, useTranslation } from '@packages/i18n';
 import type { SupportedLanguage } from '@packages/i18n';
-import { width } from '@features/ui/utils/spacing';
+import { Icon } from '@features/ui/components/shared/atoms/icon';
+import { useThemeActions } from '@features/ui/contexts/theme-context';
+import { textTokens } from '@features/ui/utils/colors';
+import { ColorScheme } from '@features/ui/utils/constants';
+import { space, width } from '@features/ui/utils/spacing';
 
 const LANGUAGES = Object.keys(resources) as SupportedLanguage[];
 
 export function LanguageSelector() {
   const { t, i18n } = useTranslation('ui');
+  const { colorScheme } = useThemeActions();
   const currentLang = i18n.language as SupportedLanguage;
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+  const isDark = colorScheme === ColorScheme.DARK;
+  const chevronColor = isDark
+    ? textTokens.dark.secondary
+    : textTokens.light.secondary;
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    right: number;
+  }>({
+    top: space.zero,
+    right: space.zero,
+  });
   const triggerRef = useRef<View>(null);
 
   const handleOpen = () => {
@@ -50,9 +65,11 @@ export function LanguageSelector() {
         <Text className="text-slate-900 dark:text-white text-xs font-bold">
           {currentLang.slice(0, 2).toUpperCase()}
         </Text>
-        <Text className="text-slate-600 dark:text-slate-300 text-xs">
-          {isOpen ? '▴' : '▾'}
-        </Text>
+        <Icon
+          name={isOpen ? 'expand-less' : 'expand-more'}
+          size={18}
+          color={chevronColor}
+        />
       </Pressable>
 
       <Modal
