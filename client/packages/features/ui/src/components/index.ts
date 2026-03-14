@@ -1,4 +1,6 @@
 export { Button } from './shared/atoms/button';
+export { InfoPopup } from './shared/atoms/info-popup';
+export type { InfoPopupProps } from './shared/atoms/info-popup';
 export { Card } from './shared/atoms/card';
 export { FormInput } from './shared/atoms/form-input';
 export { Icon } from './shared/atoms/icon';

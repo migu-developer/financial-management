@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'nativewind';
 import {
   AsYouType,
   getCountries,
@@ -27,6 +26,7 @@ import {
   uiTokens,
 } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
+import { useThemeActions } from '@features/ui/contexts/theme-context';
 import { TextInputBase } from '@features/ui/components/shared/atoms/text-input-base';
 import {
   COUNTRY_CODES,
@@ -66,7 +66,7 @@ export function PhoneInput({
   disabled = false,
   defaultCountry,
 }: PhoneInputProps) {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useThemeActions();
   const { t } = useTranslation('login');
   const isDark = colorScheme === ColorScheme.DARK;
 
@@ -184,8 +184,6 @@ export function PhoneInput({
         ? surface.dark.border
         : surface.light.border;
 
-  const containerBg = isDark ? surface.dark.card : surface.light.card;
-
   return (
     <View className="mb-4">
       {label ? (
@@ -270,8 +268,8 @@ export function PhoneInput({
             }}
           >
             <Animated.View
+              className="bg-white dark:bg-slate-800"
               style={{
-                backgroundColor: containerBg,
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
                 maxHeight: '70%',
