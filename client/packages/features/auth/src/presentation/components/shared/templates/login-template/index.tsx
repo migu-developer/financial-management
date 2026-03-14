@@ -6,8 +6,8 @@ import { useTranslation } from '@packages/i18n';
 import {
   Button,
   Card,
-  FormInput,
   LanguageSelector,
+  PasswordInput,
   SocialAuthButton,
   ThemeToggle,
 } from '@features/ui';
@@ -112,13 +112,11 @@ export function LoginTemplate({
           disabled={loading}
         />
 
-        <FormInput
+        <PasswordInput
           label={t('passwordLabel')}
           value={password}
           onChangeText={setPassword}
           placeholder={t('passwordPlaceholder')}
-          secureTextEntry
-          showPasswordToggle
           disabled={loading}
         />
 

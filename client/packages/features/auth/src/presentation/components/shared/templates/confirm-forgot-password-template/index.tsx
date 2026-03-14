@@ -6,8 +6,8 @@ import { useTranslation } from '@packages/i18n';
 import {
   Button,
   Card,
-  FormInput,
   LanguageSelector,
+  PasswordInput,
   ThemeToggle,
 } from '@features/ui';
 
@@ -129,25 +129,21 @@ export function ConfirmForgotPasswordTemplate({
           )}
         </View>
 
-        <FormInput
+        <PasswordInput
           label={t('confirmForgotPassword.newPasswordLabel')}
           value={newPassword}
           onChangeText={setNewPassword}
           placeholder={t('confirmForgotPassword.newPasswordPlaceholder')}
-          secureTextEntry
-          showPasswordToggle
           disabled={loading}
         />
 
         <PasswordStrength password={newPassword} />
 
-        <FormInput
+        <PasswordInput
           label={t('confirmForgotPassword.confirmPasswordLabel')}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           placeholder={t('confirmForgotPassword.confirmPasswordPlaceholder')}
-          secureTextEntry
-          showPasswordToggle
           error={
             passwordMismatch
               ? t('confirmForgotPassword.passwordMismatch')

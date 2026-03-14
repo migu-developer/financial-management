@@ -10,6 +10,7 @@ import {
   FormInput,
   InfoPopup,
   LanguageSelector,
+  PasswordInput,
   SocialAuthButton,
   ThemeToggle,
   useThemeActions,
@@ -216,25 +217,21 @@ export function RegisterTemplate({
           ) : null}
         </View>
 
-        <FormInput
+        <PasswordInput
           label={t('register.passwordLabel')}
           value={password}
           onChangeText={setPassword}
           placeholder={t('register.passwordPlaceholder')}
-          secureTextEntry
-          showPasswordToggle
           disabled={loading}
         />
 
         <PasswordStrength password={password} />
 
-        <FormInput
+        <PasswordInput
           label={t('register.confirmPasswordLabel')}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           placeholder={t('register.confirmPasswordPlaceholder')}
-          secureTextEntry
-          showPasswordToggle
           error={
             passwordMismatch ? t('newPassword.passwordMismatch') : undefined
           }
