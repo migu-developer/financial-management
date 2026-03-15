@@ -90,6 +90,8 @@ export const login = {
   confirmSignUp: {
     title: 'Verify Your Account',
     subtitleEmail: 'Enter the 6-digit code sent to {{destination}}',
+    subtitleEmailWithPhone:
+      'Enter the 6-digit code sent to {{destination}} or via SMS to {{phone}}.',
     subtitlePhone: 'Enter the 6-digit code sent by SMS to {{destination}}',
     codeLabel: 'Verification code',
     codePlaceholder: '000000',

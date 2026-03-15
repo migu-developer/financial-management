@@ -22,6 +22,7 @@ export type Medium = (typeof IdentifierType)[keyof typeof IdentifierType];
 export interface ConfirmSignUpTemplateProps {
   destination: string;
   medium: Medium;
+  phone?: string;
   onVerify: (code: string) => void;
   onResend: () => void;
   onBack: () => void;
@@ -33,6 +34,7 @@ export interface ConfirmSignUpTemplateProps {
 export function ConfirmSignUpTemplate({
   destination,
   medium,
+  phone = '',
   onVerify,
   onResend,
   onBack,
@@ -63,7 +65,9 @@ export function ConfirmSignUpTemplate({
   const subtitle =
     medium === IdentifierType.PHONE
       ? t('confirmSignUp.subtitlePhone', { destination })
-      : t('confirmSignUp.subtitleEmail', { destination });
+      : phone
+        ? t('confirmSignUp.subtitleEmailWithPhone', { destination, phone })
+        : t('confirmSignUp.subtitleEmail', { destination });
 
   return (
     <ScrollView

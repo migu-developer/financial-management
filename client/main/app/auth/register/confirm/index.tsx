@@ -6,13 +6,17 @@ import { ROUTES } from '@/utils/route';
 
 export default function RegisterConfirmScreen() {
   const router = useRouter();
-  const { identifier = '' } = useLocalSearchParams<{ identifier: string }>();
+  const { identifier = '', phone = '' } = useLocalSearchParams<{
+    identifier: string;
+    phone: string;
+  }>();
   const { confirmSignUp, resendConfirmation } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState(false);
 
   const id = String(identifier);
+  const registeredPhone = String(phone);
   const medium = id.startsWith('+')
     ? IdentifierType.PHONE
     : IdentifierType.EMAIL;
@@ -48,6 +52,7 @@ export default function RegisterConfirmScreen() {
     <ConfirmSignUpTemplate
       destination={id}
       medium={medium}
+      phone={registeredPhone}
       onVerify={handleVerify}
       onResend={handleResend}
       onBack={() => router.replace(ROUTES.authRegister as never)}

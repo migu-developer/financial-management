@@ -10,7 +10,7 @@ import type { SignUpDto } from '@features/auth/domain/repositories/auth-reposito
 import { useAuth } from '@features/auth/presentation/providers/auth-provider';
 
 export interface RegisterPageProps {
-  onRegisterSuccess: (identifier: string) => void;
+  onRegisterSuccess: (identifier: string, phone: string) => void;
   onSignIn: () => void;
   onPressTerms?: () => void;
   onPressPrivacy?: () => void;
@@ -33,7 +33,7 @@ export function RegisterPage({
       setLoading(true);
       try {
         await signUp({ ...dto, locale: i18n.language });
-        onRegisterSuccess(dto.email);
+        onRegisterSuccess(dto.email, dto.phoneNumber ?? '');
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {

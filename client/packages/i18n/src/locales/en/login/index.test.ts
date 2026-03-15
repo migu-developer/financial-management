@@ -42,6 +42,7 @@ describe('en/login namespace', () => {
   it('has confirmSignUp section', () => {
     expect(login.confirmSignUp).toHaveProperty('title');
     expect(login.confirmSignUp).toHaveProperty('subtitleEmail');
+    expect(login.confirmSignUp).toHaveProperty('subtitleEmailWithPhone');
     expect(login.confirmSignUp).toHaveProperty('subtitlePhone');
     expect(login.confirmSignUp).toHaveProperty('codeLabel');
     expect(login.confirmSignUp).toHaveProperty('submitButton');

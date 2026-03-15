@@ -11,10 +11,10 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const handleRegisterSuccess = useCallback(
-    (identifier: string) => {
+    (identifier: string, phone: string) => {
       router.replace({
         pathname: ROUTES.authRegisterConfirm as never,
-        params: { identifier },
+        params: { identifier, phone },
       });
     },
     [router],
