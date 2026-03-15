@@ -3,7 +3,12 @@ import { Animated, Pressable, Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 import { fontSizeScale, Icon, space, zIndex } from '@features/ui';
-import { generic, primary, textTokens } from '@features/ui/utils/colors';
+import {
+  generic,
+  primary,
+  surface,
+  textTokens,
+} from '@features/ui/utils/colors';
 
 import { useDashboard } from '@features/dashboard/presentation/providers/dashboard-provider';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
@@ -53,6 +58,8 @@ export function WebSidebar({ open, onClose }: WebSidebarProps) {
 
   const iconColor = isDark ? textTokens.dark.muted : textTokens.light.secondary;
 
+  const backgroundColor = isDark ? surface.dark.background : surface.light.card;
+
   return (
     <>
       {/* Overlay */}
@@ -82,6 +89,7 @@ export function WebSidebar({ open, onClose }: WebSidebarProps) {
           bottom: space.zero,
           width: SIDEBAR_WIDTH,
           transform: [{ translateX }],
+          backgroundColor,
           zIndex: zIndex.medium,
         }}
         className="bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800"
