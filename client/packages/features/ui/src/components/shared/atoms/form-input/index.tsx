@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import type { KeyboardTypeOptions } from 'react-native';
+import type { KeyboardTypeOptions, TextInputProps } from 'react-native';
 
 import { generic, primary, surface } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
@@ -18,6 +18,7 @@ export interface FormInputProps {
   keyboardType?: KeyboardTypeOptions;
   className?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoComplete?: TextInputProps['autoComplete'];
   autoFocus?: boolean;
   error?: string;
   disabled?: boolean;
@@ -34,6 +35,7 @@ export function FormInput({
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  autoComplete = 'off',
   autoFocus,
   className,
   error,
@@ -73,6 +75,7 @@ export function FormInput({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoFocus={autoFocus}
+          autoComplete={autoComplete}
           editable={!disabled}
           error={!!error}
           onFocus={() => {

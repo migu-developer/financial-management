@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import {
   Body,
+  Column,
   Container,
   Head,
   Html,
   Link,
   Preview,
+  Row,
   Section,
   Tailwind,
   Text,
@@ -19,16 +21,20 @@ const applicationUrl = config.APPLICATION_URL;
 export function EmailHeader() {
   return (
     <Section
-      className="bg-primary-dark py-6 px-6 text-center"
-      style={{ width: '100%' }}
+      className="bg-primary-dark py-6 px-6"
+      style={{ width: '100%', minWidth: '100%' }}
     >
-      <img
-        src={`${baseUrl}/financial-management/300x300.webp`}
-        width={80}
-        height={80}
-        alt="Financial Management"
-        style={{ display: 'block', margin: '0 auto' }}
-      />
+      <Row style={{ width: '100%', minWidth: '100%' }}>
+        <Column align="center" style={{ textAlign: 'center' }}>
+          <img
+            src={`${baseUrl}/financial-management/300x300.webp`}
+            width={80}
+            height={80}
+            alt="Financial Management"
+            style={{ display: 'block', margin: '0 auto', borderRadius: '16px' }}
+          />
+        </Column>
+      </Row>
     </Section>
   );
 }
@@ -99,17 +105,13 @@ export function EmailLayout({ preview, children, footer }: EmailLayoutProps) {
           <Preview>{preview}</Preview>
           <Container
             width={600}
-            className="email-container w-full max-w-[600px] mx-auto my-0 p-0 bg-white overflow-hidden"
+            className="email-container w-[600px] max-w-[600px] mx-auto my-0 p-0 bg-white overflow-hidden"
             style={{
-              maxWidth: '600px',
-              width: '600px',
-              margin: '0 auto',
               boxSizing: 'border-box',
               borderRadius: '16px',
               border: '1px solid #e5e7eb',
               boxShadow:
                 '0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
-              overflow: 'hidden',
             }}
           >
             <EmailHeader />

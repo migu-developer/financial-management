@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
@@ -6,6 +6,7 @@ import { useTranslation } from '@packages/i18n';
 import {
   Button,
   Card,
+  FormInput,
   LanguageSelector,
   maxWidth,
   space,
@@ -15,12 +16,7 @@ import {
 } from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
-import { IdentifierInput } from '@features/auth/presentation/components/shared/molecules/identifier-input';
-
-import { IdentifierType as IdentifierTypeEnum } from '@features/auth/domain/utils/constants';
-
-type IdentifierType =
-  (typeof IdentifierTypeEnum)[keyof typeof IdentifierTypeEnum];
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface LoginTemplateProps {
   onSignIn: (identifier: string, password: string) => void;
@@ -47,28 +43,31 @@ export function LoginTemplate({
   error,
 }: LoginTemplateProps) {
   const { t } = useTranslation('login');
-  const [identifier, setIdentifier] = useState('');
-  const [identifierError, setIdentifierError] = useState<string | undefined>();
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | undefined>();
   const [password, setPassword] = useState('');
 
-  const handleIdentifierChange = useCallback(
-    (value: string, type: IdentifierType) => {
-      setIdentifier(value);
-      if (type === IdentifierTypeEnum.EMAIL && value.length > 0) {
-        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-        setIdentifierError(
-          valid ? undefined : t('identifierInput.invalidEmail'),
-        );
+  const handleEmailChange = useCallback(
+    (value: string) => {
+      setEmail(value);
+      if (value.length > 0) {
+        const valid = EMAIL_REGEX.test(value.trim());
+        setEmailError(valid ? undefined : t('identifierInput.invalidEmail'));
       } else {
-        setIdentifierError(undefined);
+        setEmailError(undefined);
       }
     },
     [t],
   );
 
+  const isFormValid = useMemo(
+    () => EMAIL_REGEX.test(email.trim()) && password.length > 0,
+    [email, password],
+  );
+
   const handleSubmit = useCallback(() => {
-    onSignIn(identifier, password);
-  }, [identifier, password, onSignIn]);
+    onSignIn(email.trim(), password);
+  }, [email, password, onSignIn]);
 
   return (
     <ScrollView
@@ -107,10 +106,15 @@ export function LoginTemplate({
           </View>
         ) : null}
 
-        <IdentifierInput
-          value={identifier}
-          onChangeIdentifier={handleIdentifierChange}
-          error={identifierError}
+        <FormInput
+          label={t('identifierInput.label')}
+          value={email}
+          onChangeText={handleEmailChange}
+          placeholder={t('identifierInput.placeholder')}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          error={emailError}
           disabled={loading}
         />
 
@@ -136,6 +140,7 @@ export function LoginTemplate({
           label={t('signInButton')}
           onPress={handleSubmit}
           loading={loading}
+          disabled={!isFormValid}
           className="mb-6"
         />
 

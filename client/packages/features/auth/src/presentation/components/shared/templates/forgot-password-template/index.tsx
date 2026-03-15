@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
@@ -6,13 +6,14 @@ import { useTranslation } from '@packages/i18n';
 import {
   Button,
   Card,
+  FormInput,
   LanguageSelector,
   maxWidth,
   space,
   ThemeToggle,
 } from '@features/ui';
 
-import { IdentifierInput } from '@features/auth/presentation/components/shared/molecules/identifier-input';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface ForgotPasswordTemplateProps {
   onSubmit: (identifier: string) => void;
@@ -28,15 +29,27 @@ export function ForgotPasswordTemplate({
   error,
 }: ForgotPasswordTemplateProps) {
   const { t } = useTranslation('login');
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | undefined>();
 
-  const handleIdentifierChange = useCallback((value: string) => {
-    setIdentifier(value);
-  }, []);
+  const handleEmailChange = useCallback(
+    (value: string) => {
+      setEmail(value);
+      if (value.length > 0) {
+        const valid = EMAIL_REGEX.test(value.trim());
+        setEmailError(valid ? undefined : t('identifierInput.invalidEmail'));
+      } else {
+        setEmailError(undefined);
+      }
+    },
+    [t],
+  );
+
+  const isFormValid = useMemo(() => EMAIL_REGEX.test(email.trim()), [email]);
 
   const handleSubmit = useCallback(() => {
-    onSubmit(identifier);
-  }, [identifier, onSubmit]);
+    onSubmit(email.trim());
+  }, [email, onSubmit]);
 
   return (
     <ScrollView
@@ -75,9 +88,15 @@ export function ForgotPasswordTemplate({
           </View>
         ) : null}
 
-        <IdentifierInput
-          value={identifier}
-          onChangeIdentifier={handleIdentifierChange}
+        <FormInput
+          label={t('identifierInput.label')}
+          value={email}
+          onChangeText={handleEmailChange}
+          placeholder={t('identifierInput.placeholder')}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          error={emailError}
           disabled={loading}
         />
 
@@ -85,7 +104,7 @@ export function ForgotPasswordTemplate({
           label={t('forgotPasswordPage.submitButton')}
           onPress={handleSubmit}
           loading={loading}
-          disabled={identifier.trim() === ''}
+          disabled={!isFormValid}
           className="mb-6 mt-2"
         />
 

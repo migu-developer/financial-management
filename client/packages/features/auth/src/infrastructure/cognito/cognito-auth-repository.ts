@@ -35,6 +35,7 @@ import {
   UserNotConfirmedException,
   UserNotFoundException,
 } from '@features/auth/domain/errors/auth-errors';
+import { IdentifierType } from '@features/auth/domain/utils/constants';
 
 type CognitoErrorLike = { code?: string; message?: string };
 
@@ -195,7 +196,10 @@ export class CognitoAuthRepository implements AuthRepository {
   async signUp(dto: SignUpDto): Promise<void> {
     return new Promise((resolve, reject) => {
       const attributes: CognitoUserAttribute[] = [
-        new CognitoUserAttribute({ Name: 'email', Value: dto.email }),
+        new CognitoUserAttribute({
+          Name: IdentifierType.EMAIL,
+          Value: dto.email,
+        }),
       ];
 
       if (dto.name) {
@@ -317,8 +321,7 @@ export class CognitoAuthRepository implements AuthRepository {
       const user = new CognitoUser({ Username: identifier, Pool: this.pool });
       user.forgotPassword({
         onSuccess: () => {
-          const medium = identifier.includes('@') ? 'email' : 'sms';
-          resolve({ destination: identifier, medium });
+          resolve({ destination: identifier, medium: IdentifierType.EMAIL });
         },
         onFailure: (err) => reject(this.mapError(err)),
         inputVerificationCode: (data) => {
@@ -331,9 +334,8 @@ export class CognitoAuthRepository implements AuthRepository {
             }
           )?.CodeDeliveryDetails;
           const destination = details?.Destination ?? identifier;
-          const medium = (details?.DeliveryMedium?.toLowerCase() ?? 'email') as
-            | 'email'
-            | 'sms';
+          const medium = (details?.DeliveryMedium?.toLowerCase() ??
+            IdentifierType.EMAIL) as IdentifierType.EMAIL | 'sms';
           resolve({ destination, medium });
         },
       });
