@@ -1,0 +1,75 @@
+# ===========================================
+# .easignore - Replaces .gitignore for EAS uploads
+# Keep this in sync with .gitignore + extra exclusions
+# ===========================================
+
+# --- From .gitignore (MUST include since .easignore replaces it) ---
+
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.DS_Store
+expo-env.d.ts
+.tamagui/
+
+# --- Environment & secrets (CRITICAL: never upload to EAS) ---
+
+.env
+.env.local
+.env.development.local
+.env.development
+.env.test.local
+.env.production.local
+.env.production
+.envrc
+.envrc.example
+.env.template
+
+# --- Native directories (EAS regenerates these via prebuild) ---
+
+ios/
+android/
+
+# --- Testing (not needed for builds) ---
+
+__tests__/
+tests/
+__mocks__/
+jest.setup.js
+coverage/
+
+# --- IDE & editor configs ---
+
+.cursor/
+.idea/
+.vscode/
+.turbo/
+
+# --- Tooling & misc ---
+
+.nvmrc
+.tool-versions
+README.md
+*.md
+supabase/
+amplify.yml
+.claude-flow/
+
+# --- Debug logs ---
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pem
+
+# --- Service account ---
+
+ServiceAccount.json

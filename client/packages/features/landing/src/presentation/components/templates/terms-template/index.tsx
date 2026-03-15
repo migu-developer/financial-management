@@ -5,6 +5,7 @@ import { useTranslation } from '@packages/i18n';
 
 import { LegalPageHeader } from '@features/landing/presentation/components/molecules/legal-page-header';
 import { LegalSection } from '@features/landing/presentation/components/molecules/legal-section';
+import { space } from '@features/ui';
 
 interface TermsTemplateProps {
   onBackPress?: () => void;
@@ -103,7 +104,10 @@ export function TermsTemplate({ onBackPress }: TermsTemplateProps) {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
+        contentContainerStyle={{
+          padding: space.lg,
+          paddingBottom: space['2xl'],
+        }}
       >
         <Text className="text-slate-600 dark:text-slate-500 text-sm mb-8">
           {t('terms.lastUpdated')}

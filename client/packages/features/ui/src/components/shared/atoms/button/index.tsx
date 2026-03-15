@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import type { TouchableOpacityProps } from 'react-native';
 
 import { generic, primary } from '@features/ui/utils/colors';
+import { space } from '@features/ui/utils/spacing';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
@@ -68,7 +69,7 @@ export function Button({
         <ActivityIndicator
           size="small"
           color={spinnerColor}
-          style={{ marginRight: 8 }}
+          style={{ marginRight: space.xs }}
         />
       )}
       <Text className={`${labelVariants[variant]} ${labelSizes[size]}`}>

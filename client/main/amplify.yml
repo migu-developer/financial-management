@@ -20,6 +20,8 @@ applications:
             - echo "EXPO_PUBLIC_ASSETS_BUCKET_NAME=$ASSETS_BUCKET_NAME" >> client/main/.env
             - echo "EXPO_PUBLIC_ASSETS_URL=$ASSETS_BUCKET_URL" >> client/main/.env
             - echo "EXPO_PUBLIC_APPLICATION_URL=$APPLICATION_URL" >> client/main/.env
+            - echo "EXPO_PUBLIC_COGNITO_DOMAIN=$COGNITO_DOMAIN" >> client/main/.env
+            - echo "EXPO_PUBLIC_COGNITO_REGION=$COGNITO_REGION" >> client/main/.env
             - pnpm --filter @client/main build:web
             - pnpm --filter @client/main run fix-font-paths
       artifacts:

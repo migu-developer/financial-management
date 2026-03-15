@@ -3,7 +3,13 @@ import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, LanguageSelector, ThemeToggle } from '@features/ui';
+import {
+  Button,
+  iconSize,
+  LanguageSelector,
+  radius,
+  ThemeToggle,
+} from '@features/ui';
 
 interface LandingHeaderProps {
   onLoginPress?: () => void;
@@ -34,7 +40,11 @@ export function LandingHeader({
           {logoUrl && (
             <Image
               source={{ uri: logoUrl }}
-              style={{ width: 36, height: 36, borderRadius: 8 }}
+              style={{
+                width: iconSize['2xl'],
+                height: iconSize['2xl'],
+                borderRadius: radius.md,
+              }}
               accessibilityElementsHidden
             />
           )}

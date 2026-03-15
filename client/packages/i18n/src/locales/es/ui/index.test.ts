@@ -28,4 +28,11 @@ describe('es/ui namespace', () => {
     const _typeCheck: UiTranslation = ui;
     expect(_typeCheck).toBe(ui);
   });
+
+  it('has hidePassword and showPassword', () => {
+    expect(typeof ui.hidePassword).toBe('string');
+    expect(typeof ui.showPassword).toBe('string');
+    expect(ui.hidePassword.length).toBeGreaterThan(0);
+    expect(ui.showPassword.length).toBeGreaterThan(0);
+  });
 });

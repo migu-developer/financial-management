@@ -1,4 +1,6 @@
 export const ui = {
+  hidePassword: 'Ocultar contraseña',
+  showPassword: 'Mostrar contraseña',
   themeToggle: {
     switchToLight: 'Cambiar a modo claro',
     switchToDark: 'Cambiar a modo oscuro',

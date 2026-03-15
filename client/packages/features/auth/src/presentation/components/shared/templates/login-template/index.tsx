@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button, Card, FormInput, SocialAuthButton } from '@features/ui';
+import {
+  Button,
+  Card,
+  FormInput,
+  LanguageSelector,
+  maxWidth,
+  space,
+  PasswordInput,
+  SocialAuthButton,
+  ThemeToggle,
+} from '@features/ui';
 import type { SocialProvider } from '@features/ui';
 
-interface LoginTemplateProps {
-  onSignIn: (email: string, password: string) => void;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export interface LoginTemplateProps {
+  onSignIn: (identifier: string, password: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
   onSocialSignIn: (provider: SocialProvider) => void;
@@ -32,7 +44,30 @@ export function LoginTemplate({
 }: LoginTemplateProps) {
   const { t } = useTranslation('login');
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | undefined>();
   const [password, setPassword] = useState('');
+
+  const handleEmailChange = useCallback(
+    (value: string) => {
+      setEmail(value);
+      if (value.length > 0) {
+        const valid = EMAIL_REGEX.test(value.trim());
+        setEmailError(valid ? undefined : t('identifierInput.invalidEmail'));
+      } else {
+        setEmailError(undefined);
+      }
+    },
+    [t],
+  );
+
+  const isFormValid = useMemo(
+    () => EMAIL_REGEX.test(email.trim()) && password.length > 0,
+    [email, password],
+  );
+
+  const handleSubmit = useCallback(() => {
+    onSignIn(email.trim(), password);
+  }, [email, password, onSignIn]);
 
   return (
     <ScrollView
@@ -43,10 +78,19 @@ export function LoginTemplate({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 24,
+        padding: space.lg,
       }}
     >
-      <Card className="w-full p-6" style={{ maxWidth: 448 }}>
+      {/* Language / Theme bar */}
+      <View
+        className="w-full flex-row justify-end gap-2 mb-4"
+        style={{ maxWidth: maxWidth.form }}
+      >
+        <LanguageSelector />
+        <ThemeToggle />
+      </View>
+
+      <Card className="w-full p-6" style={{ maxWidth: maxWidth.form }}>
         <View className="mb-8">
           <Text className="text-slate-900 dark:text-white font-bold text-3xl mb-2">
             {t('title')}
@@ -63,20 +107,23 @@ export function LoginTemplate({
         ) : null}
 
         <FormInput
-          label={t('emailLabel')}
+          label={t('identifierInput.label')}
           value={email}
-          onChangeText={setEmail}
-          placeholder={t('emailPlaceholder')}
+          onChangeText={handleEmailChange}
+          placeholder={t('identifierInput.placeholder')}
           keyboardType="email-address"
           autoCapitalize="none"
+          autoComplete="email"
+          error={emailError}
+          disabled={loading}
         />
 
-        <FormInput
+        <PasswordInput
           label={t('passwordLabel')}
           value={password}
           onChangeText={setPassword}
           placeholder={t('passwordPlaceholder')}
-          secureTextEntry
+          disabled={loading}
         />
 
         <TouchableOpacity
@@ -91,8 +138,9 @@ export function LoginTemplate({
 
         <Button
           label={t('signInButton')}
-          onPress={() => onSignIn(email, password)}
+          onPress={handleSubmit}
           loading={loading}
+          disabled={!isFormValid}
           className="mb-6"
         />
 
@@ -108,7 +156,7 @@ export function LoginTemplate({
           <SocialAuthButton
             key={provider}
             provider={provider}
-            label={t(`social.${provider}` as never)}
+            label={t(`social.${provider}`)}
             onPress={() => onSocialSignIn(provider)}
             disabled={loading}
           />

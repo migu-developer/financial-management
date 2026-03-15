@@ -3,7 +3,14 @@ import { Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { primary, accent, success, warning } from '@features/ui';
+import {
+  primary,
+  accent,
+  success,
+  warning,
+  maxWidth,
+  width,
+} from '@features/ui';
 
 import { FeatureCard } from '@features/landing/presentation/components/molecules/feature-card';
 
@@ -53,7 +60,9 @@ export function FeaturesSection() {
       className="w-full bg-white dark:bg-slate-900 px-6 py-20"
       accessible={false}
     >
-      <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
+      <View
+        style={{ maxWidth: maxWidth.lg, alignSelf: 'center', width: '100%' }}
+      >
         {/* Section label */}
         <Text className="text-primary-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
           {t('features.sectionLabel')}
@@ -71,7 +80,7 @@ export function FeaturesSection() {
         {/* Section subtitle */}
         <Text
           className="text-slate-500 dark:text-slate-400 text-lg text-center mb-14"
-          style={{ maxWidth: 560, alignSelf: 'center' }}
+          style={{ maxWidth: maxWidth.sm, alignSelf: 'center' }}
         >
           {t('features.subtitle')}
         </Text>
@@ -87,7 +96,7 @@ export function FeaturesSection() {
               title={t(`features.items.${feature.key}.title`)}
               description={t(`features.items.${feature.key}.description`)}
               className="flex-1 web:min-w-64"
-              style={{ minWidth: 260 }}
+              style={{ minWidth: width.xxs.small }}
             />
           ))}
         </View>

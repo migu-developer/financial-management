@@ -13,6 +13,7 @@ export const generic = {
   white: '#FFFFFF',
   black: '#000000',
   error: '#EF4444',
+  subtle: '#e2e8f0',
   providers: {
     google: '#EA4335',
     facebook: '#1877F2',
@@ -148,4 +149,10 @@ export const colors = {
   warning,
   link: primary[600],
   'link-hover': primary[500],
+};
+
+// ─── RGBA colors ───────────────────────────────────────────────────────
+
+export const rgba = {
+  black50: '#00000080', // 50% opacity black
 };

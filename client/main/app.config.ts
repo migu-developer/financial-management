@@ -1,6 +1,14 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
+ * `newArchEnabled` is not yet in the official ExpoConfig typings for all SDK
+ * versions, so we extend the type to avoid TypeScript errors.
+ */
+type ExpoConfigWithNewArch = ExpoConfig & {
+  newArchEnabled?: boolean;
+};
+
+/**
  * Sincronized with the design system colors.
  * reference: @features/ui/src/utils/colors.ts
  */
@@ -18,42 +26,83 @@ const colors = {
   },
 };
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+/**
+ * EAS project ID.
+ * No security sensitive, it's public.
+ */
+const EAS_PROJECT_ID = 'b3d6baaa-5bfb-4085-b5eb-ff956ca852f1';
+
+/**
+ * Development variant.
+ */
+const APP_VARIANT_DEV = 'development';
+
+/**
+ * Assets image path.
+ */
+const ASSETS_IMAGE_PATH = './assets/images';
+
+/**
+ * Returns the unique app identifier (bundle ID / package name / URL scheme)
+ * based on the build variant. Reads from process.env at call-time so it can
+ * be tested with different variants by setting the env before calling.
+ */
+export const getAppId = (variant = process.env.APP_VARIANT): string =>
+  variant === APP_VARIANT_DEV
+    ? 'com.migudev.dev.financialmanagement.app'
+    : 'com.migudev.prod.financialmanagement.app';
+
+/**
+ * Returns the human-readable app name based on the build variant.
+ */
+export const getAppName = (variant = process.env.APP_VARIANT): string =>
+  variant === APP_VARIANT_DEV
+    ? 'Financial Management (Development)'
+    : 'Financial Management';
+
+export default ({ config }: ConfigContext): ExpoConfigWithNewArch => ({
   ...config,
-  name: 'Financial Management',
+  owner: 'migudev',
+  name: getAppName(),
   slug: 'financial-management',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
-  scheme: 'expoapp',
+  icon: `${ASSETS_IMAGE_PATH}/icon.png`,
+  scheme: getAppId(),
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    // bundleIdentifier: set when integrating with EAS
-    // e.g. bundleIdentifier: process.env.IOS_BUNDLE_IDENTIFIER ?? 'com.migudev.financialmanagement',
+    usesAppleSignIn: true,
+    bundleIdentifier: getAppId(),
+    infoPlist: {
+      // Avoids the App Store encryption compliance questionnaire for apps
+      // that only use Apple's built-in encryption (TLS/HTTPS).
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/images/android-icon-foreground.png',
+      foregroundImage: `${ASSETS_IMAGE_PATH}/android-icon-foreground.png`,
       backgroundColor: colors.primary[50],
-      monochromeImage: './assets/images/android-icon-monochrome.png',
+      monochromeImage: `${ASSETS_IMAGE_PATH}/android-icon-monochrome.png`,
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
-    // package: set when integrating with EAS
-    // e.g. package: process.env.ANDROID_PACKAGE ?? 'com.migudev.financialmanagement',
+    package: getAppId(),
   },
   web: {
     output: 'static',
-    favicon: './assets/images/favicon.png',
+    favicon: `${ASSETS_IMAGE_PATH}/favicon.png`,
   },
   plugins: [
     'expo-router',
+    'expo-secure-store',
+    'expo-web-browser',
     [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        image: `${ASSETS_IMAGE_PATH}/splash-icon.png`,
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: colors.surface.light.card,
@@ -69,7 +118,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: process.env.EAS_PROJECT_ID,
+      projectId: EAS_PROJECT_ID,
     },
+  },
+  updates: {
+    url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+  },
+  runtimeVersion: {
+    policy: 'sdkVersion',
   },
 });

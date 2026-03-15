@@ -4,7 +4,11 @@ import type {
   LocaleMessages,
   MessageContent,
 } from './types';
-import * as templates from './templates/index';
+import {
+  resolveLocale,
+  getMessages,
+  getEmailHtmlFromS3,
+} from './templates/index';
 
 jest.mock('@aws-lambda-powertools/logger', () => ({
   Logger: jest.fn(() => ({
@@ -31,16 +35,13 @@ jest.mock('./templates/index', () => ({
   },
 }));
 
-const mockResolveLocale = templates.resolveLocale as jest.MockedFunction<
-  typeof templates.resolveLocale
+const mockResolveLocale = resolveLocale as jest.MockedFunction<
+  typeof resolveLocale
 >;
-const mockGetMessages = templates.getMessages as jest.MockedFunction<
-  typeof templates.getMessages
+const mockGetMessages = getMessages as jest.MockedFunction<typeof getMessages>;
+const mockGetEmailHtmlFromS3 = getEmailHtmlFromS3 as jest.MockedFunction<
+  typeof getEmailHtmlFromS3
 >;
-const mockGetEmailHtmlFromS3 =
-  templates.getEmailHtmlFromS3 as jest.MockedFunction<
-    typeof templates.getEmailHtmlFromS3
-  >;
 
 function baseEvent(
   triggerSource: CustomMessageTriggerEvent['triggerSource'],

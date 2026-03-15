@@ -9,6 +9,10 @@ packages:
 catalog:
   '@aws-lambda-powertools/logger': ^2.10.0
   '@aws-sdk/client-s3': ^3.1000.0
+  'amazon-cognito-identity-js': ^6.3.16
+  'libphonenumber-js': ^1.12.38
+  'react-native-qrcode-svg': ^6.3.21
+  'react-native-svg': ^15.15.3
   '@babel/parser': ^7.29.0
   '@babel/traverse': ^7.29.0
   '@commitlint/cli': ^20.4.3
@@ -42,8 +46,11 @@ catalog:
   eslint-plugin-react: ^7.37.2
   eslint-plugin-react-hooks: ^5.0.0
   expo: ~54.0.33
+  expo-auth-session: ~7.0.10
+  expo-crypto: ~15.0.8
   expo-constants: ~18.0.13
   expo-font: ~14.0.11
+  expo-secure-store: ~15.0.8
   expo-haptics: ~15.0.8
   expo-image: ~3.0.11
   expo-linking: ~8.0.11

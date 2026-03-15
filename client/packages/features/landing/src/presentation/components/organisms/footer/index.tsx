@@ -3,6 +3,7 @@ import { Image } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
+import { iconSize, maxWidth, radius } from '@features/ui';
 
 type LinkKey = 'privacy' | 'terms' | 'contact';
 
@@ -35,7 +36,9 @@ export function LandingFooter({
       className="w-full bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-10"
       accessibilityRole="none"
     >
-      <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
+      <View
+        style={{ maxWidth: maxWidth.lg, alignSelf: 'center', width: '100%' }}
+      >
         {/* Top row: logo + links */}
         <View className="flex-row items-center justify-center md:justify-between flex-wrap gap-4 mb-6">
           {/* Logo */}
@@ -43,7 +46,11 @@ export function LandingFooter({
             {logoUrl && (
               <Image
                 source={{ uri: logoUrl }}
-                style={{ width: 36, height: 36, borderRadius: 8 }}
+                style={{
+                  width: iconSize['2xl'],
+                  height: iconSize['2xl'],
+                  borderRadius: radius.md,
+                }}
                 accessibilityElementsHidden
               />
             )}

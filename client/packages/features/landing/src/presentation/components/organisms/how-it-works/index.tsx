@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { useTranslation } from '@packages/i18n';
 
 import { primary, accent } from '@features/ui/utils/colors';
+import { maxWidth, width } from '@features/ui';
 
 type StepKey = 'create' | 'connect' | 'analyze';
 
@@ -25,7 +26,9 @@ export function HowItWorksSection() {
       className="w-full bg-slate-50 dark:bg-slate-800 px-6 py-20"
       accessible={false}
     >
-      <View style={{ maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
+      <View
+        style={{ maxWidth: maxWidth.lg, alignSelf: 'center', width: '100%' }}
+      >
         {/* Section label */}
         <Text className="text-primary-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
           {t('howItWorks.sectionLabel')}
@@ -42,7 +45,7 @@ export function HowItWorksSection() {
 
         <Text
           className="text-slate-500 dark:text-slate-400 text-lg text-center mb-14"
-          style={{ maxWidth: 480, alignSelf: 'center' }}
+          style={{ maxWidth: maxWidth.form, alignSelf: 'center' }}
         >
           {t('howItWorks.subtitle')}
         </Text>
@@ -57,7 +60,7 @@ export function HowItWorksSection() {
               <View
                 key={step.key}
                 className="items-center flex-1"
-                style={{ minWidth: 220, maxWidth: 300 }}
+                style={{ minWidth: width.xxs.small, maxWidth: maxWidth.popup }}
                 accessible
                 accessibilityRole="none"
                 accessibilityLabel={t('howItWorks.a11y.step', {

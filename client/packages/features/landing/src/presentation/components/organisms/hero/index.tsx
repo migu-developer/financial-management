@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
 
-import { Button } from '@features/ui';
+import { Button, maxWidth } from '@features/ui';
 
 interface HeroSectionProps {
   onGetStartedPress?: () => void;
@@ -22,7 +22,9 @@ export function HeroSection({
       accessibilityRole="none"
       accessible={false}
     >
-      <View style={{ maxWidth: 720, alignSelf: 'center', width: '100%' }}>
+      <View
+        style={{ maxWidth: maxWidth.md, alignSelf: 'center', width: '100%' }}
+      >
         {/* Badge */}
         <View className="self-start flex-row items-center gap-2 border border-accent-500/40 bg-accent-500/10 rounded-full px-4 py-1.5 mb-8">
           <View

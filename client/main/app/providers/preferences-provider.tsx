@@ -87,8 +87,8 @@ export function PreferencesProvider({
   }, [managedScheme, setColorScheme]);
 
   const themeActions = useMemo(
-    () => ({ toggleColorScheme, setColorScheme }),
-    [toggleColorScheme, setColorScheme],
+    () => ({ colorScheme: managedScheme, toggleColorScheme, setColorScheme }),
+    [managedScheme, toggleColorScheme, setColorScheme],
   );
 
   return (

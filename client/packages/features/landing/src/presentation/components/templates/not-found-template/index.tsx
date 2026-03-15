@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from '@packages/i18n';
 
 import { primary } from '@features/ui/utils/colors';
+import { fontSizeScale } from '@features/ui';
 
 interface NotFoundTemplateProps {
   onGoHomePress?: () => void;
@@ -16,7 +17,11 @@ export function NotFoundTemplate({ onGoHomePress }: NotFoundTemplateProps) {
     <View className="flex-1 bg-slate-50 dark:bg-slate-900 items-center justify-center px-6">
       <Text
         className="text-center font-bold"
-        style={{ fontSize: 96, lineHeight: 112, color: primary[600] }}
+        style={{
+          fontSize: fontSizeScale['8xl'],
+          lineHeight: 112,
+          color: primary[600],
+        }}
       >
         {t('notFound.code')}
       </Text>

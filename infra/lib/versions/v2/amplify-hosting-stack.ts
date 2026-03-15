@@ -77,6 +77,12 @@ export class AmplifyHostingStack extends BaseStack {
       'Auth',
       'IdentityPoolId',
     );
+    const cognitoDomain = importFromVersion(
+      this,
+      'v1',
+      'Auth',
+      'CognitoDomain',
+    );
     const assetsBucketName = importFromVersion(
       this,
       'v1',
@@ -88,6 +94,8 @@ export class AmplifyHostingStack extends BaseStack {
       { name: 'AMPLIFY_MONOREPO_APP_ROOT', value: props.appRoot },
       { name: 'USER_POOL_ID', value: userPoolId },
       { name: 'USER_POOL_CLIENT_ID', value: userPoolClientId },
+      { name: 'COGNITO_DOMAIN', value: cognitoDomain },
+      { name: 'COGNITO_REGION', value: this.region },
       { name: 'IDENTITY_POOL_ID', value: identityPoolId },
       { name: 'ASSETS_BUCKET_NAME', value: assetsBucketName },
       { name: 'ASSETS_BUCKET_URL', value: props.assetsBucketUrl },

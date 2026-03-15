@@ -11,16 +11,25 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo/vector-icons": "catalog:",
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",
-    "@packages/utils": "workspace:*"
+    "@packages/utils": "workspace:*",
+    "amazon-cognito-identity-js": "catalog:",
+    "expo-crypto": "catalog:",
+    "expo-auth-session": "catalog:",
+    "expo-secure-store": "catalog:",
+    "expo-web-browser": "catalog:",
+    "expo-linking": "catalog:",
+    "libphonenumber-js": "catalog:",
+    "react-native-qrcode-svg": "catalog:",
+    "react-native-svg": "catalog:"
   },
   "peerDependencies": {
     "react": "catalog:",
     "react-native": "catalog:"
   },
   "devDependencies": {
-    "@expo/vector-icons": "catalog:",
     "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",

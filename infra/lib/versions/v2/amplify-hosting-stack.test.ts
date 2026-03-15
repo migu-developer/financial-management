@@ -108,7 +108,7 @@ describe('AmplifyHostingStack', () => {
       },
     );
 
-    expect(mockImportFromVersion).toHaveBeenCalledTimes(4);
+    expect(mockImportFromVersion).toHaveBeenCalledTimes(5);
 
     expect(mockImportFromVersion).toHaveBeenCalledWith(
       expect.anything(),
@@ -133,6 +133,12 @@ describe('AmplifyHostingStack', () => {
       'v1',
       'Assets',
       'AssetsBucketName',
+    );
+    expect(mockImportFromVersion).toHaveBeenCalledWith(
+      expect.anything(),
+      'v1',
+      'Auth',
+      'CognitoDomain',
     );
   });
 

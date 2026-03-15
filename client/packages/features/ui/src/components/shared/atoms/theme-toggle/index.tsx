@@ -1,7 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable } from 'react-native';
-import { useColorScheme } from 'nativewind';
 
 import { useTranslation } from '@packages/i18n';
 
@@ -10,8 +9,7 @@ import { uiTokens } from '@features/ui/utils/colors';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
 
 export function ThemeToggle() {
-  const { colorScheme } = useColorScheme();
-  const { toggleColorScheme } = useThemeActions();
+  const { colorScheme, toggleColorScheme } = useThemeActions();
   const { t } = useTranslation('ui');
   const isDark = colorScheme === ColorScheme.DARK;
 

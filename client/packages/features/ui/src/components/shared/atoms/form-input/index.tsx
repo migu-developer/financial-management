@@ -1,21 +1,30 @@
-import React from 'react';
-import { Text, TextInput, View } from 'react-native';
-import type { KeyboardTypeOptions } from 'react-native';
-import { useColorScheme } from 'nativewind';
+import React, { useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
+import type { KeyboardTypeOptions, TextInputProps } from 'react-native';
 
-import { generic, surface } from '@features/ui/utils/colors';
+import { generic, primary, surface } from '@features/ui/utils/colors';
 import { ColorScheme } from '@features/ui/utils/constants';
+import { useThemeActions } from '@features/ui/contexts/theme-context';
+import { TextInputBase } from '@features/ui/components/shared/atoms/text-input-base';
+import { isWeb } from '@packages/utils';
+import { space } from '@features/ui/utils/spacing';
 
-interface FormInputProps {
+export interface FormInputProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  className?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoComplete?: TextInputProps['autoComplete'];
+  autoFocus?: boolean;
   error?: string;
   disabled?: boolean;
+  icon?: React.ReactNode;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function FormInput({
@@ -26,37 +35,80 @@ export function FormInput({
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  autoComplete = 'off',
+  autoFocus,
+  className,
   error,
   disabled = false,
+  icon,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }: FormInputProps) {
-  const { colorScheme } = useColorScheme();
+  const { colorScheme } = useThemeActions();
+  const isDark = colorScheme === ColorScheme.DARK;
+  const [isFocused, setIsFocused] = useState(false);
+
+  const isPlatformWeb = useMemo(() => isWeb(), []);
 
   const borderColor = error
     ? generic.error
-    : colorScheme === ColorScheme.DARK
-      ? surface.dark.border
-      : surface.light.border;
+    : isFocused
+      ? primary[400]
+      : isDark
+        ? surface.dark.border
+        : surface.light.border;
 
   return (
-    <View className="mb-4">
+    <View className={className ?? 'mb-4'}>
       <Text className="text-slate-600 dark:text-slate-300 text-sm font-medium mb-1">
         {label}
       </Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#64748B"
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        editable={!disabled}
-        className={`bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-base border ${
-          disabled ? 'opacity-50' : ''
-        }`}
-        style={{ borderColor }}
-        accessibilityLabel={label}
-      />
+      <View
+        style={{ position: 'relative' }}
+        className={disabled ? 'opacity-50' : ''}
+      >
+        <TextInputBase
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoFocus={autoFocus}
+          autoComplete={autoComplete}
+          editable={!disabled}
+          error={!!error}
+          onFocus={() => {
+            setIsFocused(true);
+            onFocusProp?.();
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            onBlurProp?.();
+          }}
+          accessibilityLabel={label}
+          style={[
+            { borderColor },
+            icon ? { paddingRight: space['2xl'] } : undefined,
+            isPlatformWeb ? { outlineStyle: 'none' as never } : undefined,
+          ]}
+        />
+        {icon ? (
+          <View
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              paddingHorizontal: space.sm,
+            }}
+            pointerEvents="box-none"
+          >
+            {icon}
+          </View>
+        ) : null}
+      </View>
       {error ? (
         <Text className="text-red-400 text-xs mt-1">{error}</Text>
       ) : null}
