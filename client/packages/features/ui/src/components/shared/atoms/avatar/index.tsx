@@ -33,6 +33,8 @@ export function Avatar({
   disabled,
   ...rest
 }: AvatarProps) {
+  const { t } = useTranslation('dashboard');
+
   const content = (
     <View
       className={`${containerSizeClasses[size]} rounded-full items-center justify-center`}
@@ -47,8 +49,6 @@ export function Avatar({
   if (!onPress) {
     return content;
   }
-
-  const { t } = useTranslation('dashboard');
 
   return (
     <Pressable

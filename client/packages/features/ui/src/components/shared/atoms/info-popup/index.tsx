@@ -35,7 +35,7 @@ export function InfoPopup({
         activeOpacity={1}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="Close popup"
+        accessibilityLabel={closeLabel}
       >
         {/* Stops tap from closing when pressing inside the card */}
         <TouchableOpacity

@@ -1,4 +1,4 @@
-import { AuthSession } from '@features/auth/domain/entities/auth-session';
+import type { AuthSession } from '@features/auth/domain/entities/auth-session';
 import type { AuthRepository } from '@features/auth/domain/repositories/auth-repository.port';
 
 export class VerifyTotpSetupUseCase {

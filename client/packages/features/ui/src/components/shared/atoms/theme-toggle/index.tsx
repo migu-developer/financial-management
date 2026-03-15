@@ -9,8 +9,7 @@ import { uiTokens } from '@features/ui/utils/colors';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
 
 export function ThemeToggle() {
-  const { colorScheme } = useThemeActions();
-  const { toggleColorScheme } = useThemeActions();
+  const { colorScheme, toggleColorScheme } = useThemeActions();
   const { t } = useTranslation('ui');
   const isDark = colorScheme === ColorScheme.DARK;
 
