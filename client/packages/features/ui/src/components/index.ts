@@ -1,3 +1,4 @@
+export { Avatar } from './shared/atoms/avatar';
 export { Button } from './shared/atoms/button';
 export { InfoPopup } from './shared/atoms/info-popup';
 export type { InfoPopupProps } from './shared/atoms/info-popup';

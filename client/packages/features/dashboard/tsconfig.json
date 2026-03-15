@@ -7,6 +7,8 @@
     "paths": {
       "@features/dashboard": ["./src/index.ts"],
       "@features/dashboard/presentation/*": ["./src/presentation/*"],
+      "@features/dashboard/domain/*": ["./src/domain/*"],
+      "@features/dashboard/infrastructure/*": ["./src/infrastructure/*"],
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
       "@features/ui": ["./node_modules/@features/ui/src/index.ts"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],

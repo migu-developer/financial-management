@@ -197,3 +197,17 @@ export const maxWidth = {
   /** 1280dp — desktop (xl breakpoint) */
   xl: 1280,
 } as const;
+
+// ─── ZIndex constants ────────────────────────────────────────────────────────
+export const zIndex = {
+  /** 1 — lowest */
+  lowest: 1,
+  /** 10 — low */
+  low: 10,
+  /** 20 — medium */
+  medium: 20,
+  /** 30 — high */
+  high: 30,
+  /** 100 — big */
+  big: 100,
+} as const;

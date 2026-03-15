@@ -17,6 +17,9 @@ const config: Config = {
     '^@features/ui/utils/(.*)$': '<rootDir>/../ui/src/utils/$1',
     '^@features/ui/components/(.*)$': '<rootDir>/../ui/src/components/$1',
     '^@features/dashboard$': '<rootDir>/src/index.ts',
+    '^@features/dashboard/domain/(.*)$': '<rootDir>/src/domain/$1',
+    '^@features/dashboard/infrastructure/(.*)$':
+      '<rootDir>/src/infrastructure/$1',
     '^@features/dashboard/presentation/(.*)$': '<rootDir>/src/presentation/$1',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
