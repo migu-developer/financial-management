@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
-import { Avatar, fontSizeScale, Icon, space, zIndex } from '@features/ui';
+import {
+  Avatar,
+  fontSizeScale,
+  Icon,
+  LanguageSelector,
+  space,
+  ThemeToggle,
+  zIndex,
+} from '@features/ui';
 import { uiTokens, textTokens } from '@features/ui/utils/colors';
 
 import { useDashboard } from '@features/dashboard/presentation/providers/dashboard-provider';
@@ -41,21 +49,25 @@ export function WebHeader({ onMenuPress }: WebHeaderProps) {
         <Icon name="menu" size={fontSizeScale.xl} color={iconColor} />
       </Pressable>
 
-      {/* Right: avatar + dropdown */}
-      <View style={{ position: 'relative' as const }}>
-        <Avatar
-          initials={initials}
-          size="md"
-          onPress={() => setMenuOpen((v) => !v)}
-          accessibilityLabel={t('header.userMenuLabel')}
-        />
-        {menuOpen && (
-          <UserMenu
-            user={user}
-            onSignOut={signOut}
-            onClose={() => setMenuOpen(false)}
+      {/* Right: theme toggle + language selector + avatar */}
+      <View className="flex-row items-center gap-2">
+        <ThemeToggle />
+        <LanguageSelector />
+        <View style={{ position: 'relative' as const }}>
+          <Avatar
+            initials={initials}
+            size="md"
+            onPress={() => setMenuOpen((v) => !v)}
+            accessibilityLabel={t('header.userMenuLabel')}
           />
-        )}
+          {menuOpen && (
+            <UserMenu
+              user={user}
+              onSignOut={signOut}
+              onClose={() => setMenuOpen(false)}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
