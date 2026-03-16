@@ -112,6 +112,7 @@ type MockCognitoUser = {
   globalSignOut: jest.Mock;
   signOut: jest.Mock;
   refreshSession: jest.Mock;
+  setSignInUserSession: jest.Mock;
 };
 
 type MockPool = {
@@ -136,6 +137,7 @@ function makeMockUser(): MockCognitoUser {
     globalSignOut: jest.fn(),
     signOut: jest.fn(),
     refreshSession: jest.fn(),
+    setSignInUserSession: jest.fn(),
   };
 }
 

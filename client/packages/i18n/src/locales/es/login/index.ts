@@ -177,6 +177,12 @@ export const login = {
     back: 'Volver al inicio de sesión',
   },
 
+  // ── OAuth callback ───────────────────────────────────────────────────────
+  callback: {
+    signInSuccess: 'Inicio de sesión exitoso',
+    signInFailed: 'Error al iniciar sesión. Redirigiendo…',
+  },
+
   // ── Errors ────────────────────────────────────────────────────────────────
   errors: {
     notAuthorized: 'Correo o contraseña incorrectos.',
