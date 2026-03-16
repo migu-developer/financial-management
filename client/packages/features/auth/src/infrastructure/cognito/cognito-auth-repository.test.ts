@@ -25,6 +25,16 @@ jest.mock('./cognito-config', () => ({
   },
 }));
 
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split('.');
+  const base64 = (parts[1] ?? '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(
+    base64.length + ((4 - (base64.length % 4)) % 4),
+    '=',
+  );
+  return JSON.parse(Buffer.from(padded, 'base64').toString());
+}
+
 jest.mock('amazon-cognito-identity-js', () => ({
   CognitoUserPool: jest.fn(),
   CognitoUser: jest.fn(),
@@ -35,6 +45,49 @@ jest.mock('amazon-cognito-identity-js', () => ({
       getValue: () => Value,
     })),
   AuthenticationDetails: jest.fn(),
+  CognitoAccessToken: jest
+    .fn()
+    .mockImplementation(({ AccessToken }: { AccessToken: string }) => ({
+      payload: decodeJwtPayload(AccessToken),
+      getJwtToken: () => AccessToken,
+      getExpiration: () => Math.floor(Date.now() / 1000) + 3600,
+    })),
+  CognitoIdToken: jest
+    .fn()
+    .mockImplementation(({ IdToken }: { IdToken: string }) => ({
+      payload: {},
+      getJwtToken: () => IdToken,
+    })),
+  CognitoRefreshToken: jest
+    .fn()
+    .mockImplementation(({ RefreshToken }: { RefreshToken: string }) => ({
+      getToken: () => RefreshToken,
+    })),
+  CognitoUserSession: jest.fn().mockImplementation(
+    (parts: {
+      AccessToken: {
+        payload: Record<string, unknown>;
+        getJwtToken: () => string;
+        getExpiration: () => number;
+      };
+      IdToken: {
+        payload: Record<string, unknown>;
+        getJwtToken: () => string;
+      };
+      RefreshToken: { getToken: () => string };
+    }) => ({
+      getAccessToken: () => parts.AccessToken,
+      getIdToken: () => ({
+        ...parts.IdToken,
+        payload: {
+          ...parts.IdToken.payload,
+          sub: parts.AccessToken.payload['sub'],
+        },
+      }),
+      getRefreshToken: () => parts.RefreshToken,
+      isValid: () => true,
+    }),
+  ),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -338,6 +391,20 @@ describe('CognitoAuthRepository', () => {
         (cb: (err: Error, session: null) => void) => {
           cb(new Error('expired'), null);
         },
+      );
+
+      await expect(repo.getCurrentUser()).resolves.toBeNull();
+    });
+
+    it('returns null when getUserAttributes fails', async () => {
+      const session = makeMockSession();
+      mockPool.getCurrentUser.mockReturnValue(mockUser);
+      mockUser.getSession.mockImplementation(
+        (cb: (err: null, s: unknown) => void) => cb(null, session),
+      );
+      mockUser.getUserAttributes.mockImplementation(
+        (cb: (err: Error, attrs: null) => void) =>
+          cb(new Error('failed'), null),
       );
 
       await expect(repo.getCurrentUser()).resolves.toBeNull();

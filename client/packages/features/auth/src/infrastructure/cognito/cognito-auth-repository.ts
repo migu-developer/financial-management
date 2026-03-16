@@ -1,5 +1,8 @@
 import {
   AuthenticationDetails,
+  CognitoAccessToken,
+  CognitoIdToken,
+  CognitoRefreshToken,
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
@@ -135,7 +138,9 @@ export class CognitoAuthRepository implements AuthRepository {
     newPassword: string,
   ): Promise<AuthChallengeResult> {
     const entry = this.pending.get(session);
-    if (!entry) throw new NotAuthorizedException();
+    if (!entry) {
+      throw new NotAuthorizedException();
+    }
 
     return new Promise((resolve, reject) => {
       entry.user.completeNewPasswordChallenge(
@@ -174,7 +179,9 @@ export class CognitoAuthRepository implements AuthRepository {
     challengeName: MfaType,
   ): Promise<AuthSession> {
     const entry = this.pending.get(session);
-    if (!entry) throw new NotAuthorizedException();
+    if (!entry) {
+      throw new NotAuthorizedException();
+    }
 
     return new Promise((resolve, reject) => {
       entry.user.sendMFACode(
@@ -260,7 +267,7 @@ export class CognitoAuthRepository implements AuthRepository {
       client_id: cognitoConfig.clientId,
       redirect_uri: redirectUri,
       identity_provider: PROVIDER_MAP[provider],
-      scope: 'openid email profile',
+      scope: 'openid email profile phone aws.cognito.signin.user.admin',
       code_challenge: pkce.codeChallenge,
       code_challenge_method: 'S256',
       state: pkce.state,
@@ -302,14 +309,33 @@ export class CognitoAuthRepository implements AuthRepository {
       expires_in: number;
     };
 
-    const payload = this.decodeJwtPayload(data.access_token);
-    return {
-      accessToken: data.access_token,
-      idToken: data.id_token,
-      refreshToken: data.refresh_token,
-      expiresAt: new Date(Date.now() + data.expires_in * 1_000),
-      userId: payload['sub'] as string,
-    };
+    // Inject the session into the SDK so that getCurrentUser() / refreshSession()
+    // work the same way as they do after a regular signIn flow.
+    const accessToken = new CognitoAccessToken({
+      AccessToken: data.access_token,
+    });
+    const idToken = new CognitoIdToken({ IdToken: data.id_token });
+    const refreshToken = new CognitoRefreshToken({
+      RefreshToken: data.refresh_token,
+    });
+
+    const cognitoSession = new CognitoUserSession({
+      AccessToken: accessToken,
+      IdToken: idToken,
+      RefreshToken: refreshToken,
+    });
+
+    const username =
+      (accessToken.payload['username'] as string | undefined) ??
+      (accessToken.payload['sub'] as string);
+
+    const cognitoUser = new CognitoUser({
+      Username: username,
+      Pool: this.pool,
+    });
+    cognitoUser.setSignInUserSession(cognitoSession);
+
+    return this.mapSession(cognitoSession);
   }
 
   // ── Forgot password ──────────────────────────────────────────────────────
@@ -362,7 +388,9 @@ export class CognitoAuthRepository implements AuthRepository {
     session: string,
   ): Promise<{ secretCode: string; qrCodeUrl: string }> {
     const entry = this.pending.get(session);
-    if (!entry) throw new NotAuthorizedException();
+    if (!entry) {
+      throw new NotAuthorizedException();
+    }
 
     return new Promise((resolve, reject) => {
       entry.user.associateSoftwareToken({
@@ -383,7 +411,9 @@ export class CognitoAuthRepository implements AuthRepository {
     deviceName: string,
   ): Promise<AuthSession> {
     const entry = this.pending.get(session);
-    if (!entry) throw new NotAuthorizedException();
+    if (!entry) {
+      throw new NotAuthorizedException();
+    }
 
     return new Promise((resolve, reject) => {
       entry.user.verifySoftwareToken(code, deviceName, {
@@ -396,10 +426,37 @@ export class CognitoAuthRepository implements AuthRepository {
     });
   }
 
+  // ── User attributes ──────────────────────────────────────────────────────
+
+  async updateUserAttribute(name: string, value: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cognitoUser = this.pool.getCurrentUser();
+      if (!cognitoUser) {
+        return reject(new NotAuthorizedException());
+      }
+
+      cognitoUser.getSession(
+        (err: Error | null, session: CognitoUserSession | null) => {
+          if (err || !session?.isValid()) {
+            return reject(new NotAuthorizedException());
+          }
+
+          const attributes = [
+            new CognitoUserAttribute({ Name: name, Value: value }),
+          ];
+          cognitoUser.updateAttributes(attributes, (attrErr) => {
+            if (attrErr) return reject(this.mapError(attrErr));
+            resolve();
+          });
+        },
+      );
+    });
+  }
+
   // ── Session management ───────────────────────────────────────────────────
 
   async getCurrentUser(): Promise<User | null> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const cognitoUser = this.pool.getCurrentUser();
       if (!cognitoUser) return resolve(null);
 
@@ -408,7 +465,7 @@ export class CognitoAuthRepository implements AuthRepository {
           if (err || !session?.isValid()) return resolve(null);
 
           cognitoUser.getUserAttributes((attrErr, attributes) => {
-            if (attrErr || !attributes) return reject(this.mapError(attrErr));
+            if (attrErr || !attributes) return resolve(null);
             const userId = session.getIdToken().payload['sub'] as string;
             resolve(this.mapUserAttributes(attributes, userId));
           });
@@ -420,7 +477,9 @@ export class CognitoAuthRepository implements AuthRepository {
   async refreshSession(): Promise<AuthSession> {
     return new Promise((resolve, reject) => {
       const cognitoUser = this.pool.getCurrentUser();
-      if (!cognitoUser) return reject(new NotAuthorizedException());
+      if (!cognitoUser) {
+        return reject(new NotAuthorizedException());
+      }
 
       cognitoUser.getSession(
         (err: Error | null, session: CognitoUserSession | null) => {
@@ -482,6 +541,20 @@ export class CognitoAuthRepository implements AuthRepository {
     const get = (name: string) =>
       attributes.find((a) => a.getName() === name)?.getValue();
     const updatedAtRaw = get('updated_at');
+
+    let providerUserId: string | undefined;
+    const identitiesRaw = get('identities');
+    if (identitiesRaw) {
+      try {
+        const identities = JSON.parse(identitiesRaw) as Array<{
+          userId?: string;
+        }>;
+        providerUserId = identities[0]?.userId;
+      } catch {
+        // identities attribute is malformed — ignore
+      }
+    }
+
     return {
       userId,
       email: get('email') ?? '',
@@ -497,20 +570,8 @@ export class CognitoAuthRepository implements AuthRepository {
         : undefined,
       emailVerified: get('email_verified') === 'true',
       phoneVerified: get('phone_number_verified') === 'true',
+      providerUserId,
     };
-  }
-
-  private decodeJwtPayload(token: string): Record<string, unknown> {
-    const parts = token.split('.');
-    if (parts.length < 2 || !parts[1]) {
-      throw new UnknownAuthException('Invalid JWT: missing payload segment');
-    }
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(
-      base64.length + ((4 - (base64.length % 4)) % 4),
-      '=',
-    );
-    return JSON.parse(atob(padded)) as Record<string, unknown>;
   }
 
   private mapError(err: unknown): Error {

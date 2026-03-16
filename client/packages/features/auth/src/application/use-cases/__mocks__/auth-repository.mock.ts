@@ -15,6 +15,7 @@ export function createMockAuthRepository(): jest.Mocked<AuthRepository> {
     associateSoftwareToken: jest.fn(),
     verifySoftwareToken: jest.fn(),
     getCurrentUser: jest.fn(),
+    updateUserAttribute: jest.fn(),
     refreshSession: jest.fn(),
     signOut: jest.fn(),
   };
