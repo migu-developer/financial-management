@@ -372,7 +372,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Re-fetch to pick up updated locale
             user = await cognitoAuthRepository.getCurrentUser();
           } catch {
-            // Locale sync failed — not critical
+            // Non-critical: user enters the app without locale.
+            // It can be set later from the profile screen.
           }
         }
 
