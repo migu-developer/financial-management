@@ -24,6 +24,9 @@ export default function RegisterScreen() {
     <RegisterPage
       onSignIn={() => router.replace(ROUTES.authLogin as never)}
       onRegisterSuccess={handleRegisterSuccess}
+      onSocialSignInSuccess={() =>
+        router.replace(ROUTES.dashboard.home as never)
+      }
       onPressTerms={() => void Linking.openURL(`${APP_URL}/terms`)}
       onPressPrivacy={() => void Linking.openURL(`${APP_URL}/privacy`)}
     />

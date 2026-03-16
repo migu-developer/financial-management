@@ -386,7 +386,13 @@ export class CognitoStack extends BaseStack {
       userPool: this.userPool,
       oAuth: {
         flows: { authorizationCodeGrant: true },
-        scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
+        scopes: [
+          OAuthScope.OPENID,
+          OAuthScope.EMAIL,
+          OAuthScope.PROFILE,
+          OAuthScope.PHONE,
+          OAuthScope.COGNITO_ADMIN,
+        ],
         callbackUrls: props.callbackUrls,
         logoutUrls: props.logoutUrls,
       },

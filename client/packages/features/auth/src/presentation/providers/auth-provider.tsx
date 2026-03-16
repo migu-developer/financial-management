@@ -61,7 +61,10 @@ export interface AuthContextValue extends AuthState {
     code: string,
     codeVerifier: string,
     redirectUri: string,
+    provider?: SocialProvider,
+    deviceLocale?: string,
   ) => Promise<void>;
+  updateUserAttribute: (name: string, value: string) => Promise<void>;
   associateSoftwareToken: (
     session: string,
   ) => Promise<{ secretCode: string; qrCodeUrl: string }>;
@@ -343,7 +346,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const handleOAuthCallback = useCallback(
-    async (code: string, codeVerifier: string, redirectUri: string) => {
+    async (
+      code: string,
+      codeVerifier: string,
+      redirectUri: string,
+      provider?: SocialProvider,
+      deviceLocale?: string,
+    ) => {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       try {
         const session = await cognitoAuthRepository.handleOAuthCallback(
@@ -351,7 +360,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           codeVerifier,
           redirectUri,
         );
-        const user = await cognitoAuthRepository.getCurrentUser();
+        let user = await cognitoAuthRepository.getCurrentUser();
+
+        // Sync locale for social sign-in users (non-critical).
+        if (provider && deviceLocale && !user?.locale) {
+          try {
+            await cognitoAuthRepository.updateUserAttribute(
+              'locale',
+              deviceLocale,
+            );
+            // Re-fetch to pick up updated locale
+            user = await cognitoAuthRepository.getCurrentUser();
+          } catch {
+            // Locale sync failed — not critical
+          }
+        }
+
         setState({
           session,
           user,
@@ -370,6 +394,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [scheduleRefresh],
+  );
+
+  const updateUserAttribute = useCallback(
+    async (name: string, value: string) =>
+      cognitoAuthRepository.updateUserAttribute(name, value),
+    [],
   );
 
   const associateSoftwareToken = useCallback(
@@ -430,6 +460,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     confirmForgotPassword,
     getOAuthSignInUrl,
     handleOAuthCallback,
+    updateUserAttribute,
     associateSoftwareToken,
     verifySoftwareToken,
     clearError,
