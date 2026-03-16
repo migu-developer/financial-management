@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react';
 
-import type { SocialProvider } from '@features/ui';
+import { useTranslation } from '@packages/i18n';
 
 import { LoginTemplate } from '@features/auth/presentation/components/shared/templates/login-template';
 import { AuthChallengeType } from '@features/auth/domain/repositories/auth-repository.port';
 import { useAuth } from '@features/auth/presentation/providers/auth-provider';
+import { useSocialSignIn } from '@features/auth/presentation/hooks/use-social-sign-in';
 
 export interface LoginPageProps {
   onForgotPassword: () => void;
@@ -24,6 +25,9 @@ export function LoginPage({
   onMfaSetupRequired,
 }: LoginPageProps) {
   const { signIn, loading, error } = useAuth();
+  const { i18n } = useTranslation();
+  const { initiate: initiateSocialSignIn, loading: socialLoading } =
+    useSocialSignIn(onSignInSuccess, i18n.language);
 
   const handleSignIn = useCallback(
     async (identifier: string, password: string) => {
@@ -57,18 +61,13 @@ export function LoginPage({
     ],
   );
 
-  const handleSocialSignIn = useCallback((_provider: SocialProvider) => {
-    // OAuth flow — Fase 7 (social)
-    console.log('social sign in', _provider);
-  }, []);
-
   return (
     <LoginTemplate
       onSignIn={handleSignIn}
-      onSocialSignIn={handleSocialSignIn}
+      onSocialSignIn={initiateSocialSignIn}
       onForgotPassword={onForgotPassword}
       onSignUp={onSignUp}
-      loading={loading}
+      loading={loading || socialLoading}
       error={error?.message}
     />
   );

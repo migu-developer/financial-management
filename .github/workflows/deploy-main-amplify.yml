@@ -89,7 +89,7 @@ jobs:
         id: resolve
         uses: ./.github/actions/resolve_deploy_env
         with:
-          deploy_paths: '^(client/main/|\.github/workflows/deploy-main-amplify\.yml)'
+          deploy_paths: '^(client/main/|client/packages/|\.github/workflows/deploy-main-amplify\.yml)'
 
   deploy:
     name: 🚀 Trigger Amplify build

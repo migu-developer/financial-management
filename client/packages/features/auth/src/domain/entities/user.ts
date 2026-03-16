@@ -7,6 +7,8 @@ export interface User {
   readonly birthdate?: string;
   readonly profilePicture?: string;
   readonly locale?: string;
+  /** Provider-specific user ID (e.g. Facebook user ID). Populated from Cognito's `identities` attribute. */
+  readonly providerUserId?: string;
   readonly address?: string;
   readonly lastUpdateTime?: Date;
   readonly emailVerified: boolean;

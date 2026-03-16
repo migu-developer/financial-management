@@ -29,4 +29,5 @@ export const ROUTE_NAMES = {
   terms: 'terms',
   contact: 'contact',
   notFound: '+not-found',
+  callback: 'callback',
 };

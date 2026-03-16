@@ -17,6 +17,7 @@ const config: Config = {
     '^@packages/i18n$': '<rootDir>/../packages/i18n/src/index.ts',
     '^@packages/i18n/(.*)$': '<rootDir>/../packages/i18n/src/$1',
     '^@packages/utils$': '<rootDir>/../packages/utils/src/index.ts',
+    '^@packages/utils/(.*)$': '<rootDir>/../packages/utils/$1/index.ts',
     '^@features/auth$': '<rootDir>/../packages/features/auth/src/index.ts',
     '^@features/auth/(.*)$': '<rootDir>/../packages/features/auth/src/$1',
     '^@features/dashboard$':
@@ -40,6 +41,7 @@ const config: Config = {
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/tests/__mocks__/nativewind.ts',
     '^expo-linking$': '<rootDir>/tests/__mocks__/expo-linking.ts',
+    '^expo-web-browser$': '<rootDir>/tests/__mocks__/expo-web-browser.ts',
     '^react-native-qrcode-svg$':
       '<rootDir>/tests/__mocks__/react-native-qrcode-svg.ts',
     '^amazon-cognito-identity-js$':

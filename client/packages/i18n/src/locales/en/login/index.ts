@@ -172,6 +172,12 @@ export const login = {
     back: 'Back to sign in',
   },
 
+  // ── OAuth callback ───────────────────────────────────────────────────────
+  callback: {
+    signInSuccess: 'Sign in successful',
+    signInFailed: 'Sign in failed. Redirecting…',
+  },
+
   // ── Errors ────────────────────────────────────────────────────────────────
   errors: {
     notAuthorized: 'Incorrect email or password.',

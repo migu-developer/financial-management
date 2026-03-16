@@ -1,5 +1,9 @@
 // Auth Provider + context
 export { AuthProvider, useAuth } from './presentation/providers/auth-provider';
+
+// Hooks
+export { useSocialSignIn } from './presentation/hooks/use-social-sign-in';
+export type { UseSocialSignInResult } from './presentation/hooks/use-social-sign-in';
 export type {
   AuthState,
   AuthContextValue,

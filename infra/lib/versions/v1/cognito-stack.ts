@@ -325,6 +325,7 @@ export class CognitoStack extends BaseStack {
         email: ProviderAttribute.GOOGLE_EMAIL,
         givenName: ProviderAttribute.GOOGLE_GIVEN_NAME,
         familyName: ProviderAttribute.GOOGLE_FAMILY_NAME,
+        profilePicture: ProviderAttribute.GOOGLE_PICTURE,
       },
     });
 
@@ -335,6 +336,8 @@ export class CognitoStack extends BaseStack {
       scopes: ['public_profile', 'email'],
       attributeMapping: {
         email: ProviderAttribute.FACEBOOK_EMAIL,
+        givenName: ProviderAttribute.FACEBOOK_FIRST_NAME,
+        familyName: ProviderAttribute.FACEBOOK_LAST_NAME,
       },
     });
 
@@ -350,7 +353,8 @@ export class CognitoStack extends BaseStack {
       scopes: ['name', 'email'],
       attributeMapping: {
         email: ProviderAttribute.APPLE_EMAIL,
-        fullname: ProviderAttribute.APPLE_NAME,
+        givenName: ProviderAttribute.APPLE_FIRST_NAME,
+        familyName: ProviderAttribute.APPLE_LAST_NAME,
       },
     });
 
@@ -382,7 +386,13 @@ export class CognitoStack extends BaseStack {
       userPool: this.userPool,
       oAuth: {
         flows: { authorizationCodeGrant: true },
-        scopes: [OAuthScope.OPENID, OAuthScope.EMAIL, OAuthScope.PROFILE],
+        scopes: [
+          OAuthScope.OPENID,
+          OAuthScope.EMAIL,
+          OAuthScope.PROFILE,
+          OAuthScope.PHONE,
+          OAuthScope.COGNITO_ADMIN,
+        ],
         callbackUrls: props.callbackUrls,
         logoutUrls: props.logoutUrls,
       },

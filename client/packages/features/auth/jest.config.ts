@@ -26,6 +26,7 @@ const config: Config = {
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
     '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
     '^expo-linking$': '<rootDir>/src/__mocks__/expo-linking.ts',
+    '^expo-web-browser$': '<rootDir>/src/__mocks__/expo-web-browser.ts',
     '^react-native-qrcode-svg$':
       '<rootDir>/src/__mocks__/react-native-qrcode-svg.ts',
     // libphonenumber-js is pure JS — no mock needed, real module works in Node

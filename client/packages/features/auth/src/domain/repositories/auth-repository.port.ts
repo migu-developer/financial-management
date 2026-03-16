@@ -101,6 +101,8 @@ export interface AuthRepository {
 
   getCurrentUser(): Promise<User | null>;
 
+  updateUserAttribute(name: string, value: string): Promise<void>;
+
   refreshSession(): Promise<AuthSession>;
 
   signOut(): Promise<void>;
