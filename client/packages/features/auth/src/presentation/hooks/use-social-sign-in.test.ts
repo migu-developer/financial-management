@@ -3,6 +3,8 @@ import { createURL } from 'expo-linking';
 
 import { OAUTH_STORAGE_KEY } from './use-social-sign-in';
 
+import { useSocialSignIn } from './use-social-sign-in';
+
 // ── React hooks mock ─────────────────────────────────────────────────────────
 // Allow calling the hook outside a component by shimming useState / useCallback.
 // We use a shared state store so that setState calls are visible to the test
@@ -99,10 +101,6 @@ function getHookState(baseIndex: number) {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const mod =
-  require('./use-social-sign-in') as typeof import('./use-social-sign-in');
-
 // ── sessionStorage polyfill ──────────────────────────────────────────────────
 
 const storage = new Map<string, string>();
@@ -134,13 +132,13 @@ describe('useSocialSignIn', () => {
   });
 
   it('exports useSocialSignIn as a function', () => {
-    expect(typeof mod.useSocialSignIn).toBe('function');
-    expect(mod.useSocialSignIn.name).toBe('useSocialSignIn');
+    expect(typeof useSocialSignIn).toBe('function');
+    expect(useSocialSignIn.name).toBe('useSocialSignIn');
   });
 
   it('returns initiate, loading, and error', () => {
     baseIndex = stateCounter;
-    const result = mod.useSocialSignIn(jest.fn());
+    const result = useSocialSignIn(jest.fn());
     expect(typeof result.initiate).toBe('function');
     const state = getHookState(baseIndex);
     expect(state.loading).toBe(false);
@@ -151,7 +149,7 @@ describe('useSocialSignIn', () => {
     it('calls getOAuthSignInUrl with provider and redirect URI', async () => {
       setupMocks();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(mockGetOAuthSignInUrl).toHaveBeenCalledWith(
@@ -163,7 +161,7 @@ describe('useSocialSignIn', () => {
     it('opens auth session with the OAuth URL', async () => {
       setupMocks();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(openAuthSessionAsync).toHaveBeenCalledWith(
@@ -175,7 +173,7 @@ describe('useSocialSignIn', () => {
     it('calls handleOAuthCallback with code, verifier, redirect, provider, and locale', async () => {
       setupMocks();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn(), 'es');
+      const { initiate } = useSocialSignIn(jest.fn(), 'es');
       await initiate('facebook');
 
       expect(mockHandleOAuthCallback).toHaveBeenCalledWith(
@@ -191,7 +189,7 @@ describe('useSocialSignIn', () => {
       setupMocks();
       const onSuccess = jest.fn();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(onSuccess);
+      const { initiate } = useSocialSignIn(onSuccess);
       await initiate('google');
 
       expect(onSuccess).toHaveBeenCalledTimes(1);
@@ -200,7 +198,7 @@ describe('useSocialSignIn', () => {
     it('clears sessionStorage after successful popup flow', async () => {
       setupMocks();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(storage.has(OAUTH_STORAGE_KEY)).toBe(false);
@@ -226,7 +224,7 @@ describe('useSocialSignIn', () => {
       });
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(storedValue).not.toBeNull();
@@ -244,7 +242,7 @@ describe('useSocialSignIn', () => {
     it('does not call handleOAuthCallback when user cancels', async () => {
       setupMocks({ authSessionResult: { type: 'cancel' } });
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(mockHandleOAuthCallback).not.toHaveBeenCalled();
@@ -254,7 +252,7 @@ describe('useSocialSignIn', () => {
       setupMocks({ authSessionResult: { type: 'dismiss' } });
       const onSuccess = jest.fn();
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(onSuccess);
+      const { initiate } = useSocialSignIn(onSuccess);
       await initiate('google');
 
       expect(onSuccess).not.toHaveBeenCalled();
@@ -271,7 +269,7 @@ describe('useSocialSignIn', () => {
       });
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
@@ -288,7 +286,7 @@ describe('useSocialSignIn', () => {
       });
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
@@ -304,7 +302,7 @@ describe('useSocialSignIn', () => {
       mockGetOAuthSignInUrl.mockRejectedValue(new Error('Network failure'));
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
@@ -318,7 +316,7 @@ describe('useSocialSignIn', () => {
       );
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
@@ -330,7 +328,7 @@ describe('useSocialSignIn', () => {
       mockHandleOAuthCallback.mockRejectedValue(new Error('fail'));
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
       expect(storage.has(OAUTH_STORAGE_KEY)).toBe(false);
@@ -343,7 +341,7 @@ describe('useSocialSignIn', () => {
       mockGetOAuthSignInUrl.mockRejectedValue('string error');
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
@@ -369,7 +367,7 @@ describe('useSocialSignIn', () => {
       (openAuthSessionAsync as jest.Mock).mockResolvedValue({ type: 'cancel' });
 
       baseIndex = stateCounter;
-      const { initiate } = mod.useSocialSignIn(jest.fn());
+      const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
       const state = getHookState(baseIndex);
 
