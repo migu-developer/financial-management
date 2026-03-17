@@ -17,7 +17,8 @@ import { isWeb } from '@packages/utils/src';
 // and send the URL back to the opener window via postMessage.
 // skipRedirectCheck avoids failures when the server adds a trailing slash
 // (e.g. /auth/callback → /auth/callback/) which breaks the default URL comparison.
-maybeCompleteAuthSession({ skipRedirectCheck: true });
+const mcsResult = maybeCompleteAuthSession({ skipRedirectCheck: true });
+console.log('[Callback] maybeCompleteAuthSession result', mcsResult);
 
 type Status = 'processing' | 'success' | 'error';
 
@@ -37,23 +38,45 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     // ── Popup guard ─────────────────────────────────────────────────────────
     // When this page runs inside a popup opened by openAuthSessionAsync,
-    // maybeCompleteAuthSession() (module-level) already sent the URL to the
-    // parent window via postMessage.  The parent's hook will extract the code
-    // and call handleOAuthCallback.
+    // maybeCompleteAuthSession() (module-level) already stored the URL in
+    // localStorage for the parent to read.  The parent's hook will extract the
+    // code and call handleOAuthCallback.
     //
     // We must NOT also process the code here — Cognito authorization codes are
     // single-use, so two concurrent exchanges cause one to fail.
-    if (
-      platformIsWeb &&
-      typeof window !== 'undefined' &&
-      window.opener !== null
-    ) {
-      // Explicitly close the popup as a safety net. If maybeCompleteAuthSession
-      // already triggered the close from the parent side, this is a no-op.
+    //
+    // We detect the popup via expo-web-browser's localStorage handle rather than
+    // window.opener, because Cross-Origin-Opener-Policy (COOP) headers from
+    // Cognito's hosted UI sever window.opener after cross-origin navigation.
+    const redirectHandle = (() => {
+      if (!platformIsWeb || typeof localStorage === 'undefined') return null;
+      try {
+        return localStorage.getItem('ExpoWebBrowserRedirectHandle');
+      } catch {
+        return null;
+      }
+    })();
+    const isPopup = redirectHandle !== null;
+
+    console.log('[Callback] Guard check', {
+      platformIsWeb,
+      isPopup,
+      redirectHandle,
+      hasOpener: typeof window !== 'undefined' ? window.opener !== null : false,
+      href: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      code: code ?? null,
+      state: state ?? null,
+      oauthError: oauthError ?? null,
+    });
+
+    if (isPopup) {
+      console.log(
+        '[Callback] Popup detected — closing window, parent will handle the code',
+      );
       try {
         window.close();
       } catch {
-        // Some browsers block window.close() for non-script-opened windows.
+        console.log('[Callback] window.close() blocked by browser');
       }
       return;
     }
@@ -67,6 +90,10 @@ export default function AuthCallbackScreen() {
 
     // OAuth error returned by the provider (e.g. user denied access)
     if (oauthError || !codeStr) {
+      console.log('[Callback] No code or OAuth error — redirecting to login', {
+        oauthError,
+        codeStr,
+      });
       router.replace(ROUTES.authLogin as never);
       return;
     }
@@ -85,16 +112,27 @@ export default function AuthCallbackScreen() {
     }
 
     if (!pending) {
+      console.log(
+        '[Callback] No pending PKCE in sessionStorage — redirecting to login',
+      );
       router.replace(ROUTES.authLogin as never);
       return;
     }
 
     const returnedState = String(state ?? '');
     if (returnedState !== pending.state) {
+      console.log('[Callback] State mismatch', {
+        returnedState,
+        expectedState: pending.state,
+      });
       router.replace(ROUTES.authLogin as never);
       return;
     }
 
+    console.log('[Callback] Redirect flow — exchanging code', {
+      provider: pending.provider,
+      redirectUri: pending.redirectUri,
+    });
     handleOAuthCallback(
       codeStr,
       pending.codeVerifier,
@@ -102,12 +140,14 @@ export default function AuthCallbackScreen() {
       pending.provider as SocialProvider,
     )
       .then(() => {
+        console.log('[Callback] Exchange success — navigating to dashboard');
         setStatus('success');
         setTimeout(() => {
           router.replace(ROUTES.dashboard.home as never);
         }, 600);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[Callback] Exchange failed', err);
         setStatus('error');
         setTimeout(() => {
           router.replace(ROUTES.authLogin as never);

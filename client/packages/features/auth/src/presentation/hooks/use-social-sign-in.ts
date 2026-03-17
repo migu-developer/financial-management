@@ -52,6 +52,11 @@ export function useSocialSignIn(
       setError(null);
       try {
         const redirectUri = createURL('auth/callback');
+        console.log('[SocialSignIn] Starting', {
+          provider,
+          redirectUri,
+          isWeb: isWeb(),
+        });
         const { url, pkce } = await auth.getOAuthSignInUrl(
           provider,
           redirectUri,
@@ -68,7 +73,18 @@ export function useSocialSignIn(
           sessionStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify(pending));
         }
 
+        console.log('[SocialSignIn] Opening popup', {
+          authUrl: url.substring(0, 80) + '...',
+          state: pkce.state,
+        });
         const result = await openAuthSessionAsync(url, redirectUri);
+        console.log('[SocialSignIn] Popup returned', {
+          type: result.type,
+          url:
+            'url' in result
+              ? (result as { url: string }).url.substring(0, 120) + '...'
+              : 'N/A',
+        });
 
         if (result.type !== 'success') {
           // User cancelled, dismissed, or the callback page consumed the code
@@ -93,6 +109,10 @@ export function useSocialSignIn(
           throw new Error('OAuth state mismatch — possible CSRF attempt');
         }
 
+        console.log('[SocialSignIn] Popup flow — exchanging code', {
+          provider,
+          codePrefix: code.substring(0, 10) + '...',
+        });
         await auth.handleOAuthCallback(
           code,
           pkce.codeVerifier,
@@ -101,12 +121,19 @@ export function useSocialSignIn(
           locale,
         );
 
+        console.log('[SocialSignIn] Exchange success — calling onSuccess');
         onSuccess();
       } catch (e) {
         if (isWeb() && typeof sessionStorage !== 'undefined') {
           sessionStorage.removeItem(OAUTH_STORAGE_KEY);
         }
-        setError(e instanceof Error ? e.message : 'Social sign in failed');
+        const msg = e instanceof Error ? e.message : 'Social sign in failed';
+        console.error('[SocialSignIn] Error', {
+          provider,
+          message: msg,
+          error: e,
+        });
+        setError(msg);
       } finally {
         setLoading(false);
       }
