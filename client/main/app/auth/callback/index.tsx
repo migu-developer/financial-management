@@ -15,7 +15,9 @@ import { isWeb } from '@packages/utils/src';
 
 // Must be called at module level — tells expo-web-browser to close the popup
 // and send the URL back to the opener window via postMessage.
-maybeCompleteAuthSession();
+// skipRedirectCheck avoids failures when the server adds a trailing slash
+// (e.g. /auth/callback → /auth/callback/) which breaks the default URL comparison.
+maybeCompleteAuthSession({ skipRedirectCheck: true });
 
 type Status = 'processing' | 'success' | 'error';
 
@@ -33,6 +35,34 @@ export default function AuthCallbackScreen() {
   const platformIsWeb = useMemo(() => isWeb(), []);
 
   useEffect(() => {
+    // ── Popup guard ─────────────────────────────────────────────────────────
+    // When this page runs inside a popup opened by openAuthSessionAsync,
+    // maybeCompleteAuthSession() (module-level) already sent the URL to the
+    // parent window via postMessage.  The parent's hook will extract the code
+    // and call handleOAuthCallback.
+    //
+    // We must NOT also process the code here — Cognito authorization codes are
+    // single-use, so two concurrent exchanges cause one to fail.
+    if (
+      platformIsWeb &&
+      typeof window !== 'undefined' &&
+      window.opener !== null
+    ) {
+      // Explicitly close the popup as a safety net. If maybeCompleteAuthSession
+      // already triggered the close from the parent side, this is a no-op.
+      try {
+        window.close();
+      } catch {
+        // Some browsers block window.close() for non-script-opened windows.
+      }
+      return;
+    }
+
+    // ── Redirect flow ───────────────────────────────────────────────────────
+    // This path runs when the page was navigated to directly (full redirect,
+    // not a popup).  Read the PKCE data that useSocialSignIn persisted in
+    // sessionStorage before triggering the OAuth redirect.
+
     const codeStr = String(code ?? '');
 
     // OAuth error returned by the provider (e.g. user denied access)
@@ -41,8 +71,6 @@ export default function AuthCallbackScreen() {
       return;
     }
 
-    // Redirect flow (direct navigation or native deep link without the hook being active).
-    // Read PKCE stored by useSocialSignIn before it triggered the navigation.
     let pending: OAuthPending | null = null;
     if (platformIsWeb && typeof sessionStorage !== 'undefined') {
       try {
@@ -75,7 +103,6 @@ export default function AuthCallbackScreen() {
     )
       .then(() => {
         setStatus('success');
-        // Brief success state so the user sees the confirmation before navigating.
         setTimeout(() => {
           router.replace(ROUTES.dashboard.home as never);
         }, 600);
