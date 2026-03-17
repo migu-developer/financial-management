@@ -118,17 +118,37 @@ afterAll(() => {
   delete (globalThis as Record<string, unknown>).sessionStorage;
 });
 
+// ── Poll timeout helper ─────────────────────────────────────────────────────
+// The COOP poll runs every 400ms until Date.now() passes the deadline.
+// Using advanceTimersByTimeAsync(5min) would process ~750 callbacks and hang.
+// Instead, jump Date.now() past the deadline via setSystemTime, then fire ONE
+// pending setTimeout so the poll loop exits on its next iteration.
+
+async function skipPollTimeout() {
+  // Flush microtasks so the code has reached the poll's setTimeout
+  await jest.advanceTimersByTimeAsync(0);
+  // Jump the system clock past the 5-minute poll deadline
+  jest.setSystemTime(Date.now() + 5 * 60 * 1000 + 1000);
+  // Fire the single pending setTimeout(400) to resume the poll
+  await jest.advanceTimersByTimeAsync(500);
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useSocialSignIn', () => {
   let baseIndex: number;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     storage.clear();
     // Record the stateStore counter before each hook call
     // so we know which indices belong to this test's hook instance
     baseIndex = stateCounter;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('exports useSocialSignIn as a function', () => {
@@ -225,7 +245,9 @@ describe('useSocialSignIn', () => {
 
       baseIndex = stateCounter;
       const { initiate } = useSocialSignIn(jest.fn());
-      await initiate('google');
+      const promise = initiate('google');
+      await skipPollTimeout();
+      await promise;
 
       expect(storedValue).not.toBeNull();
       const parsed = JSON.parse(storedValue!);
@@ -243,7 +265,9 @@ describe('useSocialSignIn', () => {
       setupMocks({ authSessionResult: { type: 'cancel' } });
       baseIndex = stateCounter;
       const { initiate } = useSocialSignIn(jest.fn());
-      await initiate('google');
+      const promise = initiate('google');
+      await skipPollTimeout();
+      await promise;
 
       expect(mockHandleOAuthCallback).not.toHaveBeenCalled();
     });
@@ -253,7 +277,9 @@ describe('useSocialSignIn', () => {
       const onSuccess = jest.fn();
       baseIndex = stateCounter;
       const { initiate } = useSocialSignIn(onSuccess);
-      await initiate('google');
+      const promise = initiate('google');
+      await skipPollTimeout();
+      await promise;
 
       expect(onSuccess).not.toHaveBeenCalled();
     });
@@ -368,7 +394,9 @@ describe('useSocialSignIn', () => {
 
       baseIndex = stateCounter;
       const { initiate } = useSocialSignIn(jest.fn());
-      await initiate('google');
+      const promise = initiate('google');
+      await skipPollTimeout();
+      await promise;
       const state = getHookState(baseIndex);
 
       expect(loadingDuringCall).toBe(true);

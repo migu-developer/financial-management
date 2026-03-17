@@ -50,6 +50,36 @@ function cleanupPopupStorage(): void {
 }
 
 /**
+ * When COOP headers cause openAuthSessionAsync to resolve immediately (the popup
+ * appears "closed" to the parent), the user is still completing the OAuth flow in
+ * the popup. We poll BroadcastChannel and localStorage until the popup sends
+ * back the callback URL. The timeout is intentionally very high (10 min) — it
+ * exists only to prevent a truly infinite loop; in practice OAuth completes in
+ * seconds and the poll resolves immediately.
+ */
+const COOP_POLL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const COOP_POLL_INTERVAL_MS = 400;
+
+async function pollForCallbackUrl(
+  getBroadcastUrl: () => string | null,
+  storageKey: string,
+): Promise<string | null> {
+  const deadline = Date.now() + COOP_POLL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const bUrl = getBroadcastUrl();
+    if (bUrl) return bUrl;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) return stored;
+    } catch {
+      // localStorage unavailable
+    }
+    await new Promise((r) => setTimeout(r, COOP_POLL_INTERVAL_MS));
+  }
+  return null;
+}
+
+/**
  * Orchestrates the full social OAuth flow with platform-aware strategy:
  *
  * Web:
@@ -103,12 +133,6 @@ export function useSocialSignIn(
 
       try {
         const redirectUri = createURL('auth/callback');
-        console.log('[SocialSignIn] Starting', {
-          provider,
-          redirectUri,
-          isWeb: isWeb(),
-          hasBroadcastChannel: channel !== null,
-        });
         const { url, pkce } = await auth.getOAuthSignInUrl(
           provider,
           redirectUri,
@@ -131,23 +155,11 @@ export function useSocialSignIn(
         if (isWeb() && typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem(POPUP_STATE_KEY, pkce.state);
-            // Verify the write succeeded
-            const verify = localStorage.getItem(POPUP_STATE_KEY);
-            console.log('[SocialSignIn] localStorage marker set', {
-              key: POPUP_STATE_KEY,
-              written: pkce.state,
-              readBack: verify,
-              match: verify === pkce.state,
-            });
-          } catch (e) {
-            console.error('[SocialSignIn] localStorage.setItem failed', e);
+          } catch {
+            // localStorage unavailable
           }
         }
 
-        console.log('[SocialSignIn] Opening popup', {
-          authUrl: url.substring(0, 80) + '...',
-          state: pkce.state,
-        });
         const result = await openAuthSessionAsync(url, redirectUri);
 
         // ── Determine the callback URL ────────────────────────────────────────
@@ -159,53 +171,25 @@ export function useSocialSignIn(
 
         if (result.type === 'success') {
           callbackUrl = result.url;
-          console.log('[SocialSignIn] Popup returned success', {
-            url: callbackUrl.substring(0, 120) + '...',
-          });
         } else {
           console.log('[SocialSignIn] Popup returned', { type: result.type });
 
-          // Wait a moment for BroadcastChannel message or localStorage write
-          // to settle. The popup writes synchronously before closing, but the
-          // parent's close-detection polling may fire before the message arrives.
+          // COOP headers from Cognito may sever the popup connection, causing
+          // openAuthSessionAsync to resolve immediately as "dismiss" before the
+          // user completed the OAuth flow. The popup marker (localStorage) MUST
+          // stay alive so the callback page can detect it's a popup. Poll for
+          // the callback URL via BroadcastChannel / localStorage until the popup
+          // sends it back or we time out.
           if (isWeb()) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-
-          // Try BroadcastChannel first (most reliable), then localStorage
-          if (broadcastUrl) {
-            callbackUrl = broadcastUrl;
-            console.log('[SocialSignIn] Using BroadcastChannel URL');
-          } else if (typeof localStorage !== 'undefined') {
-            try {
-              const storedUrl = localStorage.getItem(POPUP_RESULT_KEY);
-              if (storedUrl) {
-                callbackUrl = storedUrl;
-                console.log('[SocialSignIn] Using localStorage fallback URL', {
-                  url: storedUrl.substring(0, 120) + '...',
-                });
-              }
-            } catch {
-              // localStorage unavailable
-            }
-          }
-
-          if (!callbackUrl) {
-            // Debug: dump localStorage state to understand why the bridge failed
-            console.log(
-              '[SocialSignIn] No callback URL found via any channel',
-              {
-                broadcastUrl,
-                popupStateStillSet:
-                  typeof localStorage !== 'undefined'
-                    ? localStorage.getItem(POPUP_STATE_KEY)
-                    : 'N/A',
-                popupResult:
-                  typeof localStorage !== 'undefined'
-                    ? localStorage.getItem(POPUP_RESULT_KEY)
-                    : 'N/A',
-              },
+            callbackUrl = await pollForCallbackUrl(
+              () => broadcastUrl,
+              POPUP_RESULT_KEY,
             );
+            if (callbackUrl) {
+              console.log('[SocialSignIn] Received callback URL via polling');
+            } else {
+              console.log('[SocialSignIn] Poll timed out — no callback URL');
+            }
           }
         }
 
@@ -232,12 +216,6 @@ export function useSocialSignIn(
         const code = params.get('code');
         const returnedState = params.get('state');
 
-        console.log('[SocialSignIn] Parsed callback URL', {
-          hasCode: !!code,
-          stateMatch: returnedState === pkce.state,
-          hadHashFragment: callbackUrl !== cleanUrl,
-        });
-
         if (!code) {
           throw new Error('Missing authorization code in callback');
         }
@@ -245,10 +223,6 @@ export function useSocialSignIn(
           throw new Error('OAuth state mismatch — possible CSRF attempt');
         }
 
-        console.log('[SocialSignIn] Exchanging code with PKCE', {
-          provider,
-          codePrefix: code.substring(0, 10) + '...',
-        });
         await auth.handleOAuthCallback(
           code,
           pkce.codeVerifier,
@@ -257,7 +231,6 @@ export function useSocialSignIn(
           locale,
         );
 
-        console.log('[SocialSignIn] Exchange success — calling onSuccess');
         onSuccess();
       } catch (e) {
         cleanupPopupStorage();
@@ -265,11 +238,6 @@ export function useSocialSignIn(
           sessionStorage.removeItem(OAUTH_STORAGE_KEY);
         }
         const msg = e instanceof Error ? e.message : 'Social sign in failed';
-        console.error('[SocialSignIn] Error', {
-          provider,
-          message: msg,
-          error: e,
-        });
         setError(msg);
       } finally {
         try {

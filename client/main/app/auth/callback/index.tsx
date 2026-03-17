@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { maybeCompleteAuthSession } from 'expo-web-browser';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { useAuth } from '@features/auth';
@@ -15,13 +14,6 @@ import {
 } from '@features/auth/presentation/hooks/use-social-sign-in';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
-
-// Must be called at module level — tells expo-web-browser to close the popup
-// and send the URL back to the opener window via postMessage.
-// skipRedirectCheck avoids failures when the server adds a trailing slash
-// (e.g. /auth/callback → /auth/callback/) which breaks the default URL comparison.
-const mcsResult = maybeCompleteAuthSession({ skipRedirectCheck: true });
-console.log('[Callback] maybeCompleteAuthSession result', mcsResult);
 
 type Status = 'processing' | 'success' | 'error';
 
@@ -62,40 +54,10 @@ export default function AuthCallbackScreen() {
     })();
 
     const currentHref =
-      typeof window !== 'undefined' ? window.location.href : 'N/A';
-
-    // Debug: dump all localStorage keys to understand the storage state
-    let lsKeys: string[] = [];
-    if (platformIsWeb && typeof localStorage !== 'undefined') {
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key) lsKeys.push(key);
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    console.log('[Callback] Guard check', {
-      platformIsWeb,
-      isPopup: popupState !== null,
-      popupState,
-      mcsResult: mcsResult.type,
-      hasOpener: typeof window !== 'undefined' ? window.opener !== null : false,
-      href: currentHref,
-      code: code ?? null,
-      state: state ?? null,
-      oauthError: oauthError ?? null,
-      localStorageKeys: lsKeys,
-    });
+      typeof window !== 'undefined' ? window.location.href : '';
 
     if (popupState) {
       // ── Popup path: send URL back to parent via multiple channels ──────
-      console.log(
-        '[Callback] Popup detected — sending URL to parent and closing',
-        { href: currentHref },
-      );
 
       // Channel 1: BroadcastChannel (primary — not affected by COOP)
       if (typeof BroadcastChannel !== 'undefined') {
@@ -106,24 +68,22 @@ export default function AuthCallbackScreen() {
             url: currentHref,
           });
           channel.close();
-          console.log('[Callback] Sent URL via BroadcastChannel');
-        } catch (e) {
-          console.error('[Callback] BroadcastChannel failed', e);
+        } catch {
+          // BroadcastChannel not available
         }
       }
 
       // Channel 2: localStorage (fallback)
       try {
         localStorage.setItem(POPUP_RESULT_KEY, currentHref);
-        console.log('[Callback] Stored URL in localStorage');
       } catch {
-        console.error('[Callback] Failed to store result URL in localStorage');
+        // localStorage unavailable
       }
 
       try {
         window.close();
       } catch {
-        console.log('[Callback] window.close() blocked by browser');
+        // window.close() blocked by browser
       }
       return;
     }
@@ -141,10 +101,6 @@ export default function AuthCallbackScreen() {
     if (!codeStr && platformIsWeb && typeof window !== 'undefined') {
       const hash = window.location.hash;
       if (hash.includes('code=')) {
-        console.log(
-          '[Callback] Params not in query string, parsing from hash (Facebook #_=_)',
-          { hash: hash.substring(0, 80) },
-        );
         const hashParams = new URLSearchParams(hash.replace(/^#[^?]*\??/, ''));
         codeStr = hashParams.get('code') ?? '';
         stateStr = hashParams.get('state') ?? stateStr;
@@ -153,10 +109,6 @@ export default function AuthCallbackScreen() {
 
     // OAuth error returned by the provider (e.g. user denied access)
     if (oauthError || !codeStr) {
-      console.log('[Callback] No code or OAuth error — redirecting to login', {
-        oauthError,
-        codeStr,
-      });
       router.replace(ROUTES.authLogin as never);
       return;
     }
@@ -175,27 +127,15 @@ export default function AuthCallbackScreen() {
     }
 
     if (!pending) {
-      console.log(
-        '[Callback] No pending PKCE in sessionStorage — redirecting to login',
-      );
       router.replace(ROUTES.authLogin as never);
       return;
     }
 
     if (stateStr !== pending.state) {
-      console.log('[Callback] State mismatch', {
-        returnedState: stateStr,
-        expectedState: pending.state,
-      });
       router.replace(ROUTES.authLogin as never);
       return;
     }
 
-    console.log('[Callback] Redirect flow — exchanging code', {
-      provider: pending.provider,
-      redirectUri: pending.redirectUri,
-      codePrefix: codeStr.substring(0, 10) + '...',
-    });
     handleOAuthCallback(
       codeStr,
       pending.codeVerifier,
@@ -203,14 +143,12 @@ export default function AuthCallbackScreen() {
       pending.provider as SocialProvider,
     )
       .then(() => {
-        console.log('[Callback] Exchange success — navigating to dashboard');
         setStatus('success');
         setTimeout(() => {
           router.replace(ROUTES.dashboard.home as never);
         }, 600);
       })
-      .catch((err) => {
-        console.error('[Callback] Exchange failed', err);
+      .catch(() => {
         setStatus('error');
         setTimeout(() => {
           router.replace(ROUTES.authLogin as never);
