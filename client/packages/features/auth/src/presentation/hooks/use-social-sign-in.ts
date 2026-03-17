@@ -13,6 +13,11 @@ export const OAUTH_STORAGE_KEY = '_oauth_pending';
 export const POPUP_STATE_KEY = '_oauth_popup_state';
 export const POPUP_RESULT_KEY = '_oauth_popup_result';
 
+// BroadcastChannel name for cross-window communication.
+// BroadcastChannel is NOT affected by COOP — it works between any same-origin
+// windows/tabs regardless of browsing context group.
+export const OAUTH_BROADCAST_CHANNEL = '_oauth_popup_bridge';
+
 export interface OAuthPending {
   codeVerifier: string;
   state: string;
@@ -51,8 +56,8 @@ function cleanupPopupStorage(): void {
  *  - Persists PKCE + provider in sessionStorage before opening the browser session.
  *  - Uses openAuthSessionAsync (popup on desktop, in-app browser on mobile web).
  *  - If the popup closes successfully, processes the callback URL in the hook.
- *  - If COOP headers prevent postMessage (production), reads the callback URL
- *    from localStorage where the popup callback page stored it.
+ *  - If COOP headers prevent postMessage (production), uses BroadcastChannel
+ *    (primary) or localStorage (fallback) to receive the callback URL from the popup.
  *  - If the session is handled by the /auth/callback route instead (redirect flow),
  *    the sessionStorage entry is consumed there and onSuccess is NOT called here.
  *
@@ -75,12 +80,34 @@ export function useSocialSignIn(
     async (provider: SocialProvider) => {
       setLoading(true);
       setError(null);
+
+      // BroadcastChannel listener — set up before opening popup so we don't
+      // miss the message.  Captured URL is read after openAuthSessionAsync resolves.
+      let broadcastUrl: string | null = null;
+      let channel: BroadcastChannel | null = null;
+      if (isWeb() && typeof BroadcastChannel !== 'undefined') {
+        try {
+          channel = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL);
+          channel.onmessage = (e: MessageEvent) => {
+            if (e.data?.type === 'oauth_callback_url' && e.data?.url) {
+              broadcastUrl = e.data.url as string;
+              console.log('[SocialSignIn] BroadcastChannel received URL', {
+                url: broadcastUrl.substring(0, 120) + '...',
+              });
+            }
+          };
+        } catch {
+          // BroadcastChannel not available
+        }
+      }
+
       try {
         const redirectUri = createURL('auth/callback');
         console.log('[SocialSignIn] Starting', {
           provider,
           redirectUri,
           isWeb: isWeb(),
+          hasBroadcastChannel: channel !== null,
         });
         const { url, pkce } = await auth.getOAuthSignInUrl(
           provider,
@@ -104,8 +131,16 @@ export function useSocialSignIn(
         if (isWeb() && typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem(POPUP_STATE_KEY, pkce.state);
-          } catch {
-            // localStorage unavailable
+            // Verify the write succeeded
+            const verify = localStorage.getItem(POPUP_STATE_KEY);
+            console.log('[SocialSignIn] localStorage marker set', {
+              key: POPUP_STATE_KEY,
+              written: pkce.state,
+              readBack: verify,
+              match: verify === pkce.state,
+            });
+          } catch (e) {
+            console.error('[SocialSignIn] localStorage.setItem failed', e);
           }
         }
 
@@ -116,10 +151,10 @@ export function useSocialSignIn(
         const result = await openAuthSessionAsync(url, redirectUri);
 
         // ── Determine the callback URL ────────────────────────────────────────
-        // Two possible sources:
-        //  1. openAuthSessionAsync returned 'success' with the URL (postMessage worked)
-        //  2. openAuthSessionAsync returned 'dismiss' but the popup stored the URL
-        //     in localStorage before closing (COOP fallback)
+        // Three possible sources (in priority order):
+        //  1. openAuthSessionAsync returned 'success' (postMessage worked)
+        //  2. BroadcastChannel message from the popup (not affected by COOP)
+        //  3. localStorage entry written by the popup (fallback)
         let callbackUrl: string | null = null;
 
         if (result.type === 'success') {
@@ -130,32 +165,58 @@ export function useSocialSignIn(
         } else {
           console.log('[SocialSignIn] Popup returned', { type: result.type });
 
-          // COOP fallback: the popup may have stored the callback URL in
-          // localStorage just before closing. Give a tiny buffer for the write
-          // to propagate (localStorage.setItem is sync, but the popup close
-          // event may race with our read).
-          if (isWeb() && typeof localStorage !== 'undefined') {
-            await new Promise((r) => setTimeout(r, 200));
+          // Wait a moment for BroadcastChannel message or localStorage write
+          // to settle. The popup writes synchronously before closing, but the
+          // parent's close-detection polling may fire before the message arrives.
+          if (isWeb()) {
+            await new Promise((r) => setTimeout(r, 500));
+          }
+
+          // Try BroadcastChannel first (most reliable), then localStorage
+          if (broadcastUrl) {
+            callbackUrl = broadcastUrl;
+            console.log('[SocialSignIn] Using BroadcastChannel URL');
+          } else if (typeof localStorage !== 'undefined') {
             try {
               const storedUrl = localStorage.getItem(POPUP_RESULT_KEY);
               if (storedUrl) {
                 callbackUrl = storedUrl;
-                console.log(
-                  '[SocialSignIn] Recovered URL from localStorage (COOP fallback)',
-                  { url: storedUrl.substring(0, 120) + '...' },
-                );
+                console.log('[SocialSignIn] Using localStorage fallback URL', {
+                  url: storedUrl.substring(0, 120) + '...',
+                });
               }
             } catch {
               // localStorage unavailable
             }
           }
+
+          if (!callbackUrl) {
+            // Debug: dump localStorage state to understand why the bridge failed
+            console.log(
+              '[SocialSignIn] No callback URL found via any channel',
+              {
+                broadcastUrl,
+                popupStateStillSet:
+                  typeof localStorage !== 'undefined'
+                    ? localStorage.getItem(POPUP_STATE_KEY)
+                    : 'N/A',
+                popupResult:
+                  typeof localStorage !== 'undefined'
+                    ? localStorage.getItem(POPUP_RESULT_KEY)
+                    : 'N/A',
+              },
+            );
+          }
         }
 
+        // Clean up communication channels
+        try {
+          channel?.close();
+        } catch {}
+        channel = null;
         cleanupPopupStorage();
 
         if (!callbackUrl) {
-          // User cancelled, dismissed without completing auth, or callback
-          // page consumed the code via the redirect flow.
           console.log('[SocialSignIn] No callback URL — user likely cancelled');
           return;
         }
@@ -211,6 +272,9 @@ export function useSocialSignIn(
         });
         setError(msg);
       } finally {
+        try {
+          channel?.close();
+        } catch {}
         setLoading(false);
       }
     },

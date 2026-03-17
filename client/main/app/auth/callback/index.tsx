@@ -10,6 +10,7 @@ import {
   OAUTH_STORAGE_KEY,
   POPUP_STATE_KEY,
   POPUP_RESULT_KEY,
+  OAUTH_BROADCAST_CHANNEL,
   type OAuthPending,
 } from '@features/auth/presentation/hooks/use-social-sign-in';
 import { ROUTES } from '@/utils/route';
@@ -48,8 +49,9 @@ export default function AuthCallbackScreen() {
     //
     // When detected as popup:
     //  1. maybeCompleteAuthSession (module-level) already tried postMessage
-    //  2. We store the full callback URL in localStorage as a fallback
-    //  3. The parent reads it after openAuthSessionAsync resolves with 'dismiss'
+    //  2. We send the URL via BroadcastChannel (primary, not affected by COOP)
+    //  3. We also store it in localStorage (fallback)
+    //  4. The parent reads from whichever channel delivers first
     const popupState = (() => {
       if (!platformIsWeb || typeof localStorage === 'undefined') return null;
       try {
@@ -62,6 +64,19 @@ export default function AuthCallbackScreen() {
     const currentHref =
       typeof window !== 'undefined' ? window.location.href : 'N/A';
 
+    // Debug: dump all localStorage keys to understand the storage state
+    let lsKeys: string[] = [];
+    if (platformIsWeb && typeof localStorage !== 'undefined') {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) lsKeys.push(key);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     console.log('[Callback] Guard check', {
       platformIsWeb,
       isPopup: popupState !== null,
@@ -72,21 +87,39 @@ export default function AuthCallbackScreen() {
       code: code ?? null,
       state: state ?? null,
       oauthError: oauthError ?? null,
+      localStorageKeys: lsKeys,
     });
 
     if (popupState) {
-      // Store the full callback URL in localStorage so the parent window can
-      // read it after openAuthSessionAsync resolves with 'dismiss'.
-      // This is the COOP fallback — when postMessage can't reach the parent.
+      // ── Popup path: send URL back to parent via multiple channels ──────
       console.log(
-        '[Callback] Popup detected — storing URL for parent and closing',
+        '[Callback] Popup detected — sending URL to parent and closing',
         { href: currentHref },
       );
+
+      // Channel 1: BroadcastChannel (primary — not affected by COOP)
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          const channel = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL);
+          channel.postMessage({
+            type: 'oauth_callback_url',
+            url: currentHref,
+          });
+          channel.close();
+          console.log('[Callback] Sent URL via BroadcastChannel');
+        } catch (e) {
+          console.error('[Callback] BroadcastChannel failed', e);
+        }
+      }
+
+      // Channel 2: localStorage (fallback)
       try {
         localStorage.setItem(POPUP_RESULT_KEY, currentHref);
+        console.log('[Callback] Stored URL in localStorage');
       } catch {
         console.error('[Callback] Failed to store result URL in localStorage');
       }
+
       try {
         window.close();
       } catch {
