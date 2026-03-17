@@ -8,6 +8,8 @@ import { useTranslation } from '@packages/i18n';
 import type { SocialProvider } from '@features/auth/domain/repositories/auth-repository.port';
 import {
   OAUTH_STORAGE_KEY,
+  POPUP_STATE_KEY,
+  POPUP_RESULT_KEY,
   type OAuthPending,
 } from '@features/auth/presentation/hooks/use-social-sign-in';
 import { ROUTES } from '@/utils/route';
@@ -37,42 +39,54 @@ export default function AuthCallbackScreen() {
 
   useEffect(() => {
     // ── Popup guard ─────────────────────────────────────────────────────────
-    // When this page runs inside a popup opened by openAuthSessionAsync,
-    // maybeCompleteAuthSession() (module-level) already stored the URL in
-    // localStorage for the parent to read.  The parent's hook will extract the
-    // code and call handleOAuthCallback.
+    // Detect if this page is running inside a popup opened by useSocialSignIn.
     //
-    // We must NOT also process the code here — Cognito authorization codes are
-    // single-use, so two concurrent exchanges cause one to fail.
+    // We use our own localStorage marker (_oauth_popup_state) set by the
+    // parent before opening the popup. This is reliable even when:
+    //  - COOP headers sever window.opener (production Cognito)
+    //  - expo-web-browser's internal handle isn't shared across windows
     //
-    // We detect the popup via expo-web-browser's localStorage handle rather than
-    // window.opener, because Cross-Origin-Opener-Policy (COOP) headers from
-    // Cognito's hosted UI sever window.opener after cross-origin navigation.
-    const redirectHandle = (() => {
+    // When detected as popup:
+    //  1. maybeCompleteAuthSession (module-level) already tried postMessage
+    //  2. We store the full callback URL in localStorage as a fallback
+    //  3. The parent reads it after openAuthSessionAsync resolves with 'dismiss'
+    const popupState = (() => {
       if (!platformIsWeb || typeof localStorage === 'undefined') return null;
       try {
-        return localStorage.getItem('ExpoWebBrowserRedirectHandle');
+        return localStorage.getItem(POPUP_STATE_KEY);
       } catch {
         return null;
       }
     })();
-    const isPopup = redirectHandle !== null;
+
+    const currentHref =
+      typeof window !== 'undefined' ? window.location.href : 'N/A';
 
     console.log('[Callback] Guard check', {
       platformIsWeb,
-      isPopup,
-      redirectHandle,
+      isPopup: popupState !== null,
+      popupState,
+      mcsResult: mcsResult.type,
       hasOpener: typeof window !== 'undefined' ? window.opener !== null : false,
-      href: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      href: currentHref,
       code: code ?? null,
       state: state ?? null,
       oauthError: oauthError ?? null,
     });
 
-    if (isPopup) {
+    if (popupState) {
+      // Store the full callback URL in localStorage so the parent window can
+      // read it after openAuthSessionAsync resolves with 'dismiss'.
+      // This is the COOP fallback — when postMessage can't reach the parent.
       console.log(
-        '[Callback] Popup detected — closing window, parent will handle the code',
+        '[Callback] Popup detected — storing URL for parent and closing',
+        { href: currentHref },
       );
+      try {
+        localStorage.setItem(POPUP_RESULT_KEY, currentHref);
+      } catch {
+        console.error('[Callback] Failed to store result URL in localStorage');
+      }
       try {
         window.close();
       } catch {
@@ -86,7 +100,23 @@ export default function AuthCallbackScreen() {
     // not a popup).  Read the PKCE data that useSocialSignIn persisted in
     // sessionStorage before triggering the OAuth redirect.
 
-    const codeStr = String(code ?? '');
+    // Facebook appends #_=_ which can move query params into the hash.
+    // Try expo-router params first, then fall back to parsing the hash.
+    let codeStr = String(code ?? '');
+    let stateStr = String(state ?? '');
+
+    if (!codeStr && platformIsWeb && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.includes('code=')) {
+        console.log(
+          '[Callback] Params not in query string, parsing from hash (Facebook #_=_)',
+          { hash: hash.substring(0, 80) },
+        );
+        const hashParams = new URLSearchParams(hash.replace(/^#[^?]*\??/, ''));
+        codeStr = hashParams.get('code') ?? '';
+        stateStr = hashParams.get('state') ?? stateStr;
+      }
+    }
 
     // OAuth error returned by the provider (e.g. user denied access)
     if (oauthError || !codeStr) {
@@ -119,10 +149,9 @@ export default function AuthCallbackScreen() {
       return;
     }
 
-    const returnedState = String(state ?? '');
-    if (returnedState !== pending.state) {
+    if (stateStr !== pending.state) {
       console.log('[Callback] State mismatch', {
-        returnedState,
+        returnedState: stateStr,
         expectedState: pending.state,
       });
       router.replace(ROUTES.authLogin as never);
@@ -132,6 +161,7 @@ export default function AuthCallbackScreen() {
     console.log('[Callback] Redirect flow — exchanging code', {
       provider: pending.provider,
       redirectUri: pending.redirectUri,
+      codePrefix: codeStr.substring(0, 10) + '...',
     });
     handleOAuthCallback(
       codeStr,
