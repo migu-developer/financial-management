@@ -25,6 +25,7 @@ export interface ConfirmForgotPasswordTemplateProps {
   onBack: () => void;
   loading?: boolean;
   error?: string;
+  success?: boolean;
 }
 
 export function ConfirmForgotPasswordTemplate({
@@ -34,6 +35,7 @@ export function ConfirmForgotPasswordTemplate({
   onBack,
   loading = false,
   error,
+  success = false,
 }: ConfirmForgotPasswordTemplateProps) {
   const { t } = useTranslation('login');
   const [code, setCode] = useState('');
@@ -95,6 +97,14 @@ export function ConfirmForgotPasswordTemplate({
             {t('confirmForgotPassword.subtitle', { destination })}
           </Text>
         </View>
+
+        {success ? (
+          <View className="bg-emerald-900/30 border border-emerald-600 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-emerald-400 text-sm font-medium">
+              {t('confirmForgotPassword.success')}
+            </Text>
+          </View>
+        ) : null}
 
         {error ? (
           <View className="bg-red-900/30 border border-red-700 rounded-xl px-4 py-3 mb-4">

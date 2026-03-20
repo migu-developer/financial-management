@@ -174,6 +174,8 @@ export const login = {
     confirmPasswordPlaceholder: 'Repite tu nueva contraseña',
     submitButton: 'Restablecer contraseña',
     passwordMismatch: 'Las contraseñas no coinciden',
+    success:
+      'Tu contraseña ha sido restablecida exitosamente. Redirigiendo al inicio de sesión…',
     back: 'Volver al inicio de sesión',
   },
 

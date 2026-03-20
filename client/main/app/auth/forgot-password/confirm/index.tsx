@@ -14,6 +14,7 @@ export default function ForgotPasswordConfirmScreen() {
   const { confirmForgotPassword, initiateForgotPassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [success, setSuccess] = useState(false);
 
   // `identifier` is the original email/phone the user typed.
   // `dest` is Cognito's masked address used only for display.
@@ -26,7 +27,10 @@ export default function ForgotPasswordConfirmScreen() {
       setLoading(true);
       try {
         await confirmForgotPassword(originalIdentifier, code, newPassword);
-        router.replace(ROUTES.authLogin as never);
+        setSuccess(true);
+        setTimeout(() => {
+          router.replace(ROUTES.authLogin as never);
+        }, 1500);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -52,6 +56,7 @@ export default function ForgotPasswordConfirmScreen() {
       onBack={() => router.replace(ROUTES.authForgotPassword as never)}
       loading={loading}
       error={error}
+      success={success}
     />
   );
 }

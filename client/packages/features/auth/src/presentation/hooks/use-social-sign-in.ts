@@ -121,9 +121,6 @@ export function useSocialSignIn(
           channel.onmessage = (e: MessageEvent) => {
             if (e.data?.type === 'oauth_callback_url' && e.data?.url) {
               broadcastUrl = e.data.url as string;
-              console.log('[SocialSignIn] BroadcastChannel received URL', {
-                url: broadcastUrl.substring(0, 120) + '...',
-              });
             }
           };
         } catch {
@@ -172,8 +169,6 @@ export function useSocialSignIn(
         if (result.type === 'success') {
           callbackUrl = result.url;
         } else {
-          console.log('[SocialSignIn] Popup returned', { type: result.type });
-
           // COOP headers from Cognito may sever the popup connection, causing
           // openAuthSessionAsync to resolve immediately as "dismiss" before the
           // user completed the OAuth flow. The popup marker (localStorage) MUST
@@ -185,11 +180,6 @@ export function useSocialSignIn(
               () => broadcastUrl,
               POPUP_RESULT_KEY,
             );
-            if (callbackUrl) {
-              console.log('[SocialSignIn] Received callback URL via polling');
-            } else {
-              console.log('[SocialSignIn] Poll timed out — no callback URL');
-            }
           }
         }
 
@@ -201,7 +191,6 @@ export function useSocialSignIn(
         cleanupPopupStorage();
 
         if (!callbackUrl) {
-          console.log('[SocialSignIn] No callback URL — user likely cancelled');
           return;
         }
 

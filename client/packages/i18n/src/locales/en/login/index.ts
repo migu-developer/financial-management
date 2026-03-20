@@ -169,6 +169,8 @@ export const login = {
     confirmPasswordPlaceholder: 'Repeat your new password',
     submitButton: 'Reset password',
     passwordMismatch: 'Passwords do not match',
+    success:
+      'Your password has been reset successfully. Redirecting to sign in…',
     back: 'Back to sign in',
   },
 
