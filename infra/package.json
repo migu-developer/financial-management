@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@packages/cognito": "workspace:*",
-    "@services/auth": "workspace:*",
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:"
   },
