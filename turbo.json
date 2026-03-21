@@ -41,6 +41,18 @@
     },
     "email:upload": {
       "cache": false
+    },
+    "supabase:start": {
+      "cache": false
+    },
+    "supabase:stop": {
+      "cache": false
+    },
+    "supabase:status": {
+      "cache": false
+    },
+    "supabase:reset": {
+      "cache": false
     }
   }
 }

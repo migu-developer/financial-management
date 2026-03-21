@@ -34,6 +34,7 @@ const Configuration: UserConfig = {
         'config',
         'core',
         'versions',
+        'database',
       ],
     ],
     'scope-empty': [2, 'never'],

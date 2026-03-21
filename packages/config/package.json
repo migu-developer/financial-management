@@ -23,6 +23,7 @@
     "eslint-config-prettier": "catalog:",
     "typescript-eslint": "catalog:"
   },
+  "author": "Miguel Angel Gutierrez Maya",
   "packageManager": "pnpm@10.29.3",
   "engines": {
     "node": ">=24"

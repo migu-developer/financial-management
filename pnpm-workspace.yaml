@@ -9,10 +9,6 @@ packages:
 catalog:
   '@aws-lambda-powertools/logger': ^2.10.0
   '@aws-sdk/client-s3': ^3.1000.0
-  'amazon-cognito-identity-js': ^6.3.16
-  'libphonenumber-js': ^1.12.38
-  'react-native-qrcode-svg': ^6.3.21
-  'react-native-svg': ^15.15.3
   '@babel/parser': ^7.29.0
   '@babel/traverse': ^7.29.0
   '@commitlint/cli': ^20.4.3
@@ -32,6 +28,7 @@ catalog:
   '@types/node': ^25.3.5
   '@types/react': ~19.1.10
   '@types/react-dom': ~19.1.1
+  amazon-cognito-identity-js: ^6.3.16
   aws-cdk: ^2.1106.0
   aws-cdk-lib: ^2.238.0
   aws-sdk: ^2.1693.0
@@ -47,14 +44,14 @@ catalog:
   eslint-plugin-react-hooks: ^5.0.0
   expo: ~54.0.33
   expo-auth-session: ~7.0.10
-  expo-crypto: ~15.0.8
   expo-constants: ~18.0.13
+  expo-crypto: ~15.0.8
   expo-font: ~14.0.11
-  expo-secure-store: ~15.0.8
   expo-haptics: ~15.0.8
   expo-image: ~3.0.11
   expo-linking: ~8.0.11
   expo-router: ~6.0.23
+  expo-secure-store: ~15.0.8
   expo-splash-screen: ~31.0.13
   expo-status-bar: ~3.0.9
   expo-symbols: ~1.0.8
@@ -62,6 +59,7 @@ catalog:
   expo-web-browser: ~15.0.10
   husky: ^9.1.7
   jest: ^30.2.0
+  libphonenumber-js: ^1.12.38
   nativewind: ^4.2.2
   prettier: ^3.8.1
   react: 19.1.0
@@ -69,11 +67,14 @@ catalog:
   react-email: ^5.2.9
   react-native: 0.81.5
   react-native-gesture-handler: ~2.28.0
+  react-native-qrcode-svg: ^6.3.21
   react-native-reanimated: ~4.1.1
   react-native-safe-area-context: ~5.6.0
   react-native-screens: ~4.16.0
+  react-native-svg: ^15.15.3
   react-native-web: ~0.21.0
   react-native-worklets: 0.5.1
+  supabase: ^2.83.0
   tailwindcss: ^4.2.1
   ts-jest: ^29.4.6
   ts-node: ^10.9.2
@@ -83,15 +84,16 @@ catalog:
   typescript: ^5.9.3
   typescript-eslint: ^8.55.0
 
+onlyBuiltDependencies:
+  - supabase
+
 overrides:
   ajv: '>=6.14.0 <7.0.0'
   conf>ajv: ^8.17.0
   esbuild: 0.27.3
-  minimatch: '>=10.2.1'
-  # Security: GHSA-qffp-2rhf-9h96 — tar Hardlink Path Traversal (high)
-  tar: '>=7.5.10'
-  # Security: GHSA-fj3w-jwp8-x2g3 — fast-xml-parser stack overflow (low)
   fast-xml-parser: '>=5.3.8'
+  minimatch: '>=10.2.1'
+  tar: '>=7.5.10'
 
 patchedDependencies:
   '@commitlint/config-validator@20.4.3': patches/@commitlint__config-validator@20.4.3.patch
