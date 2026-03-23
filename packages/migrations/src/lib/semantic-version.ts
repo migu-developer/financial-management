@@ -6,14 +6,24 @@ export class SemanticVersion {
   ) {}
 
   static parse(version: string): SemanticVersion {
-    const parts = version.split('.').map(Number);
+    const [major, minor, patch, ...rest] = version.split('.').map(Number);
+
     if (
-      parts.length !== 3 ||
-      parts.some((p) => !Number.isInteger(p) || p < 0)
+      major === undefined ||
+      minor === undefined ||
+      patch === undefined ||
+      rest.length > 0 ||
+      !Number.isInteger(major) ||
+      !Number.isInteger(minor) ||
+      !Number.isInteger(patch) ||
+      major < 0 ||
+      minor < 0 ||
+      patch < 0
     ) {
       throw new Error(`Invalid semantic version: "${version}"`);
     }
-    return new SemanticVersion(parts[0], parts[1], parts[2]);
+
+    return new SemanticVersion(major, minor, patch);
   }
 
   static fromPath(
