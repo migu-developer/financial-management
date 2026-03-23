@@ -5,7 +5,6 @@ import { executeMigrations, rollbackLast } from './execute-migration';
 import type { DatabaseConfig } from 'src/interfaces/database';
 import type { Pool } from 'pg';
 
-// Suppress logger output during tests
 jest.mock('src/lib/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -18,11 +17,10 @@ jest.mock('src/lib/logger', () => ({
 }));
 
 function createMockClient() {
-  const client = {
+  return {
     query: jest.fn().mockResolvedValue({ rows: [] }),
     release: jest.fn(),
   };
-  return client;
 }
 
 function createMockPool(client: ReturnType<typeof createMockClient>) {
@@ -40,7 +38,6 @@ function createMigration(
 ): void {
   const dir = path.join(baseDir, String(major), String(minor), String(patch));
   fs.mkdirSync(dir, { recursive: true });
-
   const slug = description.toLowerCase().replace(/[^a-z0-9]+/g, '_');
   fs.writeFileSync(
     path.join(dir, 'version.ts'),
@@ -51,6 +48,12 @@ function createMigration(
   );
   fs.writeFileSync(path.join(dir, `1_up_${slug}.sql`), upSql);
   fs.writeFileSync(path.join(dir, `1_down_${slug}.sql`), downSql);
+}
+
+function getLogger() {
+  return jest.requireMock<{ logger: Record<string, jest.Mock> }>(
+    'src/lib/logger',
+  ).logger;
 }
 
 const dbConfig: DatabaseConfig = {
@@ -76,13 +79,10 @@ describe('executeMigrations', () => {
   it('warns when no migrations exist', async () => {
     const client = createMockClient();
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
 
     await executeMigrations(pool, dbConfig, tmpDir);
 
-    expect(logger.warn).toHaveBeenCalledWith('No migrations found');
+    expect(getLogger().warn).toHaveBeenCalledWith('No migrations found');
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -90,7 +90,6 @@ describe('executeMigrations', () => {
     createMigration(tmpDir, 1, 0, 0, 'Initial', 'SELECT 1;', 'SELECT 2;');
 
     const client = createMockClient();
-    // getDbVersion returns '1.0.0' (already at latest)
     client.query.mockImplementation(async (sql: string) => {
       if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
         return { rows: [{ version: '1.0.0' }] };
@@ -99,13 +98,9 @@ describe('executeMigrations', () => {
     });
 
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
-
     await executeMigrations(pool, dbConfig, tmpDir);
 
-    expect(logger.success).toHaveBeenCalledWith(
+    expect(getLogger().success).toHaveBeenCalledWith(
       expect.stringContaining('up to date'),
     );
   });
@@ -123,7 +118,6 @@ describe('executeMigrations', () => {
 
     const client = createMockClient();
     const pool = createMockPool(client);
-
     await executeMigrations(pool, dbConfig, tmpDir);
 
     const queries = client.query.mock.calls.map((c: unknown[]) => {
@@ -144,15 +138,11 @@ describe('executeMigrations', () => {
 
     const client = createMockClient();
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
-
     await executeMigrations(pool, dbConfig, tmpDir);
 
-    const migrationCalls = logger.migration!.mock.calls;
-    expect(migrationCalls[0]![0]).toBe('1.0.0');
-    expect(migrationCalls[1]![0]).toBe('1.0.1');
+    const calls = getLogger().migration!.mock.calls;
+    expect(calls[0]![0]).toBe('1.0.0');
+    expect(calls[1]![0]).toBe('1.0.1');
   });
 
   it('applies only up to the target version', async () => {
@@ -162,16 +152,12 @@ describe('executeMigrations', () => {
 
     const client = createMockClient();
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
+    await executeMigrations(pool, dbConfig, tmpDir, { targetVersion: '1.0.1' });
 
-    await executeMigrations(pool, dbConfig, tmpDir, '1.0.1');
-
-    const migrationCalls = logger.migration!.mock.calls;
-    expect(migrationCalls).toHaveLength(2);
-    expect(migrationCalls[0]![0]).toBe('1.0.0');
-    expect(migrationCalls[1]![0]).toBe('1.0.1');
+    const calls = getLogger().migration!.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0]![0]).toBe('1.0.0');
+    expect(calls[1]![0]).toBe('1.0.1');
   });
 
   it('rolls back on script failure', async () => {
@@ -184,7 +170,6 @@ describe('executeMigrations', () => {
     });
 
     const pool = createMockPool(client);
-
     await expect(executeMigrations(pool, dbConfig, tmpDir)).rejects.toThrow(
       'syntax error',
     );
@@ -206,9 +191,49 @@ describe('executeMigrations', () => {
     });
 
     const pool = createMockPool(client);
-
     await expect(executeMigrations(pool, dbConfig, tmpDir)).rejects.toThrow();
     expect(client.release).toHaveBeenCalled();
+  });
+
+  describe('--once flag', () => {
+    it('applies only the next pending migration when once is true', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'First', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 1, 0, 1, 'Second', 'SELECT 3;', 'SELECT 4;');
+      createMigration(tmpDir, 1, 0, 2, 'Third', 'SELECT 5;', 'SELECT 6;');
+
+      const client = createMockClient();
+      const pool = createMockPool(client);
+      await executeMigrations(pool, dbConfig, tmpDir, { once: true });
+
+      const calls = getLogger().migration!.mock.calls;
+      expect(calls).toHaveLength(1);
+      expect(calls[0]![0]).toBe('1.0.0');
+    });
+
+    it('applies all pending migrations when once is false', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'First', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 1, 0, 1, 'Second', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      const pool = createMockPool(client);
+      await executeMigrations(pool, dbConfig, tmpDir, { once: false });
+
+      const calls = getLogger().migration!.mock.calls;
+      expect(calls).toHaveLength(2);
+    });
+
+    it('shows --once indicator in log output', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'First', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 1, 0, 1, 'Second', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      const pool = createMockPool(client);
+      await executeMigrations(pool, dbConfig, tmpDir, { once: true });
+
+      expect(getLogger().info).toHaveBeenCalledWith(
+        expect.stringContaining('--once'),
+      );
+    });
   });
 });
 
@@ -226,13 +251,10 @@ describe('rollbackLast', () => {
   it('warns when there are no migrations to rollback', async () => {
     const client = createMockClient();
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
 
     await rollbackLast(pool, dbConfig, tmpDir);
 
-    expect(logger.warn).toHaveBeenCalledWith('No migrations to rollback');
+    expect(getLogger().warn).toHaveBeenCalledWith('No migrations to rollback');
   });
 
   it('executes down scripts in reverse order with BEGIN/COMMIT', async () => {
@@ -255,7 +277,6 @@ describe('rollbackLast', () => {
     });
 
     const pool = createMockPool(client);
-
     await rollbackLast(pool, dbConfig, tmpDir);
 
     const queries = client.query.mock.calls.map((c: unknown[]) =>
@@ -277,13 +298,9 @@ describe('rollbackLast', () => {
     });
 
     const pool = createMockPool(client);
-    const { logger } = jest.requireMock<{ logger: Record<string, jest.Mock> }>(
-      'src/lib/logger',
-    );
-
     await rollbackLast(pool, dbConfig, tmpDir);
 
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(getLogger().error).toHaveBeenCalledWith(
       expect.stringContaining('9.9.9 not found'),
     );
   });
@@ -301,7 +318,6 @@ describe('rollbackLast', () => {
     });
 
     const pool = createMockPool(client);
-
     await expect(rollbackLast(pool, dbConfig, tmpDir)).rejects.toThrow(
       'down failed',
     );
@@ -311,5 +327,96 @@ describe('rollbackLast', () => {
     );
     expect(queries).toContain('ROLLBACK');
     expect(client.release).toHaveBeenCalled();
+  });
+
+  describe('cross-major protection', () => {
+    it('throws error when rollback would cross major version boundary', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'V1', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 2, 0, 0, 'V2', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      client.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
+          return { rows: [{ version: '2.0.0' }] };
+        }
+        return { rows: [] };
+      });
+
+      const pool = createMockPool(client);
+      await expect(rollbackLast(pool, dbConfig, tmpDir)).rejects.toThrow(
+        'Cannot rollback 2.0.0: would cross major version boundary',
+      );
+    });
+
+    it('includes --force hint in cross-major error message', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'V1', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 2, 0, 0, 'V2', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      client.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
+          return { rows: [{ version: '2.0.0' }] };
+        }
+        return { rows: [] };
+      });
+
+      const pool = createMockPool(client);
+      await expect(rollbackLast(pool, dbConfig, tmpDir)).rejects.toThrow(
+        'Use --force to override',
+      );
+    });
+
+    it('allows cross-major rollback with force flag', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'V1', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 2, 0, 0, 'V2', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      client.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
+          return { rows: [{ version: '2.0.0' }] };
+        }
+        return { rows: [] };
+      });
+
+      const pool = createMockPool(client);
+      await rollbackLast(pool, dbConfig, tmpDir, { force: true });
+
+      expect(getLogger().success).toHaveBeenCalledWith('Rolled back 2.0.0');
+    });
+
+    it('allows rollback within same major version', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'V1', 'SELECT 1;', 'SELECT 2;');
+      createMigration(tmpDir, 1, 1, 0, 'V1.1', 'SELECT 3;', 'SELECT 4;');
+
+      const client = createMockClient();
+      client.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
+          return { rows: [{ version: '1.1.0' }] };
+        }
+        return { rows: [] };
+      });
+
+      const pool = createMockPool(client);
+      await rollbackLast(pool, dbConfig, tmpDir);
+
+      expect(getLogger().success).toHaveBeenCalledWith('Rolled back 1.1.0');
+    });
+
+    it('allows rollback of first migration (no previous version)', async () => {
+      createMigration(tmpDir, 1, 0, 0, 'First', 'SELECT 1;', 'SELECT 2;');
+
+      const client = createMockClient();
+      client.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT version FROM')) {
+          return { rows: [{ version: '1.0.0' }] };
+        }
+        return { rows: [] };
+      });
+
+      const pool = createMockPool(client);
+      await rollbackLast(pool, dbConfig, tmpDir);
+
+      expect(getLogger().success).toHaveBeenCalledWith('Rolled back 1.0.0');
+    });
   });
 });

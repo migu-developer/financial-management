@@ -2,11 +2,10 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { loadConfig } from './config';
 import { logger } from './lib/logger';
-import { getPool, initSchema, closePool } from './lib/db';
+import { getPool, initSchema, closePool, setSearchPath } from './lib/db';
 import { SemanticVersion } from './lib/semantic-version';
 import { getVersionList } from './runner/get-version-list';
 import { ensureMigrationsTable, getDbVersion } from './runner/get-db-version';
-import { setSearchPath } from './lib/db';
 import { executeMigrations, rollbackLast } from './runner/execute-migration';
 
 yargs(hideBin(process.argv))
@@ -20,16 +19,25 @@ yargs(hideBin(process.argv))
     'migrate',
     'Run pending migrations',
     (y) =>
-      y.option('to', {
-        type: 'string',
-        description: 'Target version (e.g. 1.2.0)',
-      }),
+      y
+        .option('to', {
+          type: 'string',
+          description: 'Target version (e.g. 1.2.0)',
+        })
+        .option('once', {
+          type: 'boolean',
+          description: 'Apply only the next pending migration',
+          default: false,
+        }),
     async (argv) => {
       try {
         const config = loadConfig(argv.env);
         const pool = getPool(config.db);
         await initSchema(config.db);
-        await executeMigrations(pool, config.db, config.migrationsDir, argv.to);
+        await executeMigrations(pool, config.db, config.migrationsDir, {
+          targetVersion: argv.to,
+          once: argv.once,
+        });
       } catch (err) {
         logger.error(err instanceof Error ? err.message : err);
         process.exitCode = 1;
@@ -41,13 +49,20 @@ yargs(hideBin(process.argv))
   .command(
     'rollback',
     'Rollback the last migration',
-    () => {},
+    (y) =>
+      y.option('force', {
+        type: 'boolean',
+        description: 'Force rollback across major version boundaries',
+        default: false,
+      }),
     async (argv) => {
       try {
         const config = loadConfig(argv.env);
         const pool = getPool(config.db);
         await initSchema(config.db);
-        await rollbackLast(pool, config.db, config.migrationsDir);
+        await rollbackLast(pool, config.db, config.migrationsDir, {
+          force: argv.force,
+        });
       } catch (err) {
         logger.error(err instanceof Error ? err.message : err);
         process.exitCode = 1;
@@ -117,8 +132,14 @@ yargs(hideBin(process.argv))
     'Create a new migration directory',
     (y) =>
       y
-        .option('major', { type: 'boolean', description: 'Bump major version' })
-        .option('minor', { type: 'boolean', description: 'Bump minor version' })
+        .option('major', {
+          type: 'boolean',
+          description: 'Bump major version',
+        })
+        .option('minor', {
+          type: 'boolean',
+          description: 'Bump minor version',
+        })
         .option('description', {
           alias: 'd',
           type: 'string',
@@ -168,7 +189,7 @@ yargs(hideBin(process.argv))
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_|_$/g, '');
 
-      const versionTs = `import { config, sqlScript } from '../../../src/lib/version-config';
+      const versionTs = `import { config, sqlScript } from 'src/lib/version-config';
 
 export default config({
   description: '${argv.description}',

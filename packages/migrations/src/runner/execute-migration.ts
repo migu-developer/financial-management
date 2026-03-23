@@ -10,6 +10,11 @@ import { ensureMigrationsTable, getDbVersion } from 'src/runner/get-db-version';
 import { setDbVersion, removeDbVersion } from './set-db-version';
 import { getVersionList } from './get-version-list';
 
+export interface MigrateOptions {
+  targetVersion?: string;
+  once?: boolean;
+}
+
 function computeChecksum(versionDir: string): string {
   const hash = crypto.createHash('sha256');
   hash.update(versionDir);
@@ -20,7 +25,7 @@ export async function executeMigrations(
   pool: Pool,
   config: DatabaseConfig,
   migrationsDir: string,
-  targetVersion?: string,
+  options: MigrateOptions = {},
 ): Promise<void> {
   const client = await pool.connect();
   try {
@@ -39,8 +44,8 @@ export async function executeMigrations(
     }
 
     const latest = allVersions[allVersions.length - 1]!;
-    const target = targetVersion
-      ? SemanticVersion.parse(targetVersion)
+    const target = options.targetVersion
+      ? SemanticVersion.parse(options.targetVersion)
       : SemanticVersion.fromPath(latest.major, latest.minor, latest.patch);
 
     const pending = allVersions.filter((v) => {
@@ -59,18 +64,24 @@ export async function executeMigrations(
       return;
     }
 
+    const toApply = options.once ? [pending[0]!] : pending;
+    const finalVersion = toApply[toApply.length - 1]!;
+    const finalVersionStr = `${finalVersion.major}.${finalVersion.minor}.${finalVersion.patch}`;
+
     logger.info(
-      `Current: ${currentVersionStr ?? '(none)'} → Target: ${target.toString()}`,
+      `Current: ${currentVersionStr ?? '(none)'} → Target: ${finalVersionStr}`,
     );
-    logger.info(`${pending.length} migration(s) to apply`);
+    logger.info(
+      `${toApply.length} migration(s) to apply${options.once ? ' (--once)' : ''}`,
+    );
     logger.divider();
 
-    for (const version of pending) {
+    for (const version of toApply) {
       await applyVersion(client, config.schema, version);
     }
 
     logger.divider();
-    logger.success(`Migrated to ${target.toString()}`);
+    logger.success(`Migrated to ${finalVersionStr}`);
   } finally {
     client.release();
   }
@@ -117,10 +128,15 @@ async function applyVersion(
   }
 }
 
+export interface RollbackOptions {
+  force?: boolean;
+}
+
 export async function rollbackLast(
   pool: Pool,
   config: DatabaseConfig,
   migrationsDir: string,
+  options: RollbackOptions = {},
 ): Promise<void> {
   const client = await pool.connect();
   try {
@@ -136,18 +152,31 @@ export async function rollbackLast(
     const currentVersion = SemanticVersion.parse(currentVersionStr);
     const allVersions = getVersionList(migrationsDir);
 
-    const target = allVersions.find((v) => {
+    const currentIdx = allVersions.findIndex((v) => {
       const sv = SemanticVersion.fromPath(v.major, v.minor, v.patch);
       return sv.equals(currentVersion);
     });
 
-    if (!target) {
+    if (currentIdx === -1) {
       logger.error(
         `Version ${currentVersionStr} not found in migrations directory`,
       );
       return;
     }
 
+    // Cross-major protection: check if rolling back would cross a major version boundary
+    if (currentIdx > 0 && !options.force) {
+      const previousVersion = allVersions[currentIdx - 1]!;
+      if (previousVersion.major !== currentVersion.major) {
+        throw new Error(
+          `Cannot rollback ${currentVersionStr}: would cross major version boundary ` +
+            `(${currentVersion.major}.x.x → ${previousVersion.major}.x.x). ` +
+            `Major rollbacks are breaking changes. Use --force to override.`,
+        );
+      }
+    }
+
+    const target = allVersions[currentIdx]!;
     const versionStr = `${target.major}.${target.minor}.${target.patch}`;
     logger.info(`Rolling back ${versionStr}: ${target.config.description}`);
 
