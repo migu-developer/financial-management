@@ -24,10 +24,10 @@
     "supabase:stop": "turbo supabase:stop --filter=@packages/supabase",
     "supabase:status": "turbo supabase:status --filter=@packages/supabase",
     "supabase:reset": "turbo supabase:reset --filter=@packages/supabase",
-    "migrations:migrate": "turbo migrations:migrate --filter=@packages/migrations",
-    "migrations:rollback": "turbo migrations:rollback --filter=@packages/migrations",
-    "migrations:status": "turbo migrations:status --filter=@packages/migrations",
-    "migrations:create-migration": "turbo migrations:create-migration --filter=@packages/migrations"
+    "migrations:migrate": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts migrate",
+    "migrations:rollback": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts rollback",
+    "migrations:status": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts status",
+    "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
@@ -38,6 +38,7 @@
     "prettier": "catalog:",
     "turbo": "catalog:",
     "ts-node": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "packageManager": "pnpm@10.29.3",

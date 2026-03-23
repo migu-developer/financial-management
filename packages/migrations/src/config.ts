@@ -7,12 +7,15 @@ export interface AppConfig {
   migrationsDir: string;
 }
 
+// Package root: packages/migrations/ (one level up from src/)
+const packageRoot = path.resolve(__dirname, '..');
+
 export function loadConfig(env?: string): AppConfig {
   // Load .env.{env} from the package directory as fallback.
   // In practice, direnv populates process.env before the CLI runs.
   const envFile = env
-    ? path.resolve(process.cwd(), `.env.${env}`)
-    : path.resolve(process.cwd(), '.env.local');
+    ? path.resolve(packageRoot, `.env.${env}`)
+    : path.resolve(packageRoot, '.env.local');
 
   dotenv.config({ path: envFile });
 

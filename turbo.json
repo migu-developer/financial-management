@@ -53,18 +53,6 @@
     },
     "supabase:reset": {
       "cache": false
-    },
-    "migrations:migrate": {
-      "cache": false
-    },
-    "migrations:rollback": {
-      "cache": false
-    },
-    "migrations:status": {
-      "cache": false
-    },
-    "migrations:create-migration": {
-      "cache": false
     }
   }
 }
