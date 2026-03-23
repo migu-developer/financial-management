@@ -150,9 +150,9 @@ describe('executeMigrations', () => {
 
     await executeMigrations(pool, dbConfig, tmpDir);
 
-    const migrationCalls = logger.migration.mock.calls;
-    expect(migrationCalls[0][0]).toBe('1.0.0');
-    expect(migrationCalls[1][0]).toBe('1.0.1');
+    const migrationCalls = logger.migration!.mock.calls;
+    expect(migrationCalls[0]![0]).toBe('1.0.0');
+    expect(migrationCalls[1]![0]).toBe('1.0.1');
   });
 
   it('applies only up to the target version', async () => {
@@ -168,10 +168,10 @@ describe('executeMigrations', () => {
 
     await executeMigrations(pool, dbConfig, tmpDir, '1.0.1');
 
-    const migrationCalls = logger.migration.mock.calls;
+    const migrationCalls = logger.migration!.mock.calls;
     expect(migrationCalls).toHaveLength(2);
-    expect(migrationCalls[0][0]).toBe('1.0.0');
-    expect(migrationCalls[1][0]).toBe('1.0.1');
+    expect(migrationCalls[0]![0]).toBe('1.0.0');
+    expect(migrationCalls[1]![0]).toBe('1.0.1');
   });
 
   it('rolls back on script failure', async () => {

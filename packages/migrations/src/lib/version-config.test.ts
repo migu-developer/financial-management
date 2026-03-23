@@ -38,7 +38,7 @@ describe('version-config helpers', () => {
       });
       expect(result.description).toBe('Create tables');
       expect(result.scripts).toHaveLength(1);
-      expect(result.scripts[0].type).toBe('sql');
+      expect(result.scripts[0]!.type).toBe('sql');
     });
   });
 });
