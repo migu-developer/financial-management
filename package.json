@@ -23,7 +23,11 @@
     "supabase:start": "turbo supabase:start --filter=@packages/supabase",
     "supabase:stop": "turbo supabase:stop --filter=@packages/supabase",
     "supabase:status": "turbo supabase:status --filter=@packages/supabase",
-    "supabase:reset": "turbo supabase:reset --filter=@packages/supabase"
+    "supabase:reset": "turbo supabase:reset --filter=@packages/supabase",
+    "migrations:migrate": "turbo migrations:migrate --filter=@packages/migrations",
+    "migrations:rollback": "turbo migrations:rollback --filter=@packages/migrations",
+    "migrations:status": "turbo migrations:status --filter=@packages/migrations",
+    "migrations:create-migration": "turbo migrations:create-migration --filter=@packages/migrations"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
