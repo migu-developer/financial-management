@@ -28,6 +28,6 @@ export function loadConfig(env?: string): AppConfig {
 
   return {
     db: { connectionString, schema },
-    migrationsDir: path.resolve(__dirname, '..', 'migrations'),
+    migrationsDir: path.resolve(__dirname, 'migrations'),
   };
 }

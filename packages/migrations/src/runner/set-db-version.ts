@@ -14,3 +14,12 @@ export async function setDbVersion(
     [version, description, executionTimeMs, checksum, success],
   );
 }
+
+export async function removeDbVersion(
+  client: PoolClient,
+  version: string,
+): Promise<void> {
+  await client.query(`DELETE FROM schema_migrations WHERE version = $1`, [
+    version,
+  ]);
+}

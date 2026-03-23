@@ -1,4 +1,4 @@
-import { setDbVersion } from './set-db-version';
+import { setDbVersion, removeDbVersion } from './set-db-version';
 import type { PoolClient } from 'pg';
 
 function createMockClient() {
@@ -14,7 +14,7 @@ describe('setDbVersion', () => {
     await setDbVersion(client, '1.0.0', 'Initial schema', 150, 'abc123', true);
 
     expect(client.query).toHaveBeenCalledTimes(1);
-    const [sql, params] = client.query.mock.calls[0];
+    const [sql, params] = client.query.mock.calls[0]!;
     expect(sql).toContain('INSERT INTO schema_migrations');
     expect(sql).toContain('$1, $2, $3, $4, $5');
     expect(params).toEqual(['1.0.0', 'Initial schema', 150, 'abc123', true]);
@@ -32,7 +32,7 @@ describe('setDbVersion', () => {
       false,
     );
 
-    const [, params] = client.query.mock.calls[0];
+    const [, params] = client.query.mock.calls[0]!;
     expect(params).toEqual([
       '1.0.0',
       'ROLLBACK: Initial schema',
@@ -46,11 +46,25 @@ describe('setDbVersion', () => {
     const client = createMockClient();
     await setDbVersion(client, '2.1.0', 'Add column', 50, 'def456', true);
 
-    const sql = client.query.mock.calls[0][0] as string;
+    const sql = client.query.mock.calls[0]![0] as string;
     expect(sql).toContain('version');
     expect(sql).toContain('description');
     expect(sql).toContain('execution_time');
     expect(sql).toContain('checksum');
     expect(sql).toContain('success');
+  });
+});
+
+describe('removeDbVersion', () => {
+  it('deletes all records for the given version', async () => {
+    const client = createMockClient();
+
+    await removeDbVersion(client, '1.0.1');
+
+    expect(client.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = client.query.mock.calls[0]!;
+    expect(sql).toContain('DELETE FROM schema_migrations');
+    expect(sql).toContain('$1');
+    expect(params).toEqual(['1.0.1']);
   });
 });

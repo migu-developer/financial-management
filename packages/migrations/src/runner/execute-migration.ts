@@ -7,7 +7,7 @@ import { logger } from 'src/lib/logger';
 import { setSearchPath } from 'src/lib/db';
 import { getExecutionFunctions } from './get-execution-fn';
 import { ensureMigrationsTable, getDbVersion } from 'src/runner/get-db-version';
-import { setDbVersion } from './set-db-version';
+import { setDbVersion, removeDbVersion } from './set-db-version';
 import { getVersionList } from './get-version-list';
 
 function computeChecksum(versionDir: string): string {
@@ -164,14 +164,7 @@ export async function rollbackLast(
         await executions[i]!.down(client);
       }
 
-      await setDbVersion(
-        client,
-        versionStr,
-        `ROLLBACK: ${target.config.description}`,
-        0,
-        null,
-        false,
-      );
+      await removeDbVersion(client, versionStr);
 
       await client.query('COMMIT');
       logger.success(`Rolled back ${versionStr}`);
