@@ -24,6 +24,7 @@
     "supabase:stop": "turbo supabase:stop --filter=@packages/supabase",
     "supabase:status": "turbo supabase:status --filter=@packages/supabase",
     "supabase:reset": "turbo supabase:reset --filter=@packages/supabase",
+    "infra:cdk": "cd infra && pnpm cdk",
     "migrations:migrate": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts migrate",
     "migrations:rollback": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts rollback",
     "migrations:status": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts status",

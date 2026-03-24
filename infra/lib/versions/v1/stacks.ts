@@ -4,5 +4,4 @@
 export enum ActiveStack {
   ASSETS = 'Assets',
   AUTH = 'Auth',
-  DATABASE = 'Database',
 }

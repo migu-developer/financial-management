@@ -9,41 +9,62 @@ const createMockFactory = (name: string): NamedStackFactory => ({
 
 describe('getAppConfig', () => {
   const versionStacks: Record<string, NamedStackFactory[]> = {
-    v1: [createMockFactory('Auth'), createMockFactory('Database')],
-    v2: [createMockFactory('ConsumerFromV1')],
+    v1: [createMockFactory('Auth'), createMockFactory('Assets')],
+    v2: [createMockFactory('AmplifyHosting')],
   };
-  const defaultVersion = 'v1';
+  const defaultVersions = ['v1'];
 
   describe('version resolution', () => {
-    test('uses deployVersion when set', () => {
+    test('uses deployVersions when provided', () => {
       const result = getAppConfig(
         versionStacks,
-        defaultVersion,
-        'v2',
+        defaultVersions,
+        ['v2'],
         undefined,
       );
-      expect(result.version).toBe('v2');
-      expect(result.factoriesToInstantiate).toHaveLength(1);
-      expect(result.factoriesToInstantiate[0]?.name).toBe('ConsumerFromV1');
+      expect(result.versions).toHaveLength(1);
+      expect(result.versions[0]!.version).toBe('v2');
+      expect(result.versions[0]!.factories).toHaveLength(1);
+      expect(result.versions[0]!.factories[0]!.name).toBe('AmplifyHosting');
     });
 
-    test('uses defaultVersion when deployVersion is undefined', () => {
+    test('uses defaultVersions when deployVersions is empty', () => {
       const result = getAppConfig(
         versionStacks,
-        defaultVersion,
-        undefined,
+        defaultVersions,
+        [],
         undefined,
       );
-      expect(result.version).toBe('v1');
-      expect(result.factoriesToInstantiate).toHaveLength(2);
+      expect(result.versions).toHaveLength(1);
+      expect(result.versions[0]!.version).toBe('v1');
     });
 
-    test('throws for invalid version', () => {
+    test('deploys multiple versions simultaneously', () => {
+      const result = getAppConfig(
+        versionStacks,
+        defaultVersions,
+        ['v1', 'v2'],
+        undefined,
+      );
+      expect(result.versions).toHaveLength(2);
+      expect(result.versions[0]!.version).toBe('v1');
+      expect(result.versions[0]!.factories).toHaveLength(2);
+      expect(result.versions[1]!.version).toBe('v2');
+      expect(result.versions[1]!.factories).toHaveLength(1);
+    });
+
+    test('throws for invalid version in array', () => {
       expect(() =>
-        getAppConfig(versionStacks, defaultVersion, 'v99', undefined),
+        getAppConfig(versionStacks, defaultVersions, ['v99'], undefined),
       ).toThrow(
         'Invalid version: "v99". Use one of: v1, v2. Example: cdk deploy --context version=v1',
       );
+    });
+
+    test('throws for invalid version even when mixed with valid ones', () => {
+      expect(() =>
+        getAppConfig(versionStacks, defaultVersions, ['v1', 'v99'], undefined),
+      ).toThrow('Invalid version: "v99"');
     });
   });
 
@@ -51,68 +72,82 @@ describe('getAppConfig', () => {
     test('returns all factories when no context stacks', () => {
       const result = getAppConfig(
         versionStacks,
-        defaultVersion,
-        'v1',
+        defaultVersions,
+        ['v1'],
         undefined,
       );
-      expect(result.factoriesToInstantiate).toHaveLength(2);
+      expect(result.versions[0]!.factories).toHaveLength(2);
     });
 
     test('filters by context stacks when provided', () => {
       const result = getAppConfig(
         versionStacks,
-        defaultVersion,
-        'v1',
-        'Auth, Database',
+        defaultVersions,
+        ['v1'],
+        'Auth, Assets',
       );
-      expect(result.factoriesToInstantiate).toHaveLength(2);
-      expect(result.factoriesToInstantiate.map((f) => f.name)).toEqual([
+      expect(result.versions[0]!.factories).toHaveLength(2);
+      expect(result.versions[0]!.factories.map((f) => f.name)).toEqual([
         'Auth',
-        'Database',
+        'Assets',
       ]);
     });
 
     test('returns only matching stacks when filter is partial', () => {
-      const result = getAppConfig(versionStacks, defaultVersion, 'v1', 'Auth');
-      expect(result.factoriesToInstantiate).toHaveLength(1);
-      expect(result.factoriesToInstantiate[0]?.name).toBe('Auth');
+      const result = getAppConfig(
+        versionStacks,
+        defaultVersions,
+        ['v1'],
+        'Auth',
+      );
+      expect(result.versions[0]!.factories).toHaveLength(1);
+      expect(result.versions[0]!.factories[0]!.name).toBe('Auth');
     });
 
     test('trims and ignores empty parts in context stacks', () => {
       const result = getAppConfig(
         versionStacks,
-        defaultVersion,
-        'v1',
-        '  Auth  ,  , Database  ',
+        defaultVersions,
+        ['v1'],
+        '  Auth  ,  , Assets  ',
       );
-      expect(result.factoriesToInstantiate.map((f) => f.name)).toEqual([
+      expect(result.versions[0]!.factories.map((f) => f.name)).toEqual([
         'Auth',
-        'Database',
+        'Assets',
       ]);
     });
 
     test('throws when filter matches no stack', () => {
       expect(() =>
-        getAppConfig(versionStacks, defaultVersion, 'v1', 'NonExistent'),
+        getAppConfig(versionStacks, defaultVersions, ['v1'], 'NonExistent'),
       ).toThrow(
-        'No stack matches: NonExistent. Stacks available for v1: Auth, Database',
+        'No stack matches: NonExistent. Stacks available for v1: Auth, Assets',
       );
+    });
+
+    test('filter applies to each version independently', () => {
+      const result = getAppConfig(
+        versionStacks,
+        defaultVersions,
+        ['v2'],
+        'AmplifyHosting',
+      );
+      expect(result.versions[0]!.factories).toHaveLength(1);
+      expect(result.versions[0]!.factories[0]!.name).toBe('AmplifyHosting');
     });
   });
 
   describe('empty version stacks', () => {
     test('throws when version has no stacks and no filter', () => {
       const emptyStacks = { v1: [], v2: [createMockFactory('Only')] };
-      expect(() =>
-        getAppConfig(emptyStacks, 'v1', undefined, undefined),
-      ).toThrow(
+      expect(() => getAppConfig(emptyStacks, ['v1'], [], undefined)).toThrow(
         'No stacks defined for version "v1". Add stacks in lib/versions/v1/index.ts',
       );
     });
 
     test('throws when version has no stacks but filter was provided', () => {
       const emptyStacks = { v1: [], v2: [] };
-      expect(() => getAppConfig(emptyStacks, 'v1', undefined, 'Auth')).toThrow(
+      expect(() => getAppConfig(emptyStacks, ['v1'], [], 'Auth')).toThrow(
         /No stack matches/,
       );
     });

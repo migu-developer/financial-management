@@ -1,52 +1,63 @@
 import type { NamedStackFactory } from '@utils/types';
 
-export interface EntryConfigResult {
+export interface VersionFactories {
   version: string;
-  factoriesToInstantiate: NamedStackFactory[];
+  factories: NamedStackFactory[];
+}
+
+export interface EntryConfigResult {
+  versions: VersionFactories[];
 }
 
 /**
- * Resolves version and which stack factories to instantiate.
+ * Resolves which versions and stack factories to instantiate.
+ * Supports deploying multiple versions simultaneously.
  * Used by bin/infra.ts; extracted for testability.
  */
 export function getAppConfig(
   versionStacks: Record<string, NamedStackFactory[]>,
-  defaultVersion: string,
-  deployVersion: string | undefined,
+  defaultVersions: string[],
+  deployVersions: string[],
   contextStacks: unknown,
 ): EntryConfigResult {
   const validVersions = Object.keys(versionStacks);
-  const version = deployVersion ?? defaultVersion;
+  const versions = deployVersions.length > 0 ? deployVersions : defaultVersions;
 
   const stacksFilter = parseStacksFilter(contextStacks);
 
-  if (!validVersions.includes(version)) {
-    throw new Error(
-      `Invalid version: "${version}". Use one of: ${validVersions.join(', ')}. ` +
-        `Example: cdk deploy --context version=v1`,
-    );
-  }
+  const result: VersionFactories[] = [];
 
-  const factories = versionStacks[version] ?? [];
-
-  const toInstantiate =
-    stacksFilter && stacksFilter.length > 0
-      ? factories.filter((f) => stacksFilter.includes(f.name))
-      : factories;
-
-  if (toInstantiate.length === 0) {
-    if (stacksFilter?.length) {
+  for (const version of versions) {
+    if (!validVersions.includes(version)) {
       throw new Error(
-        `No stack matches: ${stacksFilter.join(', ')}. ` +
-          `Stacks available for ${version}: ${factories.map((f) => f.name).join(', ')}`,
+        `Invalid version: "${version}". Use one of: ${validVersions.join(', ')}. ` +
+          `Example: cdk deploy --context version=v1`,
       );
     }
-    throw new Error(
-      `No stacks defined for version "${version}". Add stacks in lib/versions/${version}/index.ts`,
-    );
+
+    const factories = versionStacks[version] ?? [];
+
+    const toInstantiate =
+      stacksFilter && stacksFilter.length > 0
+        ? factories.filter((f) => stacksFilter.includes(f.name))
+        : factories;
+
+    if (toInstantiate.length === 0) {
+      if (stacksFilter?.length) {
+        throw new Error(
+          `No stack matches: ${stacksFilter.join(', ')}. ` +
+            `Stacks available for ${version}: ${factories.map((f) => f.name).join(', ')}`,
+        );
+      }
+      throw new Error(
+        `No stacks defined for version "${version}". Add stacks in lib/versions/${version}/index.ts`,
+      );
+    }
+
+    result.push({ version, factories: toInstantiate });
   }
 
-  return { version, factoriesToInstantiate: toInstantiate };
+  return { versions: result };
 }
 
 function parseStacksFilter(contextStacks: unknown): string[] | undefined {

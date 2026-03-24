@@ -1,7 +1,6 @@
 import type { NamedStackFactory, StackDeps } from '@utils/types';
 import { AssetsBucketStack } from './assets-bucket-stack';
 import { CognitoStack } from './cognito-stack';
-import { DsqlStack } from './dsql-stack';
 import type { Construct } from 'constructs';
 import { fullStackResource } from '@config/entry-config';
 import { ActiveStack } from './stacks';
@@ -67,25 +66,7 @@ const createAuthStack: NamedStackFactory = {
     ),
 };
 
-const createDatabaseStack: NamedStackFactory = {
-  name: ActiveStack.DATABASE,
-  create: (scope: Construct, version: string, deps: StackDeps) =>
-    new DsqlStack(
-      scope,
-      fullStackResource(version, `${ActiveStack.DATABASE}Stack`),
-      {
-        version,
-        stackName: fullStackResource(version, ActiveStack.DATABASE),
-        deps,
-        description: 'Aurora DSQL serverless distributed SQL cluster.',
-        deletionProtectionEnabled:
-          process.env.DSQL_DELETION_PROTECTION === 'true',
-      },
-    ),
-};
-
 export const v1Stacks: NamedStackFactory[] = [
   createAssetsStack,
   createAuthStack,
-  createDatabaseStack,
 ];

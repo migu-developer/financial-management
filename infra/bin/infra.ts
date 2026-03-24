@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 import { App, Stack } from 'aws-cdk-lib';
-import { DEFAULT_VERSION, VERSION_STACKS } from '@config/versions';
-import { DEPLOY_VERSION } from '@versions/deploy-config';
+import { DEFAULT_VERSIONS, VERSION_STACKS } from '@config/versions';
+import { DEPLOY_VERSIONS } from '@versions/deploy-config';
 import { getAppConfig } from '@config/entry-config';
 import type { StackDeps } from '@utils/types';
 
 const app = new App();
 
-const { version, factoriesToInstantiate } = getAppConfig(
+const { versions } = getAppConfig(
   VERSION_STACKS,
-  DEFAULT_VERSION,
-  DEPLOY_VERSION,
+  DEFAULT_VERSIONS,
+  DEPLOY_VERSIONS,
   app.node.tryGetContext('stacks'),
 );
 
@@ -21,9 +21,11 @@ const deps: StackDeps = {
   },
 };
 
-for (const { name, create } of factoriesToInstantiate) {
-  const stack = create(app, version, deps);
-  stackMap.set(name, stack);
+for (const { version, factories } of versions) {
+  for (const { name, create } of factories) {
+    const stack = create(app, version, deps);
+    stackMap.set(name, stack);
+  }
 }
 
 app.synth();
