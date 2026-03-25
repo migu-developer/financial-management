@@ -45,6 +45,7 @@ const createLambdaExpensesStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? '',
       },
     ),
 };

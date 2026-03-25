@@ -32,6 +32,9 @@ export interface LambdaExpensesStackProps extends BaseStackProps {
 
   /** Allowed origins for CORS. */
   readonly allowedOrigins: string[];
+
+  /** Api gateway stage. */
+  readonly stage: string;
 }
 
 export class LambdaExpensesStack extends BaseStack {
@@ -47,8 +50,14 @@ export class LambdaExpensesStack extends BaseStack {
   public readonly api: RestApi;
 
   constructor(scope: Construct, id: string, props: LambdaExpensesStackProps) {
-    const { version, stackName, description, databaseUrl, allowedOrigins } =
-      props;
+    const {
+      version,
+      stackName,
+      description,
+      databaseUrl,
+      allowedOrigins,
+      stage,
+    } = props;
     super(scope, id, { version, stackName, description });
 
     // ── Lambda Function ─────────────────────────────────────
@@ -74,6 +83,9 @@ export class LambdaExpensesStack extends BaseStack {
     this.api = new RestApi(this, `${stackName}-ExpensesApi`, {
       restApiName: `${stackName}-ExpensesApi`,
       description: 'API for expenses service',
+      deployOptions: {
+        stageName: stage,
+      },
       defaultCorsPreflightOptions: {
         allowOrigins: allowedOrigins,
         allowMethods: this.allowedMethods,

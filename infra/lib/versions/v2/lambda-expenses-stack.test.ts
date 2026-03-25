@@ -88,6 +88,7 @@ const defaultProps = {
   description: 'Test Lambda Expenses stack',
   databaseUrl: 'postgresql://localhost:5432/test',
   allowedOrigins: ['https://dev-financial-management.migudev.com'],
+  stage: 'dev',
 };
 
 function createStack() {
