@@ -212,13 +212,14 @@ describe('LambdaExpensesStack', () => {
       createStack();
       const { Model: MockModel } = getApiGatewayMocks();
       const ModelMock = MockModel as jest.Mock;
-      expect(ModelMock).toHaveBeenCalledTimes(2);
+      expect(ModelMock).toHaveBeenCalledTimes(3);
 
       const modelNames = ModelMock.mock.calls.map(
         (c: unknown[]) => (c[2] as Record<string, unknown>).modelName,
       );
       expect(modelNames).toContain('CreateExpense');
       expect(modelNames).toContain('PatchExpense');
+      expect(modelNames).toContain('UpdateExpense');
     });
 
     test('CreateExpense model has required fields matching DB schema', () => {
@@ -324,7 +325,7 @@ describe('LambdaExpensesStack', () => {
       });
     });
 
-    test('PUT /expenses/{id} uses body+params validator with CreateExpense model', () => {
+    test('PUT /expenses/{id} uses body+params validator with UpdateExpense model', () => {
       createStack();
       const putCall = mockItemAddMethod.mock.calls.find(
         (c: unknown[]) => c[0] === 'PUT',

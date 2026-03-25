@@ -21,6 +21,7 @@ import {
 } from '@packages/models/expenses';
 import { Construct } from 'constructs';
 import { join } from 'path';
+import { updateExpenseSchema } from '@packages/models/expenses/schema';
 
 export interface LambdaExpensesStackProps extends BaseStackProps {
   /** Optional: only needed if this stack depends on other v2 stacks. */
@@ -134,7 +135,16 @@ export class LambdaExpensesStack extends BaseStack {
       },
     );
 
-    const updateExpenseModel = createExpenseModel;
+    const updateExpenseModel = new Model(
+      this,
+      `${stackName}-UpdateExpenseModel`,
+      {
+        restApi: this.api,
+        contentType: 'application/json',
+        modelName: 'UpdateExpense',
+        schema: updateExpenseSchema as JsonSchema,
+      },
+    );
 
     const patchExpenseModel = new Model(
       this,

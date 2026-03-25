@@ -28,6 +28,11 @@ export const createExpenseSchema = {
   additionalProperties: false,
 };
 
+export const updateExpenseSchema = {
+  ...createExpenseSchema,
+  title: 'UpdateExpense',
+};
+
 export const patchExpenseSchema = {
   schema: 'http://json-schema.org/draft-04/schema#',
   title: 'PatchExpense',
