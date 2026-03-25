@@ -12,6 +12,7 @@ const config: Config = {
     '^@config/(.*)$': '<rootDir>/lib/config/$1',
     '^@core/(.*)$': '<rootDir>/lib/core/$1',
     '^@versions/(.*)$': '<rootDir>/lib/versions/$1',
+    '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
   },
 };
 

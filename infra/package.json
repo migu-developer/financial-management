@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@packages/cognito": "workspace:*",
+    "@packages/models": "workspace:*",
     "@services/expenses": "workspace:*",
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:"

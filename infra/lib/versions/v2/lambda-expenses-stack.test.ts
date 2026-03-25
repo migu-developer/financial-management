@@ -26,6 +26,9 @@ const mockApi = {
   root: { addResource: mockRootAddResource },
 };
 
+const mockRequestValidator = { requestValidatorId: 'mock-validator' };
+const mockModel = { modelId: 'mock-model' };
+
 jest.mock('aws-cdk-lib', () => {
   const MockStack = class {
     stackName = '';
@@ -62,7 +65,15 @@ jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   LambdaIntegration: jest.fn().mockImplementation(() => ({
     integrationId: 'mock-integration',
   })),
+  RequestValidator: jest.fn().mockImplementation(() => mockRequestValidator),
+  Model: jest.fn().mockImplementation(() => mockModel),
   AuthorizationType: { COGNITO: 'COGNITO' },
+  JsonSchemaType: {
+    OBJECT: 'object',
+    STRING: 'string',
+    NUMBER: 'number',
+  },
+  JsonSchemaVersion: { DRAFT4: 'http://json-schema.org/draft-04/schema#' },
 }));
 
 jest.mock('aws-cdk-lib/aws-cognito', () => ({
@@ -85,6 +96,12 @@ function createStack() {
     app as unknown as Construct,
     'TestLambdaExpensesStack',
     defaultProps,
+  );
+}
+
+function getApiGatewayMocks() {
+  return jest.requireMock<Record<string, jest.Mock>>(
+    'aws-cdk-lib/aws-apigateway',
   );
 }
 
@@ -123,7 +140,6 @@ describe('LambdaExpensesStack', () => {
 
   test('adds GET and POST methods on /expenses collection', () => {
     createStack();
-
     const collectionMethods = mockCollectionAddMethod.mock.calls.map(
       (c: unknown[]) => c[0],
     );
@@ -138,7 +154,6 @@ describe('LambdaExpensesStack', () => {
 
   test('adds GET, PUT, PATCH, DELETE methods on /expenses/{id}', () => {
     createStack();
-
     const itemMethods = mockItemAddMethod.mock.calls.map(
       (c: unknown[]) => c[0],
     );
@@ -148,36 +163,213 @@ describe('LambdaExpensesStack', () => {
     expect(itemMethods).toContain('DELETE');
   });
 
-  test('OPTIONS is NOT added as an explicit method (handled by CORS preflight)', () => {
+  test('OPTIONS is NOT added as explicit method (handled by CORS preflight)', () => {
     createStack();
-
     const collectionMethods = mockCollectionAddMethod.mock.calls.map(
       (c: unknown[]) => c[0],
     );
     const itemMethods = mockItemAddMethod.mock.calls.map(
       (c: unknown[]) => c[0],
     );
-    const allMethods = [...collectionMethods, ...itemMethods];
-
-    expect(allMethods).not.toContain('OPTIONS');
+    expect([...collectionMethods, ...itemMethods]).not.toContain('OPTIONS');
   });
 
   test('all methods use Cognito authorization', () => {
     createStack();
-
     const allCalls = [
       ...(mockCollectionAddMethod.mock.calls as unknown[][]),
       ...(mockItemAddMethod.mock.calls as unknown[][]),
     ];
-
     for (const call of allCalls) {
-      const methodOptions = call[2] as Record<string, unknown>;
-      expect(methodOptions.authorizationType).toBe('COGNITO');
+      const opts = call[2] as Record<string, unknown>;
+      expect(opts.authorizationType).toBe('COGNITO');
     }
   });
 
   test('stackName follows BaseStack convention', () => {
     const stack = createStack();
     expect(stack.stackName).toBe('FinancialManagement-v2-LambdaExpenses');
+  });
+
+  describe('request validators', () => {
+    test('creates three request validators', () => {
+      createStack();
+      const { RequestValidator: MockValidator } = getApiGatewayMocks();
+      expect(MockValidator).toHaveBeenCalledTimes(3);
+
+      const names = (MockValidator as jest.Mock).mock.calls.map(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).requestValidatorName,
+      );
+      expect(names).toContain('LambdaExpenses-validate-body');
+      expect(names).toContain('LambdaExpenses-validate-params');
+      expect(names).toContain('LambdaExpenses-validate-body-and-params');
+    });
+  });
+
+  describe('request models (JSON Schema)', () => {
+    test('creates CreateExpense and PatchExpense models', () => {
+      createStack();
+      const { Model: MockModel } = getApiGatewayMocks();
+      const ModelMock = MockModel as jest.Mock;
+      expect(ModelMock).toHaveBeenCalledTimes(2);
+
+      const modelNames = ModelMock.mock.calls.map(
+        (c: unknown[]) => (c[2] as Record<string, unknown>).modelName,
+      );
+      expect(modelNames).toContain('CreateExpense');
+      expect(modelNames).toContain('PatchExpense');
+    });
+
+    test('CreateExpense model has required fields matching DB schema', () => {
+      createStack();
+      const { Model: MockModel } = getApiGatewayMocks();
+      const createCall = (MockModel as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).modelName === 'CreateExpense',
+      );
+      const schema = (createCall![2] as Record<string, unknown>)
+        .schema as Record<string, unknown>;
+
+      expect(schema.required).toEqual([
+        'user_id',
+        'name',
+        'value',
+        'currency_id',
+        'expense_type_id',
+      ]);
+      expect(schema.additionalProperties).toBe(false);
+
+      const properties = schema.properties as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(properties.user_id).toBeDefined();
+      expect(properties.name).toBeDefined();
+      expect(properties.value).toBeDefined();
+      expect(properties.currency_id).toBeDefined();
+      expect(properties.expense_type_id).toBeDefined();
+      expect(properties.expense_category_id).toBeDefined();
+    });
+
+    test('CreateExpense model validates UUID pattern on foreign keys', () => {
+      createStack();
+      const { Model: MockModel } = getApiGatewayMocks();
+      const createCall = (MockModel as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).modelName === 'CreateExpense',
+      );
+      const schema = (createCall![2] as Record<string, unknown>)
+        .schema as Record<string, unknown>;
+      const properties = schema.properties as Record<
+        string,
+        Record<string, unknown>
+      >;
+
+      const uuidFields = [
+        'user_id',
+        'currency_id',
+        'expense_type_id',
+        'expense_category_id',
+      ];
+      for (const field of uuidFields) {
+        expect(properties[field]!.pattern).toMatch(/\^\[0-9a-f\]/);
+      }
+    });
+
+    test('CreateExpense model validates value > 0', () => {
+      createStack();
+      const { Model: MockModel } = getApiGatewayMocks();
+      const createCall = (MockModel as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).modelName === 'CreateExpense',
+      );
+      const schema = (createCall![2] as Record<string, unknown>)
+        .schema as Record<string, unknown>;
+      const properties = schema.properties as Record<
+        string,
+        Record<string, unknown>
+      >;
+
+      expect(properties.value!.minimum).toBe(0);
+      expect(properties.value!.exclusiveMinimum).toBe(true);
+    });
+
+    test('PatchExpense model has no required fields but minProperties: 1', () => {
+      createStack();
+      const { Model: MockModel } = getApiGatewayMocks();
+      const patchCall = (MockModel as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).modelName === 'PatchExpense',
+      );
+      const schema = (patchCall![2] as Record<string, unknown>)
+        .schema as Record<string, unknown>;
+
+      expect(schema.required).toBeUndefined();
+      expect(schema.minProperties).toBe(1);
+      expect(schema.additionalProperties).toBe(false);
+    });
+  });
+
+  describe('method-specific validation', () => {
+    test('POST /expenses uses body validator with CreateExpense model', () => {
+      createStack();
+      const postCall = mockCollectionAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'POST',
+      );
+      const opts = postCall![2] as Record<string, unknown>;
+      expect(opts.requestValidator).toBe(mockRequestValidator);
+      expect(opts.requestModels).toEqual({
+        'application/json': mockModel,
+      });
+    });
+
+    test('PUT /expenses/{id} uses body+params validator with CreateExpense model', () => {
+      createStack();
+      const putCall = mockItemAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'PUT',
+      );
+      const opts = putCall![2] as Record<string, unknown>;
+      expect(opts.requestValidator).toBe(mockRequestValidator);
+      expect(opts.requestModels).toEqual({
+        'application/json': mockModel,
+      });
+    });
+
+    test('PATCH /expenses/{id} uses body+params validator with PatchExpense model', () => {
+      createStack();
+      const patchCall = mockItemAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'PATCH',
+      );
+      const opts = patchCall![2] as Record<string, unknown>;
+      expect(opts.requestValidator).toBe(mockRequestValidator);
+      expect(opts.requestModels).toEqual({
+        'application/json': mockModel,
+      });
+    });
+
+    test('GET and DELETE do not have requestModels', () => {
+      createStack();
+
+      const getCollection = mockCollectionAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'GET',
+      );
+      const getItem = mockItemAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'GET',
+      );
+      const deleteItem = mockItemAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'DELETE',
+      );
+
+      expect(
+        (getCollection![2] as Record<string, unknown>).requestModels,
+      ).toBeUndefined();
+      expect(
+        (getItem![2] as Record<string, unknown>).requestModels,
+      ).toBeUndefined();
+      expect(
+        (deleteItem![2] as Record<string, unknown>).requestModels,
+      ).toBeUndefined();
+    });
   });
 });
