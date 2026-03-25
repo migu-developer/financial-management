@@ -4,6 +4,8 @@ import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { importFromVersion } from '@utils/cross-version';
 import type { Construct } from 'constructs';
 import { StackDeps } from '@utils/types';
+import { ActiveStack } from './stacks';
+import { LambdaExpensesStack } from './lambda-expenses-stack';
 
 export type AmplifyStage = 'PRODUCTION' | 'DEVELOPMENT';
 export type AmplifyPlatform = 'WEB' | 'MOBILE';
@@ -57,7 +59,7 @@ export class AmplifyHostingStack extends BaseStack {
   public readonly defaultBranch: CfnBranch;
 
   constructor(scope: Construct, id: string, props: AmplifyHostingStackProps) {
-    const { version, stackName, description } = props;
+    const { version, stackName, description, deps } = props;
     super(scope, id, { version, stackName, description });
 
     const appName = props.stackName;
@@ -90,6 +92,11 @@ export class AmplifyHostingStack extends BaseStack {
       'AssetsBucketName',
     );
 
+    // ── Import from v2 ─────────────────────────────────
+    const expensesApiStack = deps?.getStack(ActiveStack.LAMBDA_EXPENSES) as
+      | LambdaExpensesStack
+      | undefined;
+
     const envVars: CfnApp.EnvironmentVariableProperty[] = [
       { name: 'AMPLIFY_MONOREPO_APP_ROOT', value: props.appRoot },
       { name: 'USER_POOL_ID', value: userPoolId },
@@ -100,6 +107,7 @@ export class AmplifyHostingStack extends BaseStack {
       { name: 'ASSETS_BUCKET_NAME', value: assetsBucketName },
       { name: 'ASSETS_BUCKET_URL', value: props.assetsBucketUrl },
       { name: 'APPLICATION_URL', value: props.applicationUrl },
+      { name: 'EXPENSES_API_URL', value: expensesApiStack?.api.url ?? '' },
     ];
 
     /** SPA rewrite: non-file requests serve index.html for client-side routing (React Native web). */

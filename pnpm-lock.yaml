@@ -970,6 +970,10 @@ importers:
         version: 5.9.3
 
   services/expenses:
+    dependencies:
+      '@aws-lambda-powertools/logger':
+        specifier: 'catalog:'
+        version: 2.31.0
     devDependencies:
       '@packages/config':
         specifier: workspace:*

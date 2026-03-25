@@ -3,4 +3,5 @@
  */
 export enum ActiveStack {
   AMPLIFY_HOSTING = 'AmplifyHosting',
+  LAMBDA_EXPENSES = 'LambdaExpenses',
 }

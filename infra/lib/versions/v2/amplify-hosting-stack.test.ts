@@ -14,6 +14,8 @@ const mockImportFromVersion = importFromVersion as jest.MockedFunction<
   typeof importFromVersion
 >;
 
+const mockGetStack = jest.fn();
+
 const mockCfnApp = {
   attrAppId: 'mock-app-id',
   attrDefaultDomain: 'mock.amplifyapp.com',
@@ -140,6 +142,29 @@ describe('AmplifyHostingStack', () => {
       'Auth',
       'CognitoDomain',
     );
+  });
+
+  test('calls deps.getStack for LambdaExpenses', () => {
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+    new AmplifyHostingStack(
+      app as unknown as Construct,
+      'AmplifyHostingStack',
+      {
+        version: 'v2',
+        stackName: 'AmplifyHosting',
+        deps: { getStack: mockGetStack },
+        defaultBranchName: 'develop',
+        repository: 'https://github.com/org/repo',
+        accessTokenName: 'github-migudev-token',
+        platform: 'WEB',
+        stage: 'DEVELOPMENT',
+        appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
+        enableAutoBuild: false,
+      },
+    );
+    expect(mockGetStack).toHaveBeenCalledWith('LambdaExpenses');
   });
 
   test('exposes amplifyApp and defaultBranch', () => {

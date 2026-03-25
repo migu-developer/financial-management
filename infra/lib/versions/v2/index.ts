@@ -3,6 +3,7 @@ import { AmplifyHostingStack, AmplifyStage } from './amplify-hosting-stack';
 import type { Construct } from 'constructs';
 import { fullStackResource } from '@config/entry-config';
 import { ActiveStack } from './stacks';
+import { LambdaExpensesStack } from './lambda-expenses-stack';
 
 const createAmplifyHostingStack: NamedStackFactory = {
   name: 'AmplifyHosting',
@@ -29,4 +30,26 @@ const createAmplifyHostingStack: NamedStackFactory = {
     ),
 };
 
-export const v2Stacks: NamedStackFactory[] = [createAmplifyHostingStack];
+const createLambdaExpensesStack: NamedStackFactory = {
+  name: 'LambdaExpenses',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new LambdaExpensesStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_EXPENSES}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.LAMBDA_EXPENSES),
+        deps,
+        description: 'Lambda function for expenses service',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+      },
+    ),
+};
+
+export const v2Stacks: NamedStackFactory[] = [
+  createLambdaExpensesStack,
+  createAmplifyHostingStack,
+];
