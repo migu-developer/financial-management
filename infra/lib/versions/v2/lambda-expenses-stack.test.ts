@@ -67,6 +67,13 @@ jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   })),
   RequestValidator: jest.fn().mockImplementation(() => mockRequestValidator),
   Model: jest.fn().mockImplementation(() => mockModel),
+  GatewayResponse: jest.fn(),
+  ResponseType: {
+    BAD_REQUEST_BODY: 'BAD_REQUEST_BODY',
+    BAD_REQUEST_PARAMETERS: 'BAD_REQUEST_PARAMETERS',
+    UNAUTHORIZED: 'UNAUTHORIZED',
+    ACCESS_DENIED: 'ACCESS_DENIED',
+  },
   AuthorizationType: { COGNITO: 'COGNITO' },
   JsonSchemaType: {
     OBJECT: 'object',
@@ -190,6 +197,54 @@ describe('LambdaExpensesStack', () => {
   test('stackName follows BaseStack convention', () => {
     const stack = createStack();
     expect(stack.stackName).toBe('FinancialManagement-v2-LambdaExpenses');
+  });
+
+  describe('custom error responses', () => {
+    test('creates gateway responses for validation errors, auth, and access denied', () => {
+      createStack();
+      const { GatewayResponse: MockGatewayResponse } = getApiGatewayMocks();
+      const GwMock = MockGatewayResponse as jest.Mock;
+      expect(GwMock).toHaveBeenCalledTimes(4);
+
+      const types = GwMock.mock.calls.map(
+        (c: unknown[]) => (c[2] as Record<string, unknown>).type,
+      );
+      expect(types).toContain('BAD_REQUEST_BODY');
+      expect(types).toContain('BAD_REQUEST_PARAMETERS');
+      expect(types).toContain('UNAUTHORIZED');
+      expect(types).toContain('ACCESS_DENIED');
+    });
+
+    test('validation error response includes error detail template', () => {
+      createStack();
+      const { GatewayResponse: MockGatewayResponse } = getApiGatewayMocks();
+      const GwMock = MockGatewayResponse as jest.Mock;
+
+      const bodyErrorCall = GwMock.mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as Record<string, unknown>).type === 'BAD_REQUEST_BODY',
+      );
+      const templates = (bodyErrorCall![2] as Record<string, unknown>)
+        .templates as Record<string, string>;
+      const parsed = JSON.parse(templates['application/json']!) as Record<
+        string,
+        string
+      >;
+      expect(parsed.code).toBe('VALIDATION_ERROR');
+      expect(parsed.message).toContain('$context.error.validationErrorString');
+    });
+
+    test('all error responses include CORS header', () => {
+      createStack();
+      const { GatewayResponse: MockGatewayResponse } = getApiGatewayMocks();
+      const GwMock = MockGatewayResponse as jest.Mock;
+
+      for (const call of GwMock.mock.calls as unknown[][]) {
+        const headers = (call[2] as Record<string, unknown>)
+          .responseHeaders as Record<string, string>;
+        expect(headers['Access-Control-Allow-Origin']).toBeDefined();
+      }
+    });
   });
 
   describe('request validators', () => {

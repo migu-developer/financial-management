@@ -5,11 +5,21 @@ const logger = new Logger({
   serviceName: 'expenses-service',
 });
 
+interface CognitoClaims {
+  sub: string;
+  email: string;
+  [key: string]: unknown;
+}
+
 export const handler = async (event: APIGatewayProxyEvent) => {
+  const claims =
+    (event.requestContext.authorizer as CognitoClaims | null) ?? {};
+
   logger.info('Processing expenses event', {
     httpMethod: event.httpMethod,
     path: event.path,
     resource: event.resource,
+    claims: claims,
   });
 
   return {
@@ -21,6 +31,10 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       message: 'Expenses service is running',
       method: event.httpMethod,
       path: event.path,
+      pathParameters: event.pathParameters,
+      user: {
+        ...claims,
+      },
     }),
   };
 };
