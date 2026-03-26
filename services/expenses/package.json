@@ -11,10 +11,10 @@
     "@aws-lambda-powertools/logger": "catalog:"
   },
   "devDependencies": {
+    "@packages/config": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:",
     "eslint": "catalog:",
-    "@packages/config": "workspace:*"
+    "typescript": "catalog:"
   },
   "keywords": [],
   "author": "Miguel Angel Gutierrez Maya",

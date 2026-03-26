@@ -2,8 +2,21 @@
   "extends": "@packages/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "baseUrl": ".",
+
+    /* Type Safety (beyond strict: true from base) */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Emit */
+    "removeComments": true,
+    "importHelpers": true
   },
   "include": ["./src", "eslint.config.ts"],
-  "exclude": ["node_modules", ".turbo"]
+  "exclude": ["node_modules", "dist", ".turbo"]
 }

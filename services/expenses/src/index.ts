@@ -1,5 +1,5 @@
 import { Logger } from '@aws-lambda-powertools/logger';
-import { APIGatewayProxyEvent } from './types';
+import type { APIGatewayProxyEvent } from './types';
 
 const logger = new Logger({
   serviceName: 'expenses-service',
@@ -11,7 +11,7 @@ interface CognitoClaims {
   [key: string]: unknown;
 }
 
-export const handler = async (event: APIGatewayProxyEvent) => {
+export const handler = (event: APIGatewayProxyEvent) => {
   const claims =
     (event.requestContext.authorizer as CognitoClaims | null) ?? {};
 
