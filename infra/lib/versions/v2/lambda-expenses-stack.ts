@@ -5,11 +5,13 @@ import { CfnOutput, Duration } from 'aws-cdk-lib';
 import {
   AuthorizationType,
   CognitoUserPoolsAuthorizer,
+  GatewayResponse,
   JsonSchema,
   LambdaIntegration,
   MethodOptions,
   Model,
   RequestValidator,
+  ResponseType,
   RestApi,
 } from 'aws-cdk-lib/aws-apigateway';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
@@ -22,6 +24,7 @@ import {
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { updateExpenseSchema } from '@packages/models/expenses/schema';
+import { errorsSchema } from '@packages/models/expenses/error.schema';
 
 export interface LambdaExpensesStackProps extends BaseStackProps {
   /** Optional: only needed if this stack depends on other v2 stacks. */
@@ -100,6 +103,22 @@ export class LambdaExpensesStack extends BaseStack {
         maxAge: Duration.seconds(300),
       },
     });
+
+    // ── Custom Error Responses ─────────────────────────────────
+    // Returns validation details instead of generic "Invalid request body"
+    for (const error of errorsSchema) {
+      new GatewayResponse(this, `${stackName}-${error.name}`, {
+        restApi: this.api,
+        type: error.type as unknown as ResponseType,
+        statusCode: error.statusCode.toString(),
+        responseHeaders: {
+          'Access-Control-Allow-Origin': "'*'",
+        },
+        templates: {
+          'application/json': JSON.stringify(error.template),
+        },
+      });
+    }
 
     // ── Request Validators ────────────────────────────────────
     const bodyValidator = new RequestValidator(
