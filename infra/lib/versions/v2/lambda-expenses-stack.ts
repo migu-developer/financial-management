@@ -21,6 +21,7 @@ import {
   createExpenseSchema,
   patchExpenseSchema,
 } from '@packages/models/expenses';
+import { ErrorCode } from '@packages/models/shared/utils/errors';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { updateExpenseSchema } from '@packages/models/expenses/schema';
@@ -39,6 +40,13 @@ export interface LambdaExpensesStackProps extends BaseStackProps {
   /** Api gateway stage. */
   readonly stage: string;
 }
+
+const errorCodeToResponseType: Record<ErrorCode, ResponseType> = {
+  [ErrorCode.BAD_REQUEST_BODY]: ResponseType.BAD_REQUEST_BODY,
+  [ErrorCode.BAD_REQUEST_PARAMETERS]: ResponseType.BAD_REQUEST_PARAMETERS,
+  [ErrorCode.UNAUTHORIZED]: ResponseType.UNAUTHORIZED,
+  [ErrorCode.ACCESS_DENIED]: ResponseType.ACCESS_DENIED,
+};
 
 export class LambdaExpensesStack extends BaseStack {
   private readonly allowedMethods: string[] = [
@@ -79,6 +87,8 @@ export class LambdaExpensesStack extends BaseStack {
       timeout: Duration.seconds(30),
       environment: {
         DATABASE_URL: databaseUrl,
+        ALLOWED_ORIGINS: allowedOrigins.join(','),
+        ALLOWED_METHODS: this.allowedMethods.join(','),
       },
     });
 
@@ -109,7 +119,7 @@ export class LambdaExpensesStack extends BaseStack {
     for (const error of errorsSchema) {
       new GatewayResponse(this, `${stackName}-${error.name}`, {
         restApi: this.api,
-        type: error.type as unknown as ResponseType,
+        type: errorCodeToResponseType[error.type],
         statusCode: error.statusCode.toString(),
         responseHeaders: {
           'Access-Control-Allow-Origin': "'*'",

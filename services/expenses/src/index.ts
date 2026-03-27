@@ -1,40 +1,66 @@
-import { Logger } from '@aws-lambda-powertools/logger';
-import type { APIGatewayProxyEvent } from './types';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult } from './types';
+import type { User } from '@packages/models/users/interface';
+import { Application } from '@services/expenses/presentation/application';
+import { Router } from '@services/expenses/router';
+import { ResultBodyUndefinedError } from '@packages/models/shared/utils/errors';
+import { ErrorHandler } from './domain/utils/error-handler';
+import { addCors } from './domain/utils/cors';
 
-const logger = new Logger({
-  serviceName: 'expenses-service',
-});
+import { LoggerServiceImplementation } from '@services/expenses/infrastructure/services/LoggerServiceImp';
+import { HttpCode } from '@packages/models/shared/utils/http-code';
 
-interface CognitoClaims {
-  sub: string;
-  email: string;
-  [key: string]: unknown;
-}
+export const handler = async (event: APIGatewayProxyEvent) => {
+  let response: APIGatewayProxyResult | undefined = undefined;
 
-export const handler = (event: APIGatewayProxyEvent) => {
-  const claims =
-    (event.requestContext.authorizer as CognitoClaims | null) ?? {};
+  const logger = new LoggerServiceImplementation();
 
-  logger.info('Processing expenses event', {
-    httpMethod: event.httpMethod,
-    path: event.path,
-    resource: event.resource,
-    claims: claims,
-  });
+  try {
+    const claims = event.requestContext.authorizer as User;
 
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: 'Expenses service is running',
-      method: event.httpMethod,
+    logger.info('Processing expenses event', {
+      httpMethod: event.httpMethod,
       path: event.path,
-      pathParameters: event.pathParameters,
-      user: {
-        ...claims,
-      },
-    }),
+      resource: event.resource,
+      claims: claims,
+    });
+
+    const app = new Application({
+      event: event,
+      logger,
+      user: claims,
+    });
+
+    const router = Router.instantiate(app);
+
+    const result: Response = await router.dispatch();
+    const body = (await result.json()) as unknown;
+
+    logger.info(
+      `Result: ${JSON.stringify(result)}, body: ${body}`,
+      handler.name,
+    );
+
+    if (!body) {
+      throw new ResultBodyUndefinedError();
+    }
+
+    response = {
+      statusCode: result.status,
+      body: JSON.stringify(body),
+    };
+  } catch (error: unknown) {
+    response = ErrorHandler.handle(error, logger);
+  } finally {
+    if (response !== undefined) {
+      response.headers = addCors(response);
+      logger.info(`Response: ${JSON.stringify(response)}`, handler.name);
+    }
+  }
+
+  response ??= {
+    statusCode: HttpCode.INTERNAL_SERVER_ERROR,
+    body: JSON.stringify({ message: 'Internal server error' }),
   };
+
+  return response;
 };

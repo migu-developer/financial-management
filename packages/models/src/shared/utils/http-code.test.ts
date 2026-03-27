@@ -12,6 +12,8 @@ describe('HttpCode', () => {
       HttpCode.NOT_FOUND,
       HttpCode.METHOD_NOT_ALLOWED,
       HttpCode.INTERNAL_SERVER_ERROR,
+      HttpCode.SUCCESS,
+      HttpCode.NOT_IMPLEMENTED,
     ]);
   });
 
@@ -29,5 +31,7 @@ describe('HttpCode', () => {
     expect(HttpCode.NOT_FOUND).toBe(404);
     expect(HttpCode.METHOD_NOT_ALLOWED).toBe(405);
     expect(HttpCode.INTERNAL_SERVER_ERROR).toBe(500);
+    expect(HttpCode.SUCCESS).toBe(200);
+    expect(HttpCode.NOT_IMPLEMENTED).toBe(501);
   });
 });

@@ -1,4 +1,4 @@
-import { ErrorCode } from './errors';
+import { ErrorCode } from './codes';
 
 describe('ErrorCode', () => {
   it('has all expected values', () => {
