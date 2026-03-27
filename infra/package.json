@@ -31,6 +31,9 @@
     "@packages/cognito": "workspace:*",
     "@packages/models": "workspace:*",
     "@services/expenses": "workspace:*",
+    "@services/shared": "workspace:*",
+    "@services/currencies": "workspace:*",
+    "@services/documents": "workspace:*",
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:"
   },

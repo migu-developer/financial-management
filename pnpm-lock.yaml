@@ -742,9 +742,18 @@ importers:
       '@packages/models':
         specifier: workspace:*
         version: link:../packages/models
+      '@services/currencies':
+        specifier: workspace:*
+        version: link:../services/currencies
+      '@services/documents':
+        specifier: workspace:*
+        version: link:../services/documents
       '@services/expenses':
         specifier: workspace:*
         version: link:../services/expenses
+      '@services/shared':
+        specifier: workspace:*
+        version: link:../services/shared
       aws-cdk-lib:
         specifier: 'catalog:'
         version: 2.240.0(constructs@10.5.1)
