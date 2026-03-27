@@ -15,10 +15,18 @@ const mockImportFromVersion = importFromVersion as jest.MockedFunction<
 
 const mockItemAddMethod = jest.fn();
 const mockCollectionAddMethod = jest.fn();
+const mockTypesAddMethod = jest.fn();
+const mockCategoriesAddMethod = jest.fn();
 const mockItemResource = { addMethod: mockItemAddMethod };
+const mockTypesResource = { addMethod: mockTypesAddMethod };
+const mockCategoriesResource = { addMethod: mockCategoriesAddMethod };
 const mockCollectionResource = {
   addMethod: mockCollectionAddMethod,
-  addResource: jest.fn().mockReturnValue(mockItemResource),
+  addResource: jest.fn().mockImplementation((name: string) => {
+    if (name === 'types') return mockTypesResource;
+    if (name === 'categories') return mockCategoriesResource;
+    return mockItemResource;
+  }),
 };
 const mockRootAddResource = jest.fn().mockReturnValue(mockCollectionResource);
 const mockApi = {
@@ -120,6 +128,11 @@ describe('LambdaExpensesStack', () => {
       (_scope: unknown, _v: string, _stack: string, key: string) =>
         `imported-${key}`,
     );
+    mockCollectionResource.addResource.mockImplementation((name: string) => {
+      if (name === 'types') return mockTypesResource;
+      if (name === 'categories') return mockCategoriesResource;
+      return mockItemResource;
+    });
   });
 
   test('instantiates without throwing', () => {
@@ -365,6 +378,72 @@ describe('LambdaExpensesStack', () => {
       expect(schema.required).toBeUndefined();
       expect(schema.minProperties).toBe(1);
       expect(schema.additionalProperties).toBe(false);
+    });
+  });
+
+  describe('/expenses/types and /expenses/categories resources', () => {
+    test('creates /expenses/types sub-resource', () => {
+      createStack();
+      expect(mockCollectionResource.addResource).toHaveBeenCalledWith('types');
+    });
+
+    test('adds GET method on /expenses/types', () => {
+      createStack();
+      const methods = mockTypesAddMethod.mock.calls.map((c: unknown[]) => c[0]);
+      expect(methods).toContain('GET');
+    });
+
+    test('/expenses/types GET uses Cognito authorization', () => {
+      createStack();
+      const getCall = mockTypesAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'GET',
+      );
+      const opts = getCall![2] as Record<string, unknown>;
+      expect(opts.authorizationType).toBe('COGNITO');
+    });
+
+    test('/expenses/types does not expose write methods', () => {
+      createStack();
+      const methods = mockTypesAddMethod.mock.calls.map((c: unknown[]) => c[0]);
+      expect(methods).not.toContain('POST');
+      expect(methods).not.toContain('PUT');
+      expect(methods).not.toContain('PATCH');
+      expect(methods).not.toContain('DELETE');
+    });
+
+    test('creates /expenses/categories sub-resource', () => {
+      createStack();
+      expect(mockCollectionResource.addResource).toHaveBeenCalledWith(
+        'categories',
+      );
+    });
+
+    test('adds GET method on /expenses/categories', () => {
+      createStack();
+      const methods = mockCategoriesAddMethod.mock.calls.map(
+        (c: unknown[]) => c[0],
+      );
+      expect(methods).toContain('GET');
+    });
+
+    test('/expenses/categories GET uses Cognito authorization', () => {
+      createStack();
+      const getCall = mockCategoriesAddMethod.mock.calls.find(
+        (c: unknown[]) => c[0] === 'GET',
+      );
+      const opts = getCall![2] as Record<string, unknown>;
+      expect(opts.authorizationType).toBe('COGNITO');
+    });
+
+    test('/expenses/categories does not expose write methods', () => {
+      createStack();
+      const methods = mockCategoriesAddMethod.mock.calls.map(
+        (c: unknown[]) => c[0],
+      );
+      expect(methods).not.toContain('POST');
+      expect(methods).not.toContain('PUT');
+      expect(methods).not.toContain('PATCH');
+      expect(methods).not.toContain('DELETE');
     });
   });
 

@@ -4,6 +4,8 @@ import type { Construct } from 'constructs';
 import { fullStackResource } from '@config/entry-config';
 import { ActiveStack } from './stacks';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
+import { LambdaDocumentsStack } from './lambda-documents-stack';
+import { LambdaCurrenciesStack } from './lambda-currencies-stack';
 
 const createAmplifyHostingStack: NamedStackFactory = {
   name: 'AmplifyHosting',
@@ -50,7 +52,49 @@ const createLambdaExpensesStack: NamedStackFactory = {
     ),
 };
 
+const createLambdaDocumentsStack: NamedStackFactory = {
+  name: 'LambdaDocuments',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new LambdaDocumentsStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_DOCUMENTS}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.LAMBDA_DOCUMENTS),
+        deps,
+        description: 'Lambda function for documents service',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? '',
+      },
+    ),
+};
+
+const createLambdaCurrenciesStack: NamedStackFactory = {
+  name: 'LambdaCurrencies',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new LambdaCurrenciesStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_CURRENCIES}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.LAMBDA_CURRENCIES),
+        deps,
+        description: 'Lambda function for currencies service',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? '',
+      },
+    ),
+};
+
 export const v2Stacks: NamedStackFactory[] = [
   createLambdaExpensesStack,
+  createLambdaDocumentsStack,
+  createLambdaCurrenciesStack,
   createAmplifyHostingStack,
 ];

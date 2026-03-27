@@ -256,6 +256,15 @@ export class LambdaExpensesStack extends BaseStack {
     singleExpenseResource.addMethod('PATCH', integration, authWithPatchBody);
     singleExpenseResource.addMethod('DELETE', integration, authOnly);
 
+    // ── /expenses/types resource ────────────────────────────
+    const expensesTypesResource = expensesResource.addResource('types');
+    expensesTypesResource.addMethod('GET', integration, authOnly);
+
+    // ── /expenses/categories resource ──────────────────────
+    const expensesCategoriesResource =
+      expensesResource.addResource('categories');
+    expensesCategoriesResource.addMethod('GET', integration, authOnly);
+
     // ── Output ─────────────────────────────────────────────
     new CfnOutput(this, `${stackName}-ExpensesApiUrl`, {
       value: this.api.url,
