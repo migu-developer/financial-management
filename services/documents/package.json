@@ -1,0 +1,29 @@
+{
+  "name": "@services/documents",
+  "version": "1.0.0",
+  "description": "Documents service for financial management",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "catalog:",
+    "@packages/models": "workspace:*",
+    "@services/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@packages/config": "workspace:*",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "typescript": "catalog:"
+  },
+  "keywords": [],
+  "author": "Miguel Angel Gutierrez Maya",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3"
+}

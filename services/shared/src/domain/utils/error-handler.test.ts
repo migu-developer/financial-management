@@ -4,7 +4,7 @@ import {
   RouteNotFoundError,
 } from '@packages/models/shared/utils/errors';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
-import type { LoggerService } from '@services/expenses/domain/services/logger';
+import type { LoggerService } from '@services/shared/domain/services/logger';
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };

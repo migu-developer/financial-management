@@ -2,7 +2,7 @@ import type {
   LoggerService,
   LogItemExtraInput,
   LogItemMessage,
-} from '@services/expenses/domain/services/logger';
+} from '@services/shared/domain/services/logger';
 import { Logger } from '@aws-lambda-powertools/logger';
 
 export class LoggerServiceImplementation implements LoggerService {

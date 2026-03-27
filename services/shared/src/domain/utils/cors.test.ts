@@ -1,5 +1,5 @@
 import { addCors } from './cors';
-import type { APIGatewayProxyResult } from 'src/types';
+import type { APIGatewayProxyResult } from '@services/shared/domain/interfaces/response';
 
 const baseResult: APIGatewayProxyResult = { statusCode: 200, body: '{}' };
 

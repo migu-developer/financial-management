@@ -16,7 +16,8 @@
     "importHelpers": true,
     "paths": {
       "@services/expenses/*": ["./src/*"],
-      "@packages/models/*": ["node_modules/@packages/models/src/*"]
+      "@packages/models/*": ["node_modules/@packages/models/src/*"],
+      "@services/shared/*": ["node_modules/@services/shared/src/*"]
     }
   },
   "include": ["./src", "eslint.config.ts", "jest.config.ts"],

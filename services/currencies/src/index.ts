@@ -1,0 +1,67 @@
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { APIGatewayProxyResult } from '@services/shared/domain/interfaces/response';
+import type { User } from '@packages/models/users/interface';
+import { Application } from '@services/currencies/presentation/application';
+import { Router } from '@services/currencies/router';
+import { ResultBodyUndefinedError } from '@packages/models/shared/utils/errors';
+import { ErrorHandler } from '@services/shared/domain/utils/error-handler';
+import { addCors } from '@services/shared/domain/utils/cors';
+
+import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
+import { HttpCode } from '@packages/models/shared/utils/http-code';
+
+export const handler = async (event: APIGatewayProxyEvent) => {
+  let response: APIGatewayProxyResult | undefined = undefined;
+
+  const logger = new LoggerServiceImplementation();
+
+  try {
+    const claims = event.requestContext.authorizer as User;
+
+    logger.info('Processing currencies event', {
+      httpMethod: event.httpMethod,
+      path: event.path,
+      resource: event.resource,
+      claims: claims,
+    });
+
+    const app = new Application({
+      event: event,
+      logger,
+      user: claims,
+    });
+
+    const router = Router.instantiate(app);
+
+    const result: Response = await router.dispatch();
+    const body = (await result.json()) as unknown;
+
+    logger.info(
+      `Result: ${JSON.stringify(result)}, body: ${body}`,
+      handler.name,
+    );
+
+    if (!body) {
+      throw new ResultBodyUndefinedError();
+    }
+
+    response = {
+      statusCode: result.status,
+      body: JSON.stringify(body),
+    };
+  } catch (error: unknown) {
+    response = ErrorHandler.handle(error, logger);
+  } finally {
+    if (response !== undefined) {
+      response.headers = addCors(response);
+      logger.info(`Response: ${JSON.stringify(response)}`, handler.name);
+    }
+  }
+
+  response ??= {
+    statusCode: HttpCode.INTERNAL_SERVER_ERROR,
+    body: JSON.stringify({ message: 'Internal server error' }),
+  };
+
+  return response;
+};

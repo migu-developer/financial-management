@@ -1,0 +1,25 @@
+{
+  "extends": "@packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+
+    "removeComments": true,
+    "importHelpers": true,
+    "paths": {
+      "@services/currencies/*": ["./src/*"],
+      "@packages/models/*": ["node_modules/@packages/models/src/*"],
+      "@services/shared/*": ["node_modules/@services/shared/src/*"]
+    }
+  },
+  "include": ["./src", "eslint.config.ts", "jest.config.ts"],
+  "exclude": ["node_modules", "dist", ".turbo"]
+}

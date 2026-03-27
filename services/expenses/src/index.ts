@@ -1,12 +1,13 @@
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from './types';
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { APIGatewayProxyResult } from '@services/shared/domain/interfaces/response';
 import type { User } from '@packages/models/users/interface';
 import { Application } from '@services/expenses/presentation/application';
 import { Router } from '@services/expenses/router';
 import { ResultBodyUndefinedError } from '@packages/models/shared/utils/errors';
-import { ErrorHandler } from './domain/utils/error-handler';
-import { addCors } from './domain/utils/cors';
+import { ErrorHandler } from '@services/shared/domain/utils/error-handler';
+import { addCors } from '@services/shared/domain/utils/cors';
 
-import { LoggerServiceImplementation } from '@services/expenses/infrastructure/services/LoggerServiceImp';
+import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 
 export const handler = async (event: APIGatewayProxyEvent) => {

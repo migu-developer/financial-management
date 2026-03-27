@@ -1,0 +1,104 @@
+import { Service } from './service';
+import { Application } from '@services/currencies/presentation/application';
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { User } from '@packages/models/users/interface';
+
+function makeMockLogger(): LoggerService {
+  return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeApp(): Application {
+  const event: APIGatewayProxyEvent = {
+    httpMethod: 'GET',
+    path: '/currencies',
+    resource: '/currencies',
+    body: null,
+    headers: {},
+    multiValueHeaders: {},
+    isBase64Encoded: false,
+    pathParameters: null,
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    stageVariables: null,
+    requestContext: {
+      accountId: '123',
+      apiId: 'api-id',
+      authorizer: null,
+      protocol: 'HTTP/1.1',
+      httpMethod: 'GET',
+      identity: {
+        accessKey: null,
+        accountId: null,
+        apiKey: null,
+        apiKeyId: null,
+        caller: null,
+        clientCert: null,
+        cognitoAuthenticationProvider: null,
+        cognitoAuthenticationType: null,
+        cognitoIdentityId: null,
+        cognitoIdentityPoolId: null,
+        principalOrgId: null,
+        sourceIp: '127.0.0.1',
+        user: null,
+        userAgent: null,
+        userArn: null,
+      },
+      path: '/currencies',
+      stage: 'test',
+      requestId: 'req-1',
+      requestTimeEpoch: 0,
+      resourceId: 'res-1',
+      resourcePath: '/currencies',
+    },
+  };
+  const user: User = { sub: 'u1', email: 'u@test.com' };
+  return new Application({ event, logger: makeMockLogger(), user });
+}
+
+describe('Service (default wrappers)', () => {
+  it('stores application in constructor', () => {
+    const app = makeApp();
+    expect(new Service(app).application).toBe(app);
+  });
+
+  it('executeGET returns a Response with "Not implemented" body', async () => {
+    const response = await new Service(makeApp()).executeGET();
+    expect(response).toBeInstanceOf(Response);
+    expect(await response.text()).toBe('Not implemented');
+  });
+
+  it('executePOST returns a Response', async () => {
+    expect(await new Service(makeApp()).executePOST()).toBeInstanceOf(Response);
+  });
+
+  it('executePUT returns a Response', async () => {
+    expect(await new Service(makeApp()).executePUT()).toBeInstanceOf(Response);
+  });
+
+  it('executePATCH returns a Response', async () => {
+    expect(await new Service(makeApp()).executePATCH()).toBeInstanceOf(
+      Response,
+    );
+  });
+
+  it('executeDELETE returns a Response', async () => {
+    expect(await new Service(makeApp()).executeDELETE()).toBeInstanceOf(
+      Response,
+    );
+  });
+
+  it('all default methods return "Not implemented" body', async () => {
+    const service = new Service(makeApp());
+    const methods = [
+      service.executeGET(),
+      service.executePOST(),
+      service.executePUT(),
+      service.executePATCH(),
+      service.executeDELETE(),
+    ];
+    const responses = await Promise.all(methods);
+    const bodies = await Promise.all(responses.map((r) => r.text()));
+    expect(bodies.every((b) => b === 'Not implemented')).toBe(true);
+  });
+});

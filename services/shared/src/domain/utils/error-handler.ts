@@ -1,6 +1,6 @@
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { ModuleError } from '@packages/models/shared/utils/errors';
-import type { LoggerService } from '@services/expenses/domain/services/logger';
+import type { LoggerService } from '@services/shared/domain/services/logger';
 
 export class ErrorHandler {
   static handle(error: unknown, logger: LoggerService) {

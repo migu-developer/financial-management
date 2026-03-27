@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
-    "@packages/models": "workspace:*"
+    "@packages/models": "workspace:*",
+    "@services/shared": "workspace:*"
   },
   "devDependencies": {
     "@packages/config": "workspace:*",

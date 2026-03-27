@@ -9,8 +9,16 @@ describe('ROUTES', () => {
     expect(ROUTES.find((r) => r.url === '/expenses/{id}')).toBeDefined();
   });
 
-  it('has exactly 2 routes', () => {
-    expect(ROUTES).toHaveLength(2);
+  it('contains /expenses/types route', () => {
+    expect(ROUTES.find((r) => r.url === '/expenses/types')).toBeDefined();
+  });
+
+  it('contains /expenses/categories route', () => {
+    expect(ROUTES.find((r) => r.url === '/expenses/categories')).toBeDefined();
+  });
+
+  it('has exactly 4 routes', () => {
+    expect(ROUTES).toHaveLength(4);
   });
 
   it('each route has a url string', () => {

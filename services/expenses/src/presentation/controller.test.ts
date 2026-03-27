@@ -1,8 +1,13 @@
-import { ExpensesController, ExpenseController } from './controller';
+import {
+  ExpensesController,
+  ExpenseController,
+  ExpensesTypesController,
+  ExpensesCategoriesController,
+} from './controller';
 import { MethodNotImplementedError } from '@packages/models/shared/utils/errors';
 import { Application } from './application';
-import type { APIGatewayProxyEvent } from 'src/types';
-import type { LoggerService } from '@services/expenses/domain/services/logger';
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { User } from '@packages/models/users/interface';
 
 jest.useFakeTimers();
@@ -127,5 +132,71 @@ describe('ExpenseController', () => {
     const p = ctrl.DELETE();
     jest.runAllTimers();
     await expect(p).resolves.toBeInstanceOf(Response);
+  });
+});
+
+describe('ExpensesTypesController', () => {
+  it('GET returns a Response', async () => {
+    const ctrl = new ExpensesTypesController(makeApp());
+    const p = ctrl.GET();
+    jest.runAllTimers();
+    await expect(p).resolves.toBeInstanceOf(Response);
+  });
+
+  it('POST throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesTypesController(makeApp()).POST()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PUT throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesTypesController(makeApp()).PUT()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PATCH throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesTypesController(makeApp()).PATCH()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('DELETE throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesTypesController(makeApp()).DELETE()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+});
+
+describe('ExpensesCategoriesController', () => {
+  it('GET returns a Response', async () => {
+    const ctrl = new ExpensesCategoriesController(makeApp());
+    const p = ctrl.GET();
+    jest.runAllTimers();
+    await expect(p).resolves.toBeInstanceOf(Response);
+  });
+
+  it('POST throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesCategoriesController(makeApp()).POST()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PUT throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesCategoriesController(makeApp()).PUT()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PATCH throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesCategoriesController(makeApp()).PATCH()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('DELETE throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesCategoriesController(makeApp()).DELETE()).toThrow(
+      MethodNotImplementedError,
+    );
   });
 });

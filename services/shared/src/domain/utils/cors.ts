@@ -1,4 +1,4 @@
-import type { APIGatewayProxyResult } from '@services/expenses/types';
+import type { APIGatewayProxyResult } from '@services/shared/domain/interfaces/response';
 
 export function addCors(
   result: APIGatewayProxyResult,

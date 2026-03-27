@@ -1,11 +1,11 @@
-import { Router, matchRoute } from './router';
+import { Router } from './router';
 import { Application } from '@services/expenses/presentation/application';
 import {
   RouteNotFoundError,
   MethodNotImplementedError,
 } from '@packages/models/shared/utils/errors';
-import type { APIGatewayProxyEvent } from 'src/types';
-import type { LoggerService } from '@services/expenses/domain/services/logger';
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { User } from '@packages/models/users/interface';
 
 jest.useFakeTimers();
@@ -63,87 +63,6 @@ function makeApp(httpMethod: string, path: string): Application {
   const user: User = { sub: 'u1', email: 'u@test.com' };
   return new Application({ event, logger: makeMockLogger(), user });
 }
-
-// ─── matchRoute unit tests ────────────────────────────────────────────────────
-
-describe('matchRoute', () => {
-  describe('static routes', () => {
-    it('matches identical static paths', () => {
-      expect(matchRoute('/expenses', '/expenses')).toBe(true);
-    });
-
-    it('does not match different static paths', () => {
-      expect(matchRoute('/expenses', '/invoices')).toBe(false);
-    });
-
-    it('does not match when pathname has extra segment', () => {
-      expect(matchRoute('/expenses', '/expenses/extra')).toBe(false);
-    });
-
-    it('does not match when pattern has extra segment', () => {
-      expect(matchRoute('/expenses/extra', '/expenses')).toBe(false);
-    });
-  });
-
-  describe('single dynamic segment {id}', () => {
-    it('matches a UUID', () => {
-      expect(matchRoute('/expenses/{id}', `/expenses/${UUID}`)).toBe(true);
-    });
-
-    it('matches any non-empty string', () => {
-      expect(matchRoute('/expenses/{id}', '/expenses/abc')).toBe(true);
-    });
-
-    it('does not match when dynamic segment is empty', () => {
-      expect(matchRoute('/expenses/{id}', '/expenses/')).toBe(false);
-    });
-
-    it('does not match when path has no dynamic segment', () => {
-      expect(matchRoute('/expenses/{id}', '/expenses')).toBe(false);
-    });
-  });
-
-  describe('multiple dynamic segments', () => {
-    it('matches /a/{id}/b/{id} with two UUIDs', () => {
-      expect(matchRoute('/a/{id}/b/{id}', `/a/${UUID}/b/${UUID}`)).toBe(true);
-    });
-
-    it('matches /name1/{id}/name2/{id}/name3/{id}', () => {
-      expect(
-        matchRoute(
-          '/name1/{id}/name2/{id}/name3/{id}',
-          '/name1/x/name2/y/name3/z',
-        ),
-      ).toBe(true);
-    });
-
-    it('does not match when one dynamic segment is empty', () => {
-      expect(matchRoute('/a/{id}/b/{id}', `/a/${UUID}/b/`)).toBe(false);
-    });
-
-    it('does not match when segment count differs', () => {
-      expect(matchRoute('/a/{id}/b/{id}', `/a/${UUID}/b`)).toBe(false);
-    });
-
-    it('requires static segments to match exactly', () => {
-      expect(matchRoute('/a/{id}/b/{id}', `/a/${UUID}/c/${UUID}`)).toBe(false);
-    });
-  });
-
-  describe('mixed static and dynamic segments', () => {
-    it('matches /expenses/{id}/details with real value', () => {
-      expect(
-        matchRoute('/expenses/{id}/details', `/expenses/${UUID}/details`),
-      ).toBe(true);
-    });
-
-    it('does not match when static suffix differs', () => {
-      expect(
-        matchRoute('/expenses/{id}/details', `/expenses/${UUID}/summary`),
-      ).toBe(false);
-    });
-  });
-});
 
 // ─── Router.instantiate integration tests ─────────────────────────────────────
 

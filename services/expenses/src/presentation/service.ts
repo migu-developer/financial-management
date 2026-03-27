@@ -177,3 +177,63 @@ export class ExpenseService extends Service {
     );
   }
 }
+
+/**
+ * Service for handling expenses types-related HTTP requests
+ * Manages expenses types retrieval and update operations
+ */
+export class ExpensesTypesService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  /**
+   * Handles GET requests for expenses types retrieval
+   * Retrieves expenses types data
+   * @returns Promise that resolves to the HTTP response with expenses types data
+   */
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing expenses types GET request',
+      ExpensesTypesService.name,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    return new Response(
+      JSON.stringify({ success: true, data: 'Expenses types data' }),
+      {
+        status: HttpCode.SUCCESS,
+      },
+    );
+  }
+}
+
+/**
+ * Service for handling expenses categories-related HTTP requests
+ * Manages expenses categories retrieval and update operations
+ */
+export class ExpensesCategoriesService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  /**
+   * Handles GET requests for expenses categories retrieval
+   * Retrieves expenses categories data
+   * @returns Promise that resolves to the HTTP response with expenses categories data
+   */
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing expenses categories GET request',
+      ExpensesCategoriesService.name,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    return new Response(
+      JSON.stringify({ success: true, data: 'Expenses categories data' }),
+      {
+        status: HttpCode.SUCCESS,
+      },
+    );
+  }
+}

@@ -1,6 +1,6 @@
 import { Application } from './application';
-import type { APIGatewayProxyEvent } from 'src/types';
-import type { LoggerService } from '@services/expenses/domain/services/logger';
+import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
+import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { User } from '@packages/models/users/interface';
 
 function makeMockLogger(): LoggerService {
