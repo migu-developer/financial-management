@@ -82,7 +82,11 @@ export class ExpenseService extends Service {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return new Response(
-      JSON.stringify({ success: true, data: 'Expense data' }),
+      JSON.stringify({
+        success: true,
+        data: 'Expense data',
+        user: this.app.user,
+      }),
       {
         status: HttpCode.SUCCESS,
       },
@@ -103,7 +107,11 @@ export class ExpenseService extends Service {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return new Response(
-      JSON.stringify({ success: true, data: 'Expense created' }),
+      JSON.stringify({
+        success: true,
+        data: 'Expense created',
+        user: this.app.user,
+      }),
       {
         status: HttpCode.SUCCESS,
       },
@@ -121,7 +129,7 @@ export class ExpenseService extends Service {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return new Response(
-      JSON.stringify({ success: true, data: 'Expense updated' }),
+      JSON.stringify({ success: true, data: 'Expense updated put' }),
       {
         status: HttpCode.SUCCESS,
       },
@@ -142,7 +150,7 @@ export class ExpenseService extends Service {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return new Response(
-      JSON.stringify({ success: true, data: 'Expense updated' }),
+      JSON.stringify({ success: true, data: 'Expense updated patch' }),
       {
         status: HttpCode.SUCCESS,
       },
