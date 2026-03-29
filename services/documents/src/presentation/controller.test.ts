@@ -3,12 +3,19 @@ import { MethodNotImplementedError } from '@packages/models/shared/utils/errors'
 import { Application } from './application';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
-
-jest.useFakeTimers();
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeMockDbService(): DatabaseService {
+  return {
+    query: jest.fn(),
+    queryReadOnly: jest.fn().mockResolvedValue([{ id: 'uuid-1', name: 'CC' }]),
+    end: jest.fn(),
+  };
 }
 
 function makeApp(): Application {
@@ -56,15 +63,18 @@ function makeApp(): Application {
     },
   };
   const user: User = { sub: 'u1', email: 'u@test.com' };
-  return new Application({ event, logger: makeMockLogger(), user });
+  return new Application({
+    event,
+    logger: makeMockLogger(),
+    user,
+    dbService: makeMockDbService(),
+  });
 }
 
 describe('DocumentsController', () => {
   it('GET returns a Response', async () => {
     const ctrl = new DocumentsController(makeApp());
-    const p = ctrl.GET();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(ctrl.GET()).resolves.toBeInstanceOf(Response);
   });
 
   it('POST throws MethodNotImplementedError', () => {

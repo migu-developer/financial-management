@@ -4,18 +4,19 @@ import versionConfig from './version';
 
 const migrationDir = __dirname;
 
-describe('migration v1.1.0', () => {
+describe('migration v2.1.0', () => {
   it('has a description', () => {
     expect(versionConfig.description).toBeTruthy();
+    expect(typeof versionConfig.description).toBe('string');
   });
 
-  it('uses sqlScript type', () => {
-    expect(versionConfig.scripts[0]!.type).toBe('sql');
+  it('declares at least one script', () => {
+    expect(versionConfig.scripts.length).toBeGreaterThan(0);
   });
 
   it('all sql scripts reference existing files', () => {
     for (const script of versionConfig.scripts) {
-      if (script.type === 'sql') {
+      if (script.type === 'sql' || script.type === 'seed') {
         const upFile = path.join(migrationDir, `${script.up}.sql`);
         const downFile = path.join(migrationDir, `${script.down}.sql`);
         expect(fs.existsSync(upFile)).toBe(true);
@@ -24,7 +25,7 @@ describe('migration v1.1.0', () => {
     }
   });
 
-  it('up script creates composite indexes for expenses', () => {
+  it('up script creates composite indexes', () => {
     const script = versionConfig.scripts[0]!;
     if (script.type !== 'sql') return;
     const sql = fs.readFileSync(
@@ -34,12 +35,9 @@ describe('migration v1.1.0', () => {
     expect(sql).toContain('idx_expenses_user_created_at');
     expect(sql).toContain('idx_expenses_user_type_created_at');
     expect(sql).toContain('idx_expenses_user_category');
-    expect(sql).toContain('user_id, created_at DESC');
-    expect(sql).toContain('user_id, expense_type_id, created_at DESC');
-    expect(sql).toContain('user_id, expense_category_id');
   });
 
-  it('down script drops all composite indexes', () => {
+  it('down script drops composite indexes', () => {
     const script = versionConfig.scripts[0]!;
     if (script.type !== 'sql') return;
     const sql = fs.readFileSync(

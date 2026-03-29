@@ -179,3 +179,119 @@ CREATE TRIGGER trg_users_audit
 CREATE TRIGGER trg_expenses_audit
     AFTER INSERT OR UPDATE OR DELETE ON expenses
     FOR EACH ROW EXECUTE FUNCTION fn_audit_log();
+
+-- ══════════════════════════════════════════════════════════════════════
+-- Row Level Security
+-- ══════════════════════════════════════════════════════════════════════
+
+ALTER TABLE documents         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE providers         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE currencies        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses_types    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs        ENABLE ROW LEVEL SECURITY;
+
+-- ══════════════════════════════════════════════════════════════════════
+-- Grants: schema usage and SELECT for readonly_lambda_role
+-- ══════════════════════════════════════════════════════════════════════
+
+GRANT USAGE ON SCHEMA financial_management TO readonly_lambda_role;
+GRANT SELECT ON ALL TABLES IN SCHEMA financial_management TO readonly_lambda_role;
+GRANT readonly_lambda_role TO readonly_lambda;
+
+-- ══════════════════════════════════════════════════════════════════════
+-- RLS policies: readonly_lambda_role (direct pg access, no JWT)
+-- ══════════════════════════════════════════════════════════════════════
+
+CREATE POLICY readonly_select ON documents
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON providers
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON currencies
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON expenses_types
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON expenses_categories
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON users
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON expenses
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+CREATE POLICY readonly_select ON audit_logs
+    FOR SELECT TO readonly_lambda_role USING (true);
+
+-- ══════════════════════════════════════════════════════════════════════
+-- RLS policies: authenticated role (Supabase PostgREST / API access)
+-- ══════════════════════════════════════════════════════════════════════
+
+-- Catalog tables: any authenticated user can read
+CREATE POLICY authenticated_select ON documents
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY authenticated_select ON providers
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY authenticated_select ON currencies
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY authenticated_select ON expenses_types
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY authenticated_select ON expenses_categories
+    FOR SELECT TO authenticated USING (true);
+
+-- users: each user manages their own record only
+CREATE POLICY authenticated_select ON users
+    FOR SELECT TO authenticated USING (uid = auth.uid());
+
+CREATE POLICY authenticated_insert ON users
+    FOR INSERT TO authenticated WITH CHECK (uid = auth.uid());
+
+CREATE POLICY authenticated_update ON users
+    FOR UPDATE TO authenticated USING (uid = auth.uid());
+
+-- expenses: each user manages their own expenses only
+CREATE POLICY authenticated_select ON expenses
+    FOR SELECT TO authenticated
+    USING (
+        user_id = (SELECT id FROM financial_management.users WHERE uid = auth.uid())
+    );
+
+CREATE POLICY authenticated_insert ON expenses
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        user_id = (SELECT id FROM financial_management.users WHERE uid = auth.uid())
+    );
+
+CREATE POLICY authenticated_update ON expenses
+    FOR UPDATE TO authenticated
+    USING (
+        user_id = (SELECT id FROM financial_management.users WHERE uid = auth.uid())
+    );
+
+CREATE POLICY authenticated_delete ON expenses
+    FOR DELETE TO authenticated
+    USING (
+        user_id = (SELECT id FROM financial_management.users WHERE uid = auth.uid())
+    );
+
+-- audit_logs: each user can read audit records for their own expenses
+CREATE POLICY authenticated_select ON audit_logs
+    FOR SELECT TO authenticated
+    USING (
+        record_id IN (
+            SELECT id FROM financial_management.expenses
+            WHERE user_id = (
+                SELECT id FROM financial_management.users WHERE uid = auth.uid()
+            )
+        )
+    );

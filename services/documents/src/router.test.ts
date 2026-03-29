@@ -6,12 +6,19 @@ import {
 } from '@packages/models/shared/utils/errors';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
-
-jest.useFakeTimers();
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeMockDbService(): DatabaseService {
+  return {
+    query: jest.fn(),
+    queryReadOnly: jest.fn().mockResolvedValue([{ id: 'uuid-1', name: 'CC' }]),
+    end: jest.fn(),
+  };
 }
 
 function makeApp(httpMethod: string, path: string): Application {
@@ -59,7 +66,12 @@ function makeApp(httpMethod: string, path: string): Application {
     },
   };
   const user: User = { sub: 'u1', email: 'u@test.com' };
-  return new Application({ event, logger: makeMockLogger(), user });
+  return new Application({
+    event,
+    logger: makeMockLogger(),
+    user,
+    dbService: makeMockDbService(),
+  });
 }
 
 // ─── Router.instantiate integration tests ─────────────────────────────────────
@@ -101,9 +113,7 @@ describe('Router.instantiate', () => {
 describe('Router.dispatch', () => {
   it('GET /documents returns a Response', async () => {
     const router = Router.instantiate(makeApp('GET', '/documents'));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(router.dispatch()).resolves.toBeInstanceOf(Response);
   });
 
   it('throws MethodNotImplementedError for POST on /documents', async () => {

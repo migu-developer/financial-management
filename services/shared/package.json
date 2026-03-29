@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
-    "@packages/models": "workspace:*"
+    "@packages/models": "workspace:*",
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",

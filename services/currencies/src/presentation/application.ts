@@ -2,12 +2,14 @@ import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/re
 import type { ModuleType } from '@services/currencies/types/module';
 import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { User } from '@packages/models/users/interface';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import { ROUTES } from './router';
 
 interface ApplicationProps {
   event: APIGatewayProxyEvent;
   user: User;
   logger: LoggerService;
+  dbService: DatabaseService;
 }
 
 export class Application {
@@ -18,12 +20,9 @@ export class Application {
   public readonly pathname: string;
   public readonly logger: LoggerService;
   public readonly user: User;
+  public readonly dbService: DatabaseService;
 
-  /**
-   * Constructor for the Application class.
-   * @param {APIGatewayProxyEvent} event - The incoming HTTP request
-   */
-  constructor({ event, logger, user }: ApplicationProps) {
+  constructor({ event, logger, user, dbService }: ApplicationProps) {
     this.event = event;
     this.method = event.httpMethod;
     this.pathname = event.path;
@@ -32,5 +31,6 @@ export class Application {
 
     this.logger = logger;
     this.user = user;
+    this.dbService = dbService;
   }
 }

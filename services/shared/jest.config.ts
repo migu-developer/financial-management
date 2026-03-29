@@ -8,7 +8,7 @@ const config: Config = {
     '^.+\\.ts$': ['ts-jest', { useESM: false }],
   },
   moduleNameMapper: {
-    '^@services/expenses/(.*)$': '<rootDir>/src/$1',
+    '^@services/shared/(.*)$': '<rootDir>/src/$1',
     '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
     '^src/(.*)$': '<rootDir>/src/$1',
   },
