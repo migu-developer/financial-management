@@ -13,15 +13,15 @@ export const ROUTES: Array<ModuleType> = [
     controller: (app: Application) => new ExpensesController(app),
   },
   {
-    url: '/expenses/{id}',
-    controller: (app: Application) => new ExpenseController(app),
-  },
-  {
     url: '/expenses/types',
     controller: (app: Application) => new ExpensesTypesController(app),
   },
   {
     url: '/expenses/categories',
     controller: (app: Application) => new ExpensesCategoriesController(app),
+  },
+  {
+    url: '/expenses/{id}',
+    controller: (app: Application) => new ExpenseController(app),
   },
 ];

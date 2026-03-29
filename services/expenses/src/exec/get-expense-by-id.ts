@@ -1,12 +1,14 @@
-import { handler } from '@services/currencies/index';
+import { handler } from '@services/expenses/index';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 
+const EXPENSE_ID = '5b7227fb-95d0-4cae-9e1d-11945aa726a8';
+
 const event = {
   httpMethod: 'GET',
-  path: '/currencies',
-  resource: '/currencies',
-  pathParameters: null,
+  path: `/expenses/${EXPENSE_ID}`,
+  resource: '/expenses/{id}',
+  pathParameters: { id: EXPENSE_ID },
   queryStringParameters: null,
   multiValueQueryStringParameters: null,
   headers: {},

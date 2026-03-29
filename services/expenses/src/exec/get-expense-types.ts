@@ -1,11 +1,11 @@
-import { handler } from '@services/currencies/index';
+import { handler } from '@services/expenses/index';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 
 const event = {
   httpMethod: 'GET',
-  path: '/currencies',
-  resource: '/currencies',
+  path: '/expenses/types',
+  resource: '/expenses/types',
   pathParameters: null,
   queryStringParameters: null,
   multiValueQueryStringParameters: null,

@@ -16,8 +16,8 @@ const event = {
   stageVariables: null,
   requestContext: {
     authorizer: {
-      sub: 'local-test-user',
-      email: 'local@example.com',
+      sub: 'b448a428-60d1-70dd-eaca-3283019d5ee0',
+      email: 'gutierrezmayamiguelangel@gmail.com',
     },
   },
 } as unknown as APIGatewayProxyEvent;
