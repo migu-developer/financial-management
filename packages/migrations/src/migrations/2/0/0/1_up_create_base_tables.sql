@@ -155,7 +155,7 @@ BEGIN
         user_info := NEW.modified_by;
     END IF;
 
-    INSERT INTO audit_logs (table_name, record_id, action, old_data, new_data, created_by)
+    INSERT INTO financial_management.audit_logs (table_name, record_id, action, old_data, new_data, created_by)
     VALUES (
         TG_TABLE_NAME,
         record_pk,
