@@ -16,9 +16,8 @@ export const createExpenseSchema = {
   schema: 'http://json-schema.org/draft-04/schema#',
   title: 'CreateExpense',
   type: 'object' as const,
-  required: ['user_id', 'name', 'value', 'currency_id', 'expense_type_id'],
+  required: ['name', 'value', 'currency_id', 'expense_type_id'],
   properties: {
-    user_id: uuidField,
     name: nameField,
     value: valueField,
     currency_id: uuidField,

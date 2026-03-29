@@ -23,7 +23,10 @@ function makeMockDbService(): DatabaseService {
   };
 }
 
-function makeApp(overrides: Partial<APIGatewayProxyEvent> = {}): Application {
+function makeApp(
+  overrides: Partial<APIGatewayProxyEvent> = {},
+  dbService: DatabaseService = makeMockDbService(),
+): Application {
   const event: APIGatewayProxyEvent = {
     httpMethod: 'GET',
     path: '/expenses',
@@ -73,7 +76,7 @@ function makeApp(overrides: Partial<APIGatewayProxyEvent> = {}): Application {
     event,
     logger: makeMockLogger(),
     user,
-    dbService: makeMockDbService(),
+    dbService,
   });
 }
 
@@ -98,9 +101,15 @@ describe('ExpensesController', () => {
     ).resolves.toBeInstanceOf(Response);
   });
 
-  it('POST returns a Response (400 for empty body)', async () => {
+  it('POST returns a Response with valid body', async () => {
+    const body = JSON.stringify({
+      name: 'Test',
+      value: 100,
+      currency_id: 'cur-1',
+      expense_type_id: 'type-1',
+    });
     await expect(
-      new ExpensesController(makeApp()).POST(),
+      new ExpensesController(makeApp({ body })).POST(),
     ).resolves.toBeInstanceOf(Response);
   });
 
@@ -189,18 +198,37 @@ describe('ExpenseController', () => {
     );
   });
 
-  it('PUT returns a Response (400 for empty body)', async () => {
-    const app = makeApp({ pathParameters: { id: 'exp-1' } });
-    await expect(new ExpenseController(app).PUT()).resolves.toBeInstanceOf(
-      Response,
-    );
+  it('PUT returns a Response with valid body', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([mockExpense]),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
+      end: jest.fn(),
+    };
+    const body = JSON.stringify({
+      name: 'Updated',
+      value: 200,
+      currency_id: 'cur-1',
+      expense_type_id: 'type-1',
+    });
+    await expect(
+      new ExpenseController(
+        makeApp({ pathParameters: { id: 'exp-1' }, body }, dbService),
+      ).PUT(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
-  it('PATCH returns a Response (400 for empty body)', async () => {
-    const app = makeApp({ pathParameters: { id: 'exp-1' } });
-    await expect(new ExpenseController(app).PATCH()).resolves.toBeInstanceOf(
-      Response,
-    );
+  it('PATCH returns a Response with valid body', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([mockExpense]),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
+      end: jest.fn(),
+    };
+    const body = JSON.stringify({ name: 'Patched' });
+    await expect(
+      new ExpenseController(
+        makeApp({ pathParameters: { id: 'exp-1' }, body }, dbService),
+      ).PATCH(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
   it('DELETE returns a Response when expense is found', async () => {

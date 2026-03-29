@@ -303,7 +303,6 @@ describe('LambdaExpensesStack', () => {
         .schema as Record<string, unknown>;
 
       expect(schema.required).toEqual([
-        'user_id',
         'name',
         'value',
         'currency_id',
@@ -315,7 +314,6 @@ describe('LambdaExpensesStack', () => {
         string,
         Record<string, unknown>
       >;
-      expect(properties.user_id).toBeDefined();
       expect(properties.name).toBeDefined();
       expect(properties.value).toBeDefined();
       expect(properties.currency_id).toBeDefined();
@@ -338,7 +336,6 @@ describe('LambdaExpensesStack', () => {
       >;
 
       const uuidFields = [
-        'user_id',
         'currency_id',
         'expense_type_id',
         'expense_category_id',

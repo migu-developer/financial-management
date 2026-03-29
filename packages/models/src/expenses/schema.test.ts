@@ -11,9 +11,8 @@ describe('createExpenseSchema', () => {
     expect(createExpenseSchema.type).toBe('object');
   });
 
-  it('requires user_id, name, value, currency_id, expense_type_id', () => {
+  it('requires name, value, currency_id, expense_type_id (user_id comes from JWT)', () => {
     expect(createExpenseSchema.required).toEqual([
-      'user_id',
       'name',
       'value',
       'currency_id',
@@ -34,7 +33,6 @@ describe('createExpenseSchema', () => {
 
   it('validates UUID pattern on all ID fields', () => {
     const idFields = [
-      'user_id',
       'currency_id',
       'expense_type_id',
       'expense_category_id',
