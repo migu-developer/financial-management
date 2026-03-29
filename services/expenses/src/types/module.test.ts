@@ -4,10 +4,15 @@ import { Application } from '@services/expenses/presentation/application';
 import { Controller } from './controller';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeMockDbService(): DatabaseService {
+  return { query: jest.fn(), queryReadOnly: jest.fn(), end: jest.fn() };
 }
 
 function makeApp(): Application {
@@ -55,7 +60,12 @@ function makeApp(): Application {
     },
   };
   const user: User = { sub: 'u1', email: 'u@test.com' };
-  return new Application({ event, logger: makeMockLogger(), user });
+  return new Application({
+    event,
+    logger: makeMockLogger(),
+    user,
+    dbService: makeMockDbService(),
+  });
 }
 
 describe('ModuleType contract', () => {

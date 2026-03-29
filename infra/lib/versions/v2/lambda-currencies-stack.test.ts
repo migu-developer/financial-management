@@ -74,6 +74,7 @@ const defaultProps = {
   stackName: 'LambdaCurrencies',
   description: 'Test Lambda Currencies stack',
   databaseUrl: 'postgresql://localhost:5432/test',
+  databaseReadonlyUrl: 'postgresql://localhost:5432/test',
   allowedOrigins: ['https://dev-financial-management.migudev.com'],
   stage: 'dev',
 };

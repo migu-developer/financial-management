@@ -44,6 +44,7 @@ const createLambdaExpensesStack: NamedStackFactory = {
         deps,
         description: 'Lambda function for expenses service',
         databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
@@ -64,6 +65,7 @@ const createLambdaDocumentsStack: NamedStackFactory = {
         deps,
         description: 'Lambda function for documents service',
         databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
@@ -84,6 +86,7 @@ const createLambdaCurrenciesStack: NamedStackFactory = {
         deps,
         description: 'Lambda function for currencies service',
         databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),

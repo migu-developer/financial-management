@@ -1,10 +1,15 @@
 import { Application } from './application';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeMockDbService(): DatabaseService {
+  return { query: jest.fn(), queryReadOnly: jest.fn(), end: jest.fn() };
 }
 
 function makeUser(): User {
@@ -66,6 +71,7 @@ describe('Application', () => {
       event: makeEvent({ httpMethod: 'POST' }),
       logger: makeMockLogger(),
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.method).toBe('POST');
   });
@@ -75,6 +81,7 @@ describe('Application', () => {
       event: makeEvent({ path: '/expenses/abc' }),
       logger: makeMockLogger(),
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.pathname).toBe('/expenses/abc');
   });
@@ -85,6 +92,7 @@ describe('Application', () => {
       event,
       logger: makeMockLogger(),
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.event).toBe(event);
   });
@@ -95,6 +103,7 @@ describe('Application', () => {
       event: makeEvent(),
       logger,
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.logger).toBe(logger);
   });
@@ -105,8 +114,20 @@ describe('Application', () => {
       event: makeEvent(),
       logger: makeMockLogger(),
       user,
+      dbService: makeMockDbService(),
     });
     expect(app.user).toBe(user);
+  });
+
+  it('stores the dbService', () => {
+    const dbService = makeMockDbService();
+    const app = new Application({
+      event: makeEvent(),
+      logger: makeMockLogger(),
+      user: makeUser(),
+      dbService,
+    });
+    expect(app.dbService).toBe(dbService);
   });
 
   it('routes include /expenses and /expenses/{id}', () => {
@@ -114,6 +135,7 @@ describe('Application', () => {
       event: makeEvent(),
       logger: makeMockLogger(),
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.routes).toContain('/expenses');
     expect(app.routes).toContain('/expenses/{id}');
@@ -124,6 +146,7 @@ describe('Application', () => {
       event: makeEvent(),
       logger: makeMockLogger(),
       user: makeUser(),
+      dbService: makeMockDbService(),
     });
     expect(app.routes.length).toBe(app.modules.length);
   });

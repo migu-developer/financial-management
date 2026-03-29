@@ -19,6 +19,7 @@ import { importFromVersion } from '@utils/cross-version';
 export interface LambdaCurrenciesStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
   readonly databaseUrl: string;
+  readonly databaseReadonlyUrl: string;
   readonly allowedOrigins: string[];
   readonly stage: string;
 }
@@ -34,6 +35,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       stackName,
       description,
       databaseUrl,
+      databaseReadonlyUrl,
       allowedOrigins,
       stage,
     } = props;
@@ -55,6 +57,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       timeout: Duration.seconds(30),
       environment: {
         DATABASE_URL: databaseUrl,
+        DATABASE_READONLY_URL: databaseReadonlyUrl,
         ALLOWED_ORIGINS: allowedOrigins.join(','),
         ALLOWED_METHODS: this.allowedMethods.join(','),
       },

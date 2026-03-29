@@ -34,6 +34,9 @@ export interface LambdaExpensesStackProps extends BaseStackProps {
   /** Database URL. */
   readonly databaseUrl: string;
 
+  /** Database readonly URL. */
+  readonly databaseReadonlyUrl: string;
+
   /** Allowed origins for CORS. */
   readonly allowedOrigins: string[];
 
@@ -66,6 +69,7 @@ export class LambdaExpensesStack extends BaseStack {
       stackName,
       description,
       databaseUrl,
+      databaseReadonlyUrl,
       allowedOrigins,
       stage,
     } = props;
@@ -87,6 +91,7 @@ export class LambdaExpensesStack extends BaseStack {
       timeout: Duration.seconds(30),
       environment: {
         DATABASE_URL: databaseUrl,
+        DATABASE_READONLY_URL: databaseReadonlyUrl,
         ALLOWED_ORIGINS: allowedOrigins.join(','),
         ALLOWED_METHODS: this.allowedMethods.join(','),
       },

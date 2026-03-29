@@ -6,9 +6,11 @@ import { Router } from '@services/expenses/router';
 import { ResultBodyUndefinedError } from '@packages/models/shared/utils/errors';
 import { ErrorHandler } from '@services/shared/domain/utils/error-handler';
 import { addCors } from '@services/shared/domain/utils/cors';
-
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
+import { PostgresDatabaseService } from '@services/shared/infrastructure/services/DatabaseServiceImp';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
+
+const dbService = new PostgresDatabaseService();
 
 export const handler = async (event: APIGatewayProxyEvent) => {
   let response: APIGatewayProxyResult | undefined = undefined;
@@ -29,6 +31,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       event: event,
       logger,
       user: claims,
+      dbService,
     });
 
     const router = Router.instantiate(app);
