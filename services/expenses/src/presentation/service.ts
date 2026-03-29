@@ -1,214 +1,169 @@
 import { Service } from '@services/expenses/types/service';
 import type { Application } from '@services/expenses/presentation/application';
+import type {
+  CreateExpenseInput,
+  PatchExpenseInput,
+} from '@packages/models/expenses';
+import { GetExpensesByUserUseCase } from '@services/expenses/application/use-cases/get-expenses-by-user.use-case';
+import { GetExpenseByIdUseCase } from '@services/expenses/application/use-cases/get-expense-by-id.use-case';
+import { CreateExpenseUseCase } from '@services/expenses/application/use-cases/create-expense.use-case';
+import { UpdateExpenseUseCase } from '@services/expenses/application/use-cases/update-expense.use-case';
+import { PatchExpenseUseCase } from '@services/expenses/application/use-cases/patch-expense.use-case';
+import { DeleteExpenseUseCase } from '@services/expenses/application/use-cases/delete-expense.use-case';
+import { GetExpenseTypesUseCase } from '@services/expenses/application/use-cases/get-expense-types.use-case';
+import { GetExpenseCategoriesUseCase } from '@services/expenses/application/use-cases/get-expense-categories.use-case';
+import { PostgresExpenseRepository } from '@services/expenses/infrastructure/repositories/postgres-expense.repository';
+import { PostgresExpenseTypeRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-type.repository';
+import { PostgresExpenseCategoryRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-category.repository';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 
-/**
- * Service for handling expenses-related HTTP requests
- * Manages expenses retrieval and update operations
- */
 export class ExpensesService extends Service {
-  /**
-   * Creates a new ExpensesService instance
-   * @param app - The application instance
-   */
   constructor(public readonly app: Application) {
     super(app);
   }
 
-  /**
-   * Handles GET requests for expenses retrieval
-   * Retrieves expenses data
-   * @returns Promise that resolves to the HTTP response with expenses data
-   */
   override async executeGET(): Promise<Response> {
     this.app.logger.info(
       'Executing expenses GET request',
       ExpensesService.name,
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expenses data' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
-    );
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new GetExpensesByUserUseCase(repository);
+    const expenses = await useCase.execute(this.app.user.sub);
+    return new Response(JSON.stringify({ success: true, data: expenses }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 
-  /**
-   * Handles POST requests for expenses creation
-   * Creates expenses data
-   * @returns Promise that resolves to the HTTP response with created expenses data
-   */
   override async executePOST(): Promise<Response> {
     this.app.logger.info(
       'Executing expenses POST request',
       ExpensesService.name,
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expenses created' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
+    const input = JSON.parse(this.app.event.body!) as Omit<
+      CreateExpenseInput,
+      'user_id'
+    >;
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new CreateExpenseUseCase(repository);
+    const expense = await useCase.execute(
+      input,
+      this.app.user.sub,
+      this.app.user.email,
     );
+    return new Response(JSON.stringify({ success: true, data: expense }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 }
 
-/**
- * Service for handling expense-related HTTP requests
- * Manages expense retrieval and update operations
- */
 export class ExpenseService extends Service {
-  /**
-   * Creates a new ExpenseService instance
-   * @param app - The application instance
-   */
   constructor(public readonly app: Application) {
     super(app);
   }
 
-  /**
-   * Handles GET requests for expense retrieval
-   * Retrieves expense data
-   * @returns Promise that resolves to the HTTP response with expense data
-   */
   override async executeGET(): Promise<Response> {
     this.app.logger.info('Executing expense GET request', ExpenseService.name);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: 'Expense data',
-        user: this.app.user,
-      }),
-      {
-        status: HttpCode.SUCCESS,
-      },
-    );
+    const id = this.app.event.pathParameters?.['id'] ?? '';
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new GetExpenseByIdUseCase(repository);
+    const expense = await useCase.execute(id, this.app.user.sub);
+    return new Response(JSON.stringify({ success: true, data: expense }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 
-  /**
-   * Handles PUT requests for expense update
-   * Updates expense data
-   * @returns Promise that resolves to the HTTP response with updated expense data
-   */
   override async executePUT(): Promise<Response> {
     this.app.logger.info('Executing expense PUT request', ExpenseService.name);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expense updated put' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
+    const id = this.app.event.pathParameters?.['id'] ?? '';
+    const input = JSON.parse(this.app.event.body!) as Omit<
+      CreateExpenseInput,
+      'user_id'
+    >;
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new UpdateExpenseUseCase(repository);
+    const expense = await useCase.execute(
+      id,
+      input,
+      this.app.user.sub,
+      this.app.user.email,
     );
+    return new Response(JSON.stringify({ success: true, data: expense }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 
-  /**
-   * Handles PATCH requests for expense update
-   * Updates expense data
-   * @returns Promise that resolves to the HTTP response with updated expense data
-   */
   override async executePATCH(): Promise<Response> {
     this.app.logger.info(
       'Executing expense PATCH request',
       ExpenseService.name,
     );
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expense updated patch' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
+    const id = this.app.event.pathParameters?.['id'] ?? '';
+    const input = JSON.parse(this.app.event.body!) as PatchExpenseInput;
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new PatchExpenseUseCase(repository);
+    const expense = await useCase.execute(
+      id,
+      input,
+      this.app.user.sub,
+      this.app.user.email,
     );
+    return new Response(JSON.stringify({ success: true, data: expense }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 
-  /**
-   * Handles DELETE requests for expense deletion
-   * Deletes expense data
-   * @returns Promise that resolves to the HTTP response with deleted expense data
-   */
   override async executeDELETE(): Promise<Response> {
     this.app.logger.info(
       'Executing expense DELETE request',
       ExpenseService.name,
     );
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expense deleted' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
-    );
+    const id = this.app.event.pathParameters?.['id'] ?? '';
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new DeleteExpenseUseCase(repository);
+    await useCase.execute(id, this.app.user.sub);
+    return new Response(JSON.stringify({ success: true }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 }
 
-/**
- * Service for handling expenses types-related HTTP requests
- * Manages expenses types retrieval and update operations
- */
 export class ExpensesTypesService extends Service {
   constructor(public readonly app: Application) {
     super(app);
   }
 
-  /**
-   * Handles GET requests for expenses types retrieval
-   * Retrieves expenses types data
-   * @returns Promise that resolves to the HTTP response with expenses types data
-   */
   override async executeGET(): Promise<Response> {
     this.app.logger.info(
       'Executing expenses types GET request',
       ExpensesTypesService.name,
     );
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expenses types data' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
-    );
+    const repository = new PostgresExpenseTypeRepository(this.app.dbService);
+    const useCase = new GetExpenseTypesUseCase(repository);
+    const types = await useCase.execute();
+    return new Response(JSON.stringify({ success: true, data: types }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 }
 
-/**
- * Service for handling expenses categories-related HTTP requests
- * Manages expenses categories retrieval and update operations
- */
 export class ExpensesCategoriesService extends Service {
   constructor(public readonly app: Application) {
     super(app);
   }
 
-  /**
-   * Handles GET requests for expenses categories retrieval
-   * Retrieves expenses categories data
-   * @returns Promise that resolves to the HTTP response with expenses categories data
-   */
   override async executeGET(): Promise<Response> {
     this.app.logger.info(
       'Executing expenses categories GET request',
       ExpensesCategoriesService.name,
     );
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({ success: true, data: 'Expenses categories data' }),
-      {
-        status: HttpCode.SUCCESS,
-      },
+    const repository = new PostgresExpenseCategoryRepository(
+      this.app.dbService,
     );
+    const useCase = new GetExpenseCategoriesUseCase(repository);
+    const categories = await useCase.execute();
+    return new Response(JSON.stringify({ success: true, data: categories }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 }
