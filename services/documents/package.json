@@ -6,7 +6,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "jest"
+    "test": "jest",
+    "execute": "tsx src/index.executor.ts"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
@@ -20,6 +21,7 @@
     "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "keywords": [],
