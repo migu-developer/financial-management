@@ -102,6 +102,11 @@ describe('ExpensesController', () => {
   });
 
   it('POST returns a Response with valid body', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([mockExpense]),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
+      end: jest.fn(),
+    };
     const body = JSON.stringify({
       name: 'Test',
       value: 100,
@@ -109,7 +114,7 @@ describe('ExpensesController', () => {
       expense_type_id: 'type-1',
     });
     await expect(
-      new ExpensesController(makeApp({ body })).POST(),
+      new ExpensesController(makeApp({ body }, dbService)).POST(),
     ).resolves.toBeInstanceOf(Response);
   });
 
