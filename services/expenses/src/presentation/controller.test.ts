@@ -8,15 +8,22 @@ import { MethodNotImplementedError } from '@packages/models/shared/utils/errors'
 import { Application } from './application';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
-
-jest.useFakeTimers();
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
 }
 
-function makeApp(): Application {
+function makeMockDbService(): DatabaseService {
+  return {
+    query: jest.fn().mockResolvedValue([]),
+    queryReadOnly: jest.fn().mockResolvedValue([]),
+    end: jest.fn(),
+  };
+}
+
+function makeApp(overrides: Partial<APIGatewayProxyEvent> = {}): Application {
   const event: APIGatewayProxyEvent = {
     httpMethod: 'GET',
     path: '/expenses',
@@ -59,24 +66,42 @@ function makeApp(): Application {
       resourceId: 'res-1',
       resourcePath: '/expenses',
     },
+    ...overrides,
   };
-  const user: User = { sub: 'u1', email: 'u@test.com' };
-  return new Application({ event, logger: makeMockLogger(), user });
+  const user: User = { sub: 'uid-123', email: 'u@test.com' };
+  return new Application({
+    event,
+    logger: makeMockLogger(),
+    user,
+    dbService: makeMockDbService(),
+  });
 }
+
+const mockExpense = {
+  id: 'exp-1',
+  user_id: 'user-1',
+  name: 'Test',
+  value: 100,
+  currency_id: 'cur-1',
+  expense_type_id: 'type-1',
+  expense_category_id: null,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+  created_by: null,
+  modified_by: null,
+};
 
 describe('ExpensesController', () => {
   it('GET returns a Response', async () => {
-    const ctrl = new ExpensesController(makeApp());
-    const p = ctrl.GET();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(
+      new ExpensesController(makeApp()).GET(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
-  it('POST returns a Response', async () => {
-    const ctrl = new ExpensesController(makeApp());
-    const p = ctrl.POST();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('POST returns a Response (400 for empty body)', async () => {
+    await expect(
+      new ExpensesController(makeApp()).POST(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
   it('PUT throws MethodNotImplementedError', () => {
@@ -99,11 +124,63 @@ describe('ExpensesController', () => {
 });
 
 describe('ExpenseController', () => {
-  it('GET returns a Response', async () => {
-    const ctrl = new ExpenseController(makeApp());
-    const p = ctrl.GET();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('GET returns a Response when expense is found', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockExpense]),
+      end: jest.fn(),
+    };
+    const app = new Application({
+      event: {
+        httpMethod: 'GET',
+        path: '/expenses/exp-1',
+        resource: '/expenses/{id}',
+        body: null,
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { id: 'exp-1' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {
+          accountId: '123',
+          apiId: 'api-id',
+          authorizer: null,
+          protocol: 'HTTP/1.1',
+          httpMethod: 'GET',
+          identity: {
+            accessKey: null,
+            accountId: null,
+            apiKey: null,
+            apiKeyId: null,
+            caller: null,
+            clientCert: null,
+            cognitoAuthenticationProvider: null,
+            cognitoAuthenticationType: null,
+            cognitoIdentityId: null,
+            cognitoIdentityPoolId: null,
+            principalOrgId: null,
+            sourceIp: '127.0.0.1',
+            user: null,
+            userAgent: null,
+            userArn: null,
+          },
+          path: '/expenses/exp-1',
+          stage: 'test',
+          requestId: 'req-1',
+          requestTimeEpoch: 0,
+          resourceId: 'res-1',
+          resourcePath: '/expenses/{id}',
+        },
+      } as APIGatewayProxyEvent,
+      logger: makeMockLogger(),
+      user: { sub: 'uid-123', email: 'u@test.com' },
+      dbService,
+    });
+    await expect(new ExpenseController(app).GET()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 
   it('POST throws MethodNotImplementedError', () => {
@@ -112,34 +189,85 @@ describe('ExpenseController', () => {
     );
   });
 
-  it('PUT returns a Response', async () => {
-    const ctrl = new ExpenseController(makeApp());
-    const p = ctrl.PUT();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('PUT returns a Response (400 for empty body)', async () => {
+    const app = makeApp({ pathParameters: { id: 'exp-1' } });
+    await expect(new ExpenseController(app).PUT()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 
-  it('PATCH returns a Response', async () => {
-    const ctrl = new ExpenseController(makeApp());
-    const p = ctrl.PATCH();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('PATCH returns a Response (400 for empty body)', async () => {
+    const app = makeApp({ pathParameters: { id: 'exp-1' } });
+    await expect(new ExpenseController(app).PATCH()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 
-  it('DELETE returns a Response', async () => {
-    const ctrl = new ExpenseController(makeApp());
-    const p = ctrl.DELETE();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('DELETE returns a Response when expense is found', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([{ id: 'exp-1' }]),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
+      end: jest.fn(),
+    };
+    const app = new Application({
+      event: {
+        httpMethod: 'DELETE',
+        path: '/expenses/exp-1',
+        resource: '/expenses/{id}',
+        body: null,
+        headers: {},
+        multiValueHeaders: {},
+        isBase64Encoded: false,
+        pathParameters: { id: 'exp-1' },
+        queryStringParameters: null,
+        multiValueQueryStringParameters: null,
+        stageVariables: null,
+        requestContext: {
+          accountId: '123',
+          apiId: 'api-id',
+          authorizer: null,
+          protocol: 'HTTP/1.1',
+          httpMethod: 'DELETE',
+          identity: {
+            accessKey: null,
+            accountId: null,
+            apiKey: null,
+            apiKeyId: null,
+            caller: null,
+            clientCert: null,
+            cognitoAuthenticationProvider: null,
+            cognitoAuthenticationType: null,
+            cognitoIdentityId: null,
+            cognitoIdentityPoolId: null,
+            principalOrgId: null,
+            sourceIp: '127.0.0.1',
+            user: null,
+            userAgent: null,
+            userArn: null,
+          },
+          path: '/expenses/exp-1',
+          stage: 'test',
+          requestId: 'req-1',
+          requestTimeEpoch: 0,
+          resourceId: 'res-1',
+          resourcePath: '/expenses/{id}',
+        },
+      } as APIGatewayProxyEvent,
+      logger: makeMockLogger(),
+      user: { sub: 'uid-123', email: 'u@test.com' },
+      dbService,
+    });
+    await expect(new ExpenseController(app).DELETE()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 });
 
 describe('ExpensesTypesController', () => {
   it('GET returns a Response', async () => {
-    const ctrl = new ExpensesTypesController(makeApp());
-    const p = ctrl.GET();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(
+      new ExpensesTypesController(makeApp()).GET(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
   it('POST throws MethodNotImplementedError', () => {
@@ -169,10 +297,9 @@ describe('ExpensesTypesController', () => {
 
 describe('ExpensesCategoriesController', () => {
   it('GET returns a Response', async () => {
-    const ctrl = new ExpensesCategoriesController(makeApp());
-    const p = ctrl.GET();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(
+      new ExpensesCategoriesController(makeApp()).GET(),
+    ).resolves.toBeInstanceOf(Response);
   });
 
   it('POST throws MethodNotImplementedError', () => {

@@ -211,18 +211,73 @@ describe('Router.dispatch', () => {
     await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
   });
 
-  it('throws MethodNotImplementedError for PUT on /expenses/:uuid', async () => {
+  it('PUT /expenses/:uuid returns a Response (400 for empty body)', async () => {
     const router = Router.instantiate(makeApp('PUT', `/expenses/${UUID}`));
-    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
+    await expect(router.dispatch()).resolves.toBeInstanceOf(Response);
   });
 
-  it('throws MethodNotImplementedError for DELETE on /expenses/:uuid', async () => {
-    const router = Router.instantiate(makeApp('DELETE', `/expenses/${UUID}`));
-    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
-  });
-
-  it('throws MethodNotImplementedError for PATCH on /expenses/:uuid', async () => {
+  it('PATCH /expenses/:uuid returns a Response (400 for empty body)', async () => {
     const router = Router.instantiate(makeApp('PATCH', `/expenses/${UUID}`));
-    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
+    await expect(router.dispatch()).resolves.toBeInstanceOf(Response);
+  });
+
+  it('DELETE /expenses/:uuid returns a Response when expense is found', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([{ id: UUID }]),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
+      end: jest.fn(),
+    };
+    const event: APIGatewayProxyEvent = {
+      httpMethod: 'DELETE',
+      path: `/expenses/${UUID}`,
+      resource: '/expenses/{id}',
+      body: null,
+      headers: {},
+      multiValueHeaders: {},
+      isBase64Encoded: false,
+      pathParameters: { id: UUID },
+      queryStringParameters: null,
+      multiValueQueryStringParameters: null,
+      stageVariables: null,
+      requestContext: {
+        accountId: '123',
+        apiId: 'api-id',
+        authorizer: null,
+        protocol: 'HTTP/1.1',
+        httpMethod: 'DELETE',
+        identity: {
+          accessKey: null,
+          accountId: null,
+          apiKey: null,
+          apiKeyId: null,
+          caller: null,
+          clientCert: null,
+          cognitoAuthenticationProvider: null,
+          cognitoAuthenticationType: null,
+          cognitoIdentityId: null,
+          cognitoIdentityPoolId: null,
+          principalOrgId: null,
+          sourceIp: '127.0.0.1',
+          user: null,
+          userAgent: null,
+          userArn: null,
+        },
+        path: `/expenses/${UUID}`,
+        stage: 'test',
+        requestId: 'req-1',
+        requestTimeEpoch: 0,
+        resourceId: 'res-1',
+        resourcePath: '/expenses/{id}',
+      },
+    };
+    const app = new Application({
+      event,
+      logger: makeMockLogger(),
+      user: { sub: 'u1', email: 'u@test.com' },
+      dbService,
+    });
+    await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 });
