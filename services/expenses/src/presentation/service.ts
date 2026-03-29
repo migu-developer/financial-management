@@ -94,31 +94,6 @@ export class ExpenseService extends Service {
   }
 
   /**
-   * Handles POST requests for expense creation
-   * Creates expense data
-   * @returns Promise that resolves to the HTTP response with created expense data
-   */
-  override async executePOST(): Promise<Response> {
-    this.app.logger.info(
-      'Executing expense POST request',
-      ExpensesService.name,
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: 'Expense created',
-        user: this.app.user,
-      }),
-      {
-        status: HttpCode.SUCCESS,
-      },
-    );
-  }
-
-  /**
    * Handles PUT requests for expense update
    * Updates expense data
    * @returns Promise that resolves to the HTTP response with updated expense data

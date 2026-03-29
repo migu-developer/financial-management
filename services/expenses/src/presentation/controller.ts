@@ -83,10 +83,10 @@ export class ExpenseController extends Controller {
 
   /**
    * Handles POST requests for expense creation
-   * @returns Promise that resolves to the HTTP response with created expense
+   * @returns throws MethodNotImplementedError
    */
-  override async POST(): Promise<Response> {
-    return this.service.executePOST();
+  override POST(): Promise<Response> {
+    throw new MethodNotImplementedError();
   }
 
   /**

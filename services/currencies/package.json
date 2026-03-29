@@ -7,7 +7,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest",
-    "execute": "tsx src/index.executor.ts"
+    "execute": "tsx src/exec/*.ts"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",

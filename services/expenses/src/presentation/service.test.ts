@@ -94,13 +94,6 @@ describe('ExpenseService', () => {
     expect((await p).status).toBe(HttpCode.SUCCESS);
   });
 
-  it('executePOST returns 200', async () => {
-    const service = new ExpenseService(makeApp());
-    const p = service.executePOST();
-    jest.runAllTimers();
-    expect((await p).status).toBe(HttpCode.SUCCESS);
-  });
-
   it('executePUT returns 200', async () => {
     const service = new ExpenseService(makeApp());
     const p = service.executePUT();

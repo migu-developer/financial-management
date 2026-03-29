@@ -106,11 +106,10 @@ describe('ExpenseController', () => {
     await expect(p).resolves.toBeInstanceOf(Response);
   });
 
-  it('POST returns a Response', async () => {
-    const ctrl = new ExpenseController(makeApp());
-    const p = ctrl.POST();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+  it('POST throws MethodNotImplementedError', () => {
+    expect(() => new ExpenseController(makeApp()).POST()).toThrow(
+      MethodNotImplementedError,
+    );
   });
 
   it('PUT returns a Response', async () => {
