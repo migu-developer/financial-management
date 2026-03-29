@@ -6,14 +6,21 @@ import {
 } from '@packages/models/shared/utils/errors';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
+import type { DatabaseService } from '@services/shared/domain/services/database';
 import type { User } from '@packages/models/users/interface';
-
-jest.useFakeTimers();
 
 const UUID = '550e8400-e29b-41d4-a716-446655440000';
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+}
+
+function makeMockDbService(): DatabaseService {
+  return {
+    query: jest.fn().mockResolvedValue([]),
+    queryReadOnly: jest.fn().mockResolvedValue([]),
+    end: jest.fn(),
+  };
 }
 
 function makeApp(httpMethod: string, path: string): Application {
@@ -61,7 +68,12 @@ function makeApp(httpMethod: string, path: string): Application {
     },
   };
   const user: User = { sub: 'u1', email: 'u@test.com' };
-  return new Application({ event, logger: makeMockLogger(), user });
+  return new Application({
+    event,
+    logger: makeMockLogger(),
+    user,
+    dbService: makeMockDbService(),
+  });
 }
 
 // ─── Router.instantiate integration tests ─────────────────────────────────────
@@ -113,16 +125,80 @@ describe('Router.instantiate', () => {
 describe('Router.dispatch', () => {
   it('GET /expenses returns a Response', async () => {
     const router = Router.instantiate(makeApp('GET', '/expenses'));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(router.dispatch()).resolves.toBeInstanceOf(Response);
   });
 
   it('GET /expenses/:uuid returns a Response', async () => {
-    const router = Router.instantiate(makeApp('GET', `/expenses/${UUID}`));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    const mockExpense = {
+      id: UUID,
+      user_id: 'u1',
+      name: 'Test',
+      value: 100,
+      currency_id: 'c1',
+      expense_type_id: 't1',
+      expense_category_id: null,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      created_by: null,
+      modified_by: null,
+    };
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockExpense]),
+      end: jest.fn(),
+    };
+    const event: APIGatewayProxyEvent = {
+      httpMethod: 'GET',
+      path: `/expenses/${UUID}`,
+      resource: '/expenses/{id}',
+      body: null,
+      headers: {},
+      multiValueHeaders: {},
+      isBase64Encoded: false,
+      pathParameters: { id: UUID },
+      queryStringParameters: null,
+      multiValueQueryStringParameters: null,
+      stageVariables: null,
+      requestContext: {
+        accountId: '123',
+        apiId: 'api-id',
+        authorizer: null,
+        protocol: 'HTTP/1.1',
+        httpMethod: 'GET',
+        identity: {
+          accessKey: null,
+          accountId: null,
+          apiKey: null,
+          apiKeyId: null,
+          caller: null,
+          clientCert: null,
+          cognitoAuthenticationProvider: null,
+          cognitoAuthenticationType: null,
+          cognitoIdentityId: null,
+          cognitoIdentityPoolId: null,
+          principalOrgId: null,
+          sourceIp: '127.0.0.1',
+          user: null,
+          userAgent: null,
+          userArn: null,
+        },
+        path: `/expenses/${UUID}`,
+        stage: 'test',
+        requestId: 'req-1',
+        requestTimeEpoch: 0,
+        resourceId: 'res-1',
+        resourcePath: '/expenses/{id}',
+      },
+    };
+    const app = new Application({
+      event,
+      logger: makeMockLogger(),
+      user: { sub: 'u1', email: 'u@test.com' },
+      dbService,
+    });
+    await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(
+      Response,
+    );
   });
 
   it('throws MethodNotImplementedError for PUT on /expenses', async () => {
@@ -135,24 +211,18 @@ describe('Router.dispatch', () => {
     await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
   });
 
-  it('PUT /expenses/:uuid resolves successfully', async () => {
+  it('throws MethodNotImplementedError for PUT on /expenses/:uuid', async () => {
     const router = Router.instantiate(makeApp('PUT', `/expenses/${UUID}`));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
   });
 
-  it('DELETE /expenses/:uuid resolves successfully', async () => {
+  it('throws MethodNotImplementedError for DELETE on /expenses/:uuid', async () => {
     const router = Router.instantiate(makeApp('DELETE', `/expenses/${UUID}`));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
   });
 
-  it('PATCH /expenses/:uuid resolves successfully', async () => {
+  it('throws MethodNotImplementedError for PATCH on /expenses/:uuid', async () => {
     const router = Router.instantiate(makeApp('PATCH', `/expenses/${UUID}`));
-    const p = router.dispatch();
-    jest.runAllTimers();
-    await expect(p).resolves.toBeInstanceOf(Response);
+    await expect(router.dispatch()).rejects.toThrow(MethodNotImplementedError);
   });
 });

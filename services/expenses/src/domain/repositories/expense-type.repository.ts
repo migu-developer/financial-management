@@ -1,5 +1,5 @@
-import type { ExpenseTypeEntity } from '@services/expenses/domain/entities/expense-type.entity';
+import type { ExpenseType } from '@packages/models/expenses';
 
 export interface ExpenseTypeRepository {
-  findAll(): Promise<ExpenseTypeEntity[]>;
+  findAll(): Promise<ExpenseType[]>;
 }

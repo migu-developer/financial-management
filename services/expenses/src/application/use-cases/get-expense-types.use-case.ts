@@ -1,10 +1,10 @@
-import type { ExpenseTypeEntity } from '@services/expenses/domain/entities/expense-type.entity';
+import type { ExpenseType } from '@packages/models/expenses';
 import type { ExpenseTypeRepository } from '@services/expenses/domain/repositories/expense-type.repository';
 
 export class GetExpenseTypesUseCase {
   constructor(private readonly repository: ExpenseTypeRepository) {}
 
-  async execute(): Promise<ExpenseTypeEntity[]> {
+  async execute(): Promise<ExpenseType[]> {
     return this.repository.findAll();
   }
 }

@@ -1,14 +1,11 @@
-import type {
-  CreateExpenseInput,
-  ExpenseEntity,
-} from '@services/expenses/domain/entities/expense.entity';
+import type { Expense, CreateExpenseInput } from '@packages/models/expenses';
 
 export interface ExpenseRepository {
-  findAllByUserUid(uid: string): Promise<ExpenseEntity[]>;
-  findByIdAndUserUid(id: string, uid: string): Promise<ExpenseEntity | null>;
+  findAllByUserUid(uid: string): Promise<Expense[]>;
+  findByIdAndUserUid(id: string, uid: string): Promise<Expense | null>;
   create(
-    input: CreateExpenseInput,
+    input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
     createdBy: string,
-  ): Promise<ExpenseEntity>;
+  ): Promise<Expense>;
 }

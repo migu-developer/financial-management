@@ -21,6 +21,7 @@
     "eslint": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "keywords": [],
