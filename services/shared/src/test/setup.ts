@@ -12,13 +12,17 @@ export class TestDatabaseService extends DatabaseService {
   constructor(
     private readonly connectionString: string,
     sourceSchema: string,
+    testRunId: string,
   ) {
     super();
     if (!sourceSchema) {
       throw new DatabaseError('sourceSchema is required for integration tests');
     }
+    if (!testRunId) {
+      throw new DatabaseError('testRunId is required for integration tests');
+    }
     this.sourceSchema = sourceSchema;
-    this.testSchema = `${sourceSchema}_test`;
+    this.testSchema = `${sourceSchema}_${testRunId}_test`;
   }
 
   get schema(): string {
