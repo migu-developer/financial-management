@@ -221,6 +221,105 @@ export default config({
         logger.info(`  1_down_${slug}.sql`);
       },
     )
+    .command(
+      'export',
+      'Export schema DDL (structure only) to a SQL file for integration tests',
+      (y) =>
+        y.option('output', {
+          alias: 'o',
+          type: 'string',
+          description: 'Output file path (relative to package root)',
+          default: 'src/exports/schema.sql',
+        }),
+      async (parsedArgv) => {
+        try {
+          const { execSync } = await import('node:child_process');
+          const fs = await import('node:fs');
+          const path = await import('node:path');
+          const config = loadConfig(parsedArgv.env);
+          const schema = config.db.schema;
+
+          logger.info(`Exporting schema "${schema}" from database...`);
+
+          let dump: string;
+          try {
+            dump = execSync(
+              `pg_dump --schema-only --no-owner --no-privileges --schema=${schema} "${config.db.connectionString}"`,
+              { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 },
+            );
+          } catch {
+            // Fallback: pg_dump version mismatch — try Docker container
+            logger.warn(
+              'Local pg_dump failed (likely version mismatch). Trying Docker container...',
+            );
+            const container = execSync(
+              "docker ps --format '{{.Names}}' | grep -i 'supabase.*db\\|postgres'",
+              { encoding: 'utf8' },
+            )
+              .trim()
+              .split('\n')[0];
+            if (!container)
+              throw new Error('No Supabase/Postgres Docker container found');
+            logger.info(`Using pg_dump from container: ${container}`);
+            dump = execSync(
+              `docker exec ${container} pg_dump --schema-only --no-owner --no-privileges --schema=${schema} -U postgres postgres`,
+              { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 },
+            );
+          }
+
+          // Strip RLS-related statements (line-by-line state machine
+          // to handle multi-line CREATE POLICY blocks)
+          const lines = dump.split('\n');
+          const cleanedLines: string[] = [];
+          let insidePolicy = false;
+          let policyCommentPhase = 0; // 0=none, 1=saw "-- Name:...POLICY", 2=saw "--"
+
+          for (const line of lines) {
+            // Skip 3-line comment headers: "-- \n-- Name: ... Type: POLICY ...\n--"
+            if (line.match(/^-- Name:.*Type: POLICY;/)) {
+              policyCommentPhase = 1;
+              continue;
+            }
+            if (policyCommentPhase === 1 && line.trim() === '--') {
+              policyCommentPhase = 0;
+              continue;
+            }
+            policyCommentPhase = 0;
+
+            // Skip ENABLE/FORCE ROW LEVEL SECURITY
+            if (/ALTER TABLE .+ (ENABLE|FORCE) ROW LEVEL SECURITY/.test(line))
+              continue;
+
+            // Skip CREATE POLICY (may span multiple lines until ;)
+            if (/^CREATE POLICY /.test(line)) {
+              insidePolicy = !line.includes(';');
+              continue;
+            }
+            if (insidePolicy) {
+              if (line.includes(';')) insidePolicy = false;
+              continue;
+            }
+
+            cleanedLines.push(line);
+          }
+
+          const cleaned = cleanedLines.join('\n');
+
+          const packageRoot = path.resolve(__dirname, '..');
+          const outputPath = path.resolve(packageRoot, parsedArgv.output);
+          fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+          fs.writeFileSync(outputPath, cleaned, 'utf8');
+
+          logger.success(`Schema exported to ${outputPath}`);
+          logger.info(
+            `Use this file to create test schemas by replacing "${schema}" with your test schema name`,
+          );
+        } catch (err) {
+          logger.error(err instanceof Error ? err.message : err);
+          process.exitCode = 1;
+        }
+      },
+    )
     .demandCommand(1, 'You must specify a command')
     .strict()
     .help();

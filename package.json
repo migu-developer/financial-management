@@ -28,7 +28,8 @@
     "migrations:migrate": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts migrate",
     "migrations:rollback": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts rollback",
     "migrations:status": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts status",
-    "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration"
+    "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration",
+    "migrations:export": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts export"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
