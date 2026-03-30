@@ -18,8 +18,8 @@
   "devDependencies": {
     "@packages/config": "workspace:*",
     "@types/pg": "catalog:",
-    "@packages/migrations": "workspace:*",
     "@types/jest": "catalog:",
+    "dotenv": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "jest": "catalog:",

@@ -1026,9 +1026,6 @@ importers:
       '@packages/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@packages/migrations':
-        specifier: workspace:*
-        version: link:../../packages/migrations
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -1038,6 +1035,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.20.0
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
       eslint:
         specifier: 'catalog:'
         version: 10.0.2(jiti@2.6.1)
@@ -1069,9 +1069,6 @@ importers:
       '@packages/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@packages/migrations':
-        specifier: workspace:*
-        version: link:../../packages/migrations
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -1081,6 +1078,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.20.0
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
       eslint:
         specifier: 'catalog:'
         version: 10.0.2(jiti@2.6.1)
@@ -1112,9 +1112,6 @@ importers:
       '@packages/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@packages/migrations':
-        specifier: workspace:*
-        version: link:../../packages/migrations
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -1124,6 +1121,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.20.0
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
       eslint:
         specifier: 'catalog:'
         version: 10.0.2(jiti@2.6.1)
@@ -1148,9 +1148,6 @@ importers:
       '@packages/models':
         specifier: workspace:*
         version: link:../../packages/models
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.3.1
       pg:
         specifier: 'catalog:'
         version: 8.20.0
@@ -1158,6 +1155,9 @@ importers:
       '@packages/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@packages/migrations':
+        specifier: workspace:*
+        version: link:../../packages/migrations
       '@types/jest':
         specifier: 'catalog:'
         version: 30.0.0
@@ -12924,7 +12924,7 @@ snapshots:
       eslint: 9.39.3(jiti@2.6.1)
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-expo: 1.0.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.3(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.39.3(jiti@2.6.1))
       eslint-plugin-react-hooks: 5.2.0(eslint@9.39.3(jiti@2.6.1))
       globals: 16.5.0
@@ -12957,7 +12957,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.3(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -12981,7 +12981,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.3(jiti@2.6.1)):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1)))(eslint@9.39.3(jiti@2.6.1)):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9

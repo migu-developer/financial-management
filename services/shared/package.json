@@ -11,11 +11,11 @@
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
     "@packages/models": "workspace:*",
-    "dotenv": "catalog:",
     "pg": "catalog:"
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
+    "@packages/migrations": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",

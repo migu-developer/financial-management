@@ -16,7 +16,8 @@
     "importHelpers": true,
     "paths": {
       "@services/shared/*": ["./src/*"],
-      "@packages/models/*": ["node_modules/@packages/models/src/*"]
+      "@packages/models/*": ["node_modules/@packages/models/src/*"],
+      "@packages/migrations/*": ["node_modules/@packages/migrations/*"]
     }
   },
   "include": ["./src", "eslint.config.ts", "jest.config.ts"],

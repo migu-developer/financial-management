@@ -11,7 +11,7 @@
     "lint:fix": "turbo lint:fix",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "test:integration": "turbo test:integration",
+    "test:integration": "turbo run test:integration --concurrency 1",
     "clean": "turbo clean",
     "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
     "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
