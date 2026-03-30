@@ -3,7 +3,7 @@ import { FixtureBase } from '@services/shared/test/fixtures/fixture.base';
 import {
   ExpenseFactory,
   type ExpenseInput,
-} from '../factories/expense.factory';
+} from '@services/expenses/test/factories/expense.factory';
 
 export interface TestExpense {
   id: string;

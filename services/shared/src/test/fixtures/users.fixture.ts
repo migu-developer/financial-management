@@ -1,6 +1,9 @@
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import { FixtureBase } from './fixture.base';
-import { UserFactory, type UserInput } from '../factories/user.factory';
+import {
+  UserFactory,
+  type UserInput,
+} from '@services/shared/test/factories/user.factory';
 
 export interface TestUser {
   id: string;
