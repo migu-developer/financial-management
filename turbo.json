@@ -53,6 +53,10 @@
     },
     "supabase:reset": {
       "cache": false
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }

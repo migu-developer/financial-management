@@ -11,6 +11,7 @@
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
     "@packages/models": "workspace:*",
+    "dotenv": "catalog:",
     "pg": "catalog:"
   },
   "devDependencies": {

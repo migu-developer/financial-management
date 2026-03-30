@@ -4,6 +4,7 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.test\\.ts$'],
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: false }],
   },

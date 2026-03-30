@@ -275,6 +275,9 @@ export default config({
           let policyCommentPhase = 0; // 0=none, 1=saw "-- Name:...POLICY", 2=saw "--"
 
           for (const line of lines) {
+            // Skip psql metacommands (\restrict, \unrestrict, etc.)
+            if (/^\\[a-z]/.test(line)) continue;
+
             // Skip 3-line comment headers: "-- \n-- Name: ... Type: POLICY ...\n--"
             if (line.match(/^-- Name:.*Type: POLICY;/)) {
               policyCommentPhase = 1;

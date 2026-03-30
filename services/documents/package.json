@@ -7,6 +7,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest",
+    "test:integration": "jest --config src/test/jest.integration.config.ts",
     "execute": "for f in src/exec/*.ts; do tsx \"$f\"; done"
   },
   "dependencies": {
@@ -16,6 +17,8 @@
   },
   "devDependencies": {
     "@packages/config": "workspace:*",
+    "@types/pg": "catalog:",
+    "@packages/migrations": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
