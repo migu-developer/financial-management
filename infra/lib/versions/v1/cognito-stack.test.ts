@@ -136,6 +136,7 @@ const defaultProps: CognitoStackProps = {
   snsMonthlySpendLimit: '1',
   smsBlockedCountries: ['US'],
   databaseUrl: 'postgresql://localhost:5432/test',
+  databaseReadonlyUrl: 'postgresql://localhost:5432/test',
 };
 
 describe('CognitoStack', () => {
@@ -321,7 +322,7 @@ describe('CognitoStack', () => {
     );
   });
 
-  test('creates UserSyncFn lambda with DATABASE_URL env var', () => {
+  test('creates UserSyncFn lambda with DATABASE_URL and DATABASE_READONLY_URL env vars', () => {
     const { NodejsFunction: NjsFn } = jest.requireMock<
       Record<string, jest.Mock>
     >('aws-cdk-lib/aws-lambda-nodejs');
@@ -331,6 +332,7 @@ describe('CognitoStack', () => {
     new CognitoStack(app as unknown as Construct, 'TestAuthStack', {
       ...defaultProps,
       databaseUrl: 'postgresql://test:5432/db',
+      databaseReadonlyUrl: 'postgresql://readonly:5432/db',
     });
 
     const userSyncCall = (NjsFn!.mock.calls as unknown[][]).find(
@@ -338,9 +340,9 @@ describe('CognitoStack', () => {
     );
     expect(userSyncCall).toBeDefined();
     const fnProps = userSyncCall![2] as Record<string, unknown>;
-    expect((fnProps.environment as Record<string, string>).DATABASE_URL).toBe(
-      'postgresql://test:5432/db',
-    );
+    const env = fnProps.environment as Record<string, string>;
+    expect(env.DATABASE_URL).toBe('postgresql://test:5432/db');
+    expect(env.DATABASE_READONLY_URL).toBe('postgresql://readonly:5432/db');
   });
 
   test('UserSyncFn bundling includes createRequire banner for pg compatibility', () => {

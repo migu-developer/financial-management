@@ -63,6 +63,7 @@ const createAuthStack: NamedStackFactory = {
         removalProtect: process.env.COGNITO_REMOVAL_PROTECT === 'true',
         cognitoEmailsPrefix: process.env.COGNITO_EMAILS_PREFIX ?? '',
         databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
       },
     ),
 };

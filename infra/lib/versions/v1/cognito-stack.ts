@@ -83,6 +83,7 @@ export interface CognitoStackProps extends BaseStackProps {
   readonly cognitoEmailsPrefix: string;
   // Database (for user sync trigger)
   readonly databaseUrl: string;
+  readonly databaseReadonlyUrl: string;
 }
 
 /**
@@ -157,6 +158,7 @@ export class CognitoStack extends BaseStack {
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
       environment: {
         DATABASE_URL: props.databaseUrl,
+        DATABASE_READONLY_URL: props.databaseReadonlyUrl,
       },
     });
 
