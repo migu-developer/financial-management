@@ -7,7 +7,7 @@ import {
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { DatabaseService } from '@services/shared/domain/services/database';
-import type { User } from '@packages/models/users/interface';
+import type { UserProfile } from '@packages/models/users/types';
 
 const UUID = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -20,6 +20,28 @@ function makeMockDbService(): DatabaseService {
     query: jest.fn().mockResolvedValue([]),
     queryReadOnly: jest.fn().mockResolvedValue([]),
     end: jest.fn(),
+  };
+}
+
+function makeUser(): UserProfile {
+  return {
+    id: 'u1',
+    uid: 'u1',
+    email: 'u@test.com',
+    first_name: 'u',
+    last_name: 'u',
+    identities: null,
+    locale: 'en',
+    picture: null,
+    phone: null,
+    document_id: null,
+    email_verified: false,
+    phone_verified: false,
+    provider_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: 'u1',
+    modified_by: 'u1',
   };
 }
 
@@ -67,7 +89,7 @@ function makeApp(httpMethod: string, path: string): Application {
       resourcePath: path,
     },
   };
-  const user: User = { sub: 'u1', email: 'u@test.com' };
+  const user: UserProfile = makeUser();
   return new Application({
     event,
     logger: makeMockLogger(),
@@ -193,7 +215,7 @@ describe('Router.dispatch', () => {
     const app = new Application({
       event,
       logger: makeMockLogger(),
-      user: { sub: 'u1', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(
@@ -282,7 +304,7 @@ describe('Router.dispatch', () => {
     const app = new Application({
       event,
       logger: makeMockLogger(),
-      user: { sub: 'u1', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(
@@ -356,7 +378,7 @@ describe('Router.dispatch', () => {
     const app = new Application({
       event,
       logger: makeMockLogger(),
-      user: { sub: 'u1', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(
@@ -416,7 +438,7 @@ describe('Router.dispatch', () => {
     const app = new Application({
       event,
       logger: makeMockLogger(),
-      user: { sub: 'u1', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(Router.instantiate(app).dispatch()).resolves.toBeInstanceOf(

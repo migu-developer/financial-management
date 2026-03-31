@@ -9,7 +9,7 @@ import { Application } from './application';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { DatabaseService } from '@services/shared/domain/services/database';
-import type { User } from '@packages/models/users/interface';
+import type { UserProfile } from '@packages/models/users/types';
 
 function makeMockLogger(): LoggerService {
   return { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
@@ -20,6 +20,28 @@ function makeMockDbService(): DatabaseService {
     query: jest.fn().mockResolvedValue([]),
     queryReadOnly: jest.fn().mockResolvedValue([]),
     end: jest.fn(),
+  };
+}
+
+function makeUser(): UserProfile {
+  return {
+    id: 'u1',
+    uid: 'u1',
+    email: 'u@test.com',
+    first_name: 'u',
+    last_name: 'u',
+    identities: null,
+    locale: 'en',
+    picture: null,
+    phone: null,
+    document_id: null,
+    email_verified: false,
+    phone_verified: false,
+    provider_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: 'u1',
+    modified_by: 'u1',
   };
 }
 
@@ -71,7 +93,7 @@ function makeApp(
     },
     ...overrides,
   };
-  const user: User = { sub: 'uid-123', email: 'u@test.com' };
+  const user: UserProfile = makeUser();
   return new Application({
     event,
     logger: makeMockLogger(),
@@ -189,7 +211,7 @@ describe('ExpenseController', () => {
         },
       } as APIGatewayProxyEvent,
       logger: makeMockLogger(),
-      user: { sub: 'uid-123', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(new ExpenseController(app).GET()).resolves.toBeInstanceOf(
@@ -287,7 +309,7 @@ describe('ExpenseController', () => {
         },
       } as APIGatewayProxyEvent,
       logger: makeMockLogger(),
-      user: { sub: 'uid-123', email: 'u@test.com' },
+      user: makeUser(),
       dbService,
     });
     await expect(new ExpenseController(app).DELETE()).resolves.toBeInstanceOf(

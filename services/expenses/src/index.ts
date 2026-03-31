@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { APIGatewayProxyResult } from '@services/shared/domain/interfaces/response';
-import type { User } from '@packages/models/users/interface';
+import type { UserProfile } from '@packages/models/users/types';
 import { Application } from '@services/expenses/presentation/application';
 import { Router } from '@services/expenses/router';
 import { ResultBodyUndefinedError } from '@packages/models/shared/utils/errors';
@@ -9,6 +9,7 @@ import { addCors } from '@services/shared/domain/utils/cors';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 import { PostgresDatabaseService } from '@services/shared/infrastructure/services/DatabaseServiceImp';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
+import { getUserProfile } from '@packages/models/users/utils';
 
 const dbService = new PostgresDatabaseService();
 
@@ -18,7 +19,11 @@ export const handler = async (event: APIGatewayProxyEvent) => {
   const logger = new LoggerServiceImplementation();
 
   try {
-    const claims = event.requestContext.authorizer as User;
+    const claims: UserProfile = getUserProfile(
+      event.requestContext.authorizer as {
+        [key: string]: unknown;
+      },
+    );
 
     logger.info('Processing expenses event', {
       httpMethod: event.httpMethod,

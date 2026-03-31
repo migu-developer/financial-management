@@ -29,7 +29,7 @@ export class ExpensesService extends Service {
     );
     const repository = new PostgresExpenseRepository(this.app.dbService);
     const useCase = new GetExpensesByUserUseCase(repository);
-    const expenses = await useCase.execute(this.app.user.sub);
+    const expenses = await useCase.execute(this.app.user.uid);
     return new Response(JSON.stringify({ success: true, data: expenses }), {
       status: HttpCode.SUCCESS,
     });
@@ -48,7 +48,7 @@ export class ExpensesService extends Service {
     const useCase = new CreateExpenseUseCase(repository);
     const expense = await useCase.execute(
       input,
-      this.app.user.sub,
+      this.app.user.uid,
       this.app.user.email,
     );
     return new Response(JSON.stringify({ success: true, data: expense }), {
@@ -67,7 +67,7 @@ export class ExpenseService extends Service {
     const id = this.app.event.pathParameters?.['id'] ?? '';
     const repository = new PostgresExpenseRepository(this.app.dbService);
     const useCase = new GetExpenseByIdUseCase(repository);
-    const expense = await useCase.execute(id, this.app.user.sub);
+    const expense = await useCase.execute(id, this.app.user.uid);
     return new Response(JSON.stringify({ success: true, data: expense }), {
       status: HttpCode.SUCCESS,
     });
@@ -85,7 +85,7 @@ export class ExpenseService extends Service {
     const expense = await useCase.execute(
       id,
       input,
-      this.app.user.sub,
+      this.app.user.uid,
       this.app.user.email,
     );
     return new Response(JSON.stringify({ success: true, data: expense }), {
@@ -105,7 +105,7 @@ export class ExpenseService extends Service {
     const expense = await useCase.execute(
       id,
       input,
-      this.app.user.sub,
+      this.app.user.uid,
       this.app.user.email,
     );
     return new Response(JSON.stringify({ success: true, data: expense }), {
@@ -121,7 +121,7 @@ export class ExpenseService extends Service {
     const id = this.app.event.pathParameters?.['id'] ?? '';
     const repository = new PostgresExpenseRepository(this.app.dbService);
     const useCase = new DeleteExpenseUseCase(repository);
-    await useCase.execute(id, this.app.user.sub);
+    await useCase.execute(id, this.app.user.uid);
     return new Response(JSON.stringify({ success: true }), {
       status: HttpCode.SUCCESS,
     });
