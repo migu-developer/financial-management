@@ -760,6 +760,9 @@ importers:
       '@services/shared':
         specifier: workspace:*
         version: link:../services/shared
+      '@services/users':
+        specifier: workspace:*
+        version: link:../services/users
       aws-cdk-lib:
         specifier: 'catalog:'
         version: 2.240.0(constructs@10.5.1)
