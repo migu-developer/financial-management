@@ -1,0 +1,47 @@
+# Integration Tests: runs services against the Supabase test database.
+# Runs on PRs (to any branch) and on push to main.
+# Note: does not run on release events — integration tests are guaranteed to have
+# already run on the underlying commit when it was pushed to main.
+name: Integration Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: Integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_READONLY_URL: ${{ secrets.DATABASE_READONLY_URL }}
+      DATABASE_SCHEMA: ${{ secrets.DATABASE_SCHEMA }}
+      TEST_RUN_ID: ${{ github.run_id }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Configure pnpm and Node.js
+        uses: ./.github/actions/configure_pnpm
+
+      - name: 📌 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📤 Export schema DDL from Supabase test database
+        run: pnpm migrations:export
+
+      - name: 🧪 Run integration tests
+        run: pnpm test:integration
