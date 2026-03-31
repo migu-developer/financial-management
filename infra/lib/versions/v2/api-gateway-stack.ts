@@ -13,6 +13,8 @@ import {
   RequestValidator,
   ResponseType,
   RestApi,
+  CfnDocumentationPart,
+  CfnDocumentationVersion,
 } from 'aws-cdk-lib/aws-apigateway';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
 import { ErrorCode } from '@packages/models/shared/utils/errors';
@@ -126,6 +128,23 @@ export class ApiGatewayStack extends BaseStack {
       `${stackName}-Authorizer`,
       { cognitoUserPools: [usersPool] },
     );
+
+    // ── API Documentation ────────────────────────────────────
+    new CfnDocumentationPart(this, `${stackName}-ApiDoc`, {
+      restApiId: this.api.restApiId,
+      location: { type: 'API' },
+      properties: JSON.stringify({
+        description:
+          'Financial Management REST API — expenses, users, currencies, documents',
+        version: '1.0.0',
+      }),
+    });
+
+    new CfnDocumentationVersion(this, `${stackName}-DocsVersion`, {
+      restApiId: this.api.restApiId,
+      documentationVersion: '1.0.0',
+      description: 'Initial API documentation',
+    });
 
     // ── Output ────────────────────────────────────────────────
     new CfnOutput(this, `${stackName}-ApiUrl`, {

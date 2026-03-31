@@ -51,6 +51,8 @@ jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   RequestValidator: jest.fn().mockImplementation(() => mockRequestValidator),
   Model: jest.fn().mockImplementation(() => mockModel),
   GatewayResponse: jest.fn(),
+  CfnDocumentationPart: jest.fn(),
+  CfnDocumentationVersion: jest.fn(),
   ResponseType: {
     BAD_REQUEST_BODY: 'BAD_REQUEST_BODY',
     BAD_REQUEST_PARAMETERS: 'BAD_REQUEST_PARAMETERS',

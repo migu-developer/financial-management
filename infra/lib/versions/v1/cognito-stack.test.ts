@@ -135,6 +135,7 @@ const defaultProps: CognitoStackProps = {
   cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
   snsMonthlySpendLimit: '1',
   smsBlockedCountries: ['US'],
+  databaseUrl: 'postgresql://localhost:5432/test',
 };
 
 describe('CognitoStack', () => {
@@ -318,6 +319,70 @@ describe('CognitoStack', () => {
         }),
       }),
     );
+  });
+
+  test('creates UserSyncFn lambda with DATABASE_URL env var', () => {
+    const { NodejsFunction: NjsFn } = jest.requireMock<
+      Record<string, jest.Mock>
+    >('aws-cdk-lib/aws-lambda-nodejs');
+    NjsFn!.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(app as unknown as Construct, 'TestAuthStack', {
+      ...defaultProps,
+      databaseUrl: 'postgresql://test:5432/db',
+    });
+
+    const userSyncCall = (NjsFn!.mock.calls as unknown[][]).find(
+      (c) => (c[1] as string) === 'UserSyncFn',
+    );
+    expect(userSyncCall).toBeDefined();
+    const fnProps = userSyncCall![2] as Record<string, unknown>;
+    expect((fnProps.environment as Record<string, string>).DATABASE_URL).toBe(
+      'postgresql://test:5432/db',
+    );
+  });
+
+  test('UserSyncFn bundling includes createRequire banner for pg compatibility', () => {
+    const { NodejsFunction: NjsFn } = jest.requireMock<
+      Record<string, jest.Mock>
+    >('aws-cdk-lib/aws-lambda-nodejs');
+    NjsFn!.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(
+      app as unknown as Construct,
+      'TestAuthStack',
+      defaultProps,
+    );
+
+    const userSyncCall = (NjsFn!.mock.calls as unknown[][]).find(
+      (c) => (c[1] as string) === 'UserSyncFn',
+    );
+    const fnProps = userSyncCall![2] as Record<string, unknown>;
+    const bundling = fnProps.bundling as Record<string, unknown>;
+    expect(bundling.banner).toContain('createRequire');
+  });
+
+  test('UserPool lambdaTriggers includes postConfirmation and postAuthentication', () => {
+    const { UserPool: MockUP } = jest.requireMock<Record<string, jest.Mock>>(
+      'aws-cdk-lib/aws-cognito',
+    );
+    MockUP!.mockClear();
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+
+    new CognitoStack(
+      app as unknown as Construct,
+      'TestAuthStack',
+      defaultProps,
+    );
+
+    const userPoolCall = MockUP!.mock.calls[0];
+    const poolProps = userPoolCall![2] as Record<string, unknown>;
+    const triggers = poolProps.lambdaTriggers as Record<string, unknown>;
+    expect(triggers.postConfirmation).toBeDefined();
+    expect(triggers.postAuthentication).toBeDefined();
+    expect(triggers.customMessage).toBeDefined();
   });
 
   test('skips protect configuration when smsBlockedCountries is empty', () => {

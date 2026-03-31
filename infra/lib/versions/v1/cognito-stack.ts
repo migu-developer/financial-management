@@ -81,6 +81,8 @@ export interface CognitoStackProps extends BaseStackProps {
   // Protection
   readonly removalProtect: boolean;
   readonly cognitoEmailsPrefix: string;
+  // Database (for user sync trigger)
+  readonly databaseUrl: string;
 }
 
 /**
@@ -136,6 +138,28 @@ export class CognitoStack extends BaseStack {
       assetsStack.bucket.grantRead(customMessageFn);
     }
 
+    // ── User Sync Lambda Trigger ─────────────────────
+    const userSyncFn = new NodejsFunction(this, 'UserSyncFn', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: join(
+        __dirname,
+        '../../../node_modules/@packages/cognito/src/user-sync/index.ts',
+      ),
+      handler: 'handler',
+      bundling: {
+        format: OutputFormat.ESM,
+        sourceMap: true,
+        minify: true,
+        banner:
+          "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      },
+      description:
+        'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
+      environment: {
+        DATABASE_URL: props.databaseUrl,
+      },
+    });
+
     // ── User Pool ──────────────────────────────────────
     this.userPool = new UserPool(this, 'UserPool', {
       selfSignUpEnabled: true,
@@ -148,6 +172,8 @@ export class CognitoStack extends BaseStack {
       snsRegion: props.snsRegion,
       lambdaTriggers: {
         customMessage: customMessageFn,
+        postConfirmation: userSyncFn,
+        postAuthentication: userSyncFn,
       },
       email: UserPoolEmail.withSES({
         fromEmail: props.sesFromEmail,

@@ -8,6 +8,13 @@ jest.mock('@utils/cross-version', () => ({
   ),
 }));
 
+jest.mock('./api-docs', () => ({
+  ApiDocumentation: jest.fn().mockImplementation(() => ({
+    addResource: jest.fn(),
+    createVersion: jest.fn(),
+  })),
+}));
+
 jest.mock('./api-gateway-stack', () => ({
   ApiGatewayStack: {
     integration: jest.fn().mockReturnValue({ integrationId: 'mock' }),

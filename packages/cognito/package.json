@@ -26,6 +26,9 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
-    "@aws-sdk/client-s3": "catalog:"
+    "@aws-sdk/client-s3": "catalog:",
+    "@packages/models": "workspace:*",
+    "@services/shared": "workspace:*",
+    "@services/users": "workspace:*"
   }
 }

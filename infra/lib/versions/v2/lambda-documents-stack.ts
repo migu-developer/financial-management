@@ -6,6 +6,7 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
+import { ApiDocumentation } from './api-docs';
 
 export interface LambdaDocumentsStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -59,5 +60,18 @@ export class LambdaDocumentsStack extends BaseStack {
     const integration = ApiGatewayStack.integration(lambda);
     const documentsResource = gateway.api.root.addResource('documents');
     documentsResource.addMethod('GET', integration, gateway.authOnly());
+
+    // ── Documentation ────────────────────────────────────
+    const docs = new ApiDocumentation(this, gateway.api, stackName);
+    docs.addResource({
+      path: '/documents',
+      description: 'Document type catalog',
+      methods: [
+        {
+          method: 'GET',
+          description: 'List all document types (CC, CE, Passport, NIT)',
+        },
+      ],
+    });
   }
 }
