@@ -1,7 +1,20 @@
 import type { CognitoUserSyncEvent } from './types';
 
-const mockCreate = jest.fn().mockResolvedValue({ id: 'user-1' });
-const mockPatch = jest.fn().mockResolvedValue({ id: 'user-1' });
+jest.mock('@aws-lambda-powertools/logger', () => ({
+  Logger: jest.fn(() => ({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  })),
+}));
+
+const mockSignupExecute = jest
+  .fn()
+  .mockResolvedValue({ action: 'created', user: { id: 'user-1' } });
+const mockLoginExecute = jest
+  .fn()
+  .mockResolvedValue({ action: 'updated', user: { id: 'user-1' } });
 const mockEnd = jest.fn().mockResolvedValue(undefined);
 
 jest.mock(
@@ -22,17 +35,23 @@ jest.mock(
   }),
 );
 
-jest.mock('@services/users/application/use-cases/create-user.use-case', () => ({
-  CreateUserUseCase: jest.fn().mockImplementation(() => ({
-    execute: mockCreate,
-  })),
-}));
+jest.mock(
+  '@user-sync/application/use-cases/sync-user-on-signup.use-case',
+  () => ({
+    SyncUserOnSignupUseCase: jest.fn().mockImplementation(() => ({
+      execute: mockSignupExecute,
+    })),
+  }),
+);
 
-jest.mock('@services/users/application/use-cases/patch-user.use-case', () => ({
-  PatchUserUseCase: jest.fn().mockImplementation(() => ({
-    execute: mockPatch,
-  })),
-}));
+jest.mock(
+  '@user-sync/application/use-cases/sync-user-on-login.use-case',
+  () => ({
+    SyncUserOnLoginUseCase: jest.fn().mockImplementation(() => ({
+      execute: mockLoginExecute,
+    })),
+  }),
+);
 
 import { handler } from './index';
 
@@ -67,76 +86,77 @@ beforeEach(() => {
 
 describe('user-sync handler', () => {
   describe('PostConfirmation_ConfirmSignUp', () => {
-    it('calls CreateUserUseCase with mapped input', async () => {
+    it('dispatches to SyncUserOnSignupUseCase via trigger map', async () => {
       const event = buildEvent('PostConfirmation_ConfirmSignUp');
       const result = await handler(event);
 
-      expect(mockCreate).toHaveBeenCalledTimes(1);
-      expect(mockCreate).toHaveBeenCalledWith(
+      expect(mockSignupExecute).toHaveBeenCalledTimes(1);
+      expect(mockSignupExecute).toHaveBeenCalledWith(
         expect.objectContaining({
           uid: 'a0000000-0000-0000-0000-000000000001',
           email: 'test@example.com',
-          first_name: 'Miguel',
         }),
         'test@example.com',
       );
+      expect(mockLoginExecute).not.toHaveBeenCalled();
       expect(result).toBe(event);
-    });
-
-    it('does not call PatchUserUseCase', async () => {
-      await handler(buildEvent('PostConfirmation_ConfirmSignUp'));
-      expect(mockPatch).not.toHaveBeenCalled();
     });
   });
 
   describe('PostAuthentication_Authentication', () => {
-    it('calls PatchUserUseCase with mapped input', async () => {
+    it('dispatches to SyncUserOnLoginUseCase via trigger map', async () => {
       const event = buildEvent('PostAuthentication_Authentication');
       const result = await handler(event);
 
-      expect(mockPatch).toHaveBeenCalledTimes(1);
-      expect(mockPatch).toHaveBeenCalledWith(
+      expect(mockLoginExecute).toHaveBeenCalledTimes(1);
+      expect(mockLoginExecute).toHaveBeenCalledWith(
         'a0000000-0000-0000-0000-000000000001',
         expect.objectContaining({
-          first_name: 'Miguel',
-          last_name: 'Gutierrez',
-          locale: 'en',
+          uid: 'a0000000-0000-0000-0000-000000000001',
         }),
+        expect.objectContaining({ first_name: 'Miguel' }),
         'test@example.com',
       );
+      expect(mockSignupExecute).not.toHaveBeenCalled();
       expect(result).toBe(event);
-    });
-
-    it('does not call CreateUserUseCase', async () => {
-      await handler(buildEvent('PostAuthentication_Authentication'));
-      expect(mockCreate).not.toHaveBeenCalled();
     });
   });
 
-  describe('PostConfirmation_ConfirmForgotPassword', () => {
-    it('does not call create or patch', async () => {
+  describe('unhandled trigger sources', () => {
+    it('skips PostConfirmation_ConfirmForgotPassword', async () => {
+      const event = buildEvent('PostConfirmation_ConfirmForgotPassword');
+      const result = await handler(event);
+
+      expect(mockSignupExecute).not.toHaveBeenCalled();
+      expect(mockLoginExecute).not.toHaveBeenCalled();
+      expect(result).toBe(event);
+    });
+
+    it('does not create repository for unhandled triggers', async () => {
       await handler(buildEvent('PostConfirmation_ConfirmForgotPassword'));
-      expect(mockCreate).not.toHaveBeenCalled();
-      expect(mockPatch).not.toHaveBeenCalled();
+      const { PostgresUserRepository } = jest.requireMock(
+        '@services/users/infrastructure/repositories/postgres-user.repository',
+      ) as { PostgresUserRepository: jest.Mock };
+      expect(PostgresUserRepository).not.toHaveBeenCalled();
     });
   });
 
   describe('lifecycle', () => {
     it('always returns the original event', async () => {
       const event = buildEvent('PostConfirmation_ConfirmSignUp');
-      const result = await handler(event);
-      expect(result).toBe(event);
+      expect(await handler(event)).toBe(event);
     });
 
-    it('always calls dbService.end() even on success', async () => {
+    it('always calls dbService.end()', async () => {
       await handler(buildEvent('PostConfirmation_ConfirmSignUp'));
       expect(mockEnd).toHaveBeenCalledTimes(1);
     });
 
-    it('always calls dbService.end() on error and rethrows', async () => {
-      mockCreate.mockRejectedValueOnce(new Error('DB down'));
-      const event = buildEvent('PostConfirmation_ConfirmSignUp');
-      await expect(handler(event)).rejects.toThrow('DB down');
+    it('calls dbService.end() on error and rethrows', async () => {
+      mockSignupExecute.mockRejectedValueOnce(new Error('DB down'));
+      await expect(
+        handler(buildEvent('PostConfirmation_ConfirmSignUp')),
+      ).rejects.toThrow('DB down');
       expect(mockEnd).toHaveBeenCalledTimes(1);
     });
   });

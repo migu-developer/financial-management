@@ -1,4 +1,4 @@
-import { mapToCreateInput, mapToPatchInput } from './mapper';
+import { mapToCreateInput, mapToPatchInput } from './cognito-user.mapper';
 
 const fullAttributes: Record<string, string> = {
   sub: 'a0000000-0000-0000-0000-000000000001',
