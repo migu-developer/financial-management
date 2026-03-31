@@ -2,7 +2,7 @@ import { handler } from '@services/expenses/index';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 
-const EXPENSE_ID = '5b7227fb-95d0-4cae-9e1d-11945aa726a8';
+const EXPENSE_ID = process.env['EXPENSE_DELETE_ID'] ?? '';
 
 const event = {
   httpMethod: 'DELETE',
@@ -18,8 +18,8 @@ const event = {
   stageVariables: null,
   requestContext: {
     authorizer: {
-      sub: 'b448a428-60d1-70dd-eaca-3283019d5ee0',
-      email: 'gutierrezmayamiguelangel@gmail.com',
+      sub: process.env['USER_ID'] ?? '',
+      email: 'test@example.com',
     },
   },
 } as unknown as APIGatewayProxyEvent;

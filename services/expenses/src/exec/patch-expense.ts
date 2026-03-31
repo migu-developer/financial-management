@@ -2,7 +2,7 @@ import { handler } from '@services/expenses/index';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 
-const EXPENSE_ID = '0a4a0c1c-ef92-472d-8204-8b64742eeffc';
+const EXPENSE_ID = process.env['EXPENSE_ID'] ?? '';
 
 const event = {
   httpMethod: 'PATCH',
@@ -21,8 +21,8 @@ const event = {
   stageVariables: null,
   requestContext: {
     authorizer: {
-      sub: 'b448a428-60d1-70dd-eaca-3283019d5ee0',
-      email: 'gutierrezmayamiguelangel@gmail.com',
+      sub: process.env['USER_ID'] ?? '',
+      email: 'test@example.com',
     },
   },
 } as unknown as APIGatewayProxyEvent;

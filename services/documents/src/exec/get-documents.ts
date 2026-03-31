@@ -16,8 +16,8 @@ const event = {
   stageVariables: null,
   requestContext: {
     authorizer: {
-      sub: 'b448a428-60d1-70dd-eaca-3283019d5ee0',
-      email: 'gutierrezmayamiguelangel@gmail.com',
+      sub: process.env['USER_ID'] ?? '',
+      email: 'test@example.com',
     },
   },
 } as unknown as APIGatewayProxyEvent;
