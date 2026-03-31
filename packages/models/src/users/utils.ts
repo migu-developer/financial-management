@@ -8,23 +8,27 @@ export const getUserProfile = (data: {
     throw new DataNotDefinedError('data is required');
   }
 
+  const data_processed: { [key: string]: unknown } = data['claims']
+    ? (data['claims'] as { [key: string]: unknown })
+    : (data as { [key: string]: unknown });
+
   return {
-    id: data['sub'],
-    uid: data['sub'],
-    email: data['email'],
-    first_name: data['first_name'],
-    last_name: data['last_name'],
-    identities: data['identities'],
-    locale: data['locale'],
-    picture: data['picture'],
-    phone: data['phone'],
-    document_id: data['document_id'],
-    email_verified: data['email_verified'],
-    phone_verified: data['phone_verified'],
-    provider_id: data['provider_id'],
-    created_at: data['created_at'],
-    updated_at: data['updated_at'],
-    created_by: data['created_by'],
-    modified_by: data['modified_by'],
+    id: data_processed['sub'],
+    uid: data_processed['sub'],
+    email: data_processed['email'],
+    first_name: data_processed['first_name'] ?? data_processed['given_name'],
+    last_name: data_processed['last_name'] ?? data_processed['family_name'],
+    identities: data_processed['identities'],
+    locale: data_processed['locale'],
+    picture: data_processed['picture'],
+    phone: data_processed['phone'],
+    document_id: data_processed['document_id'],
+    email_verified: data_processed['email_verified'],
+    phone_verified: data_processed['phone_verified'],
+    provider_id: data_processed['provider_id'],
+    created_at: data_processed['created_at'],
+    updated_at: data_processed['updated_at'],
+    created_by: data_processed['created_by'],
+    modified_by: data_processed['modified_by'],
   } as UserProfile;
 };
