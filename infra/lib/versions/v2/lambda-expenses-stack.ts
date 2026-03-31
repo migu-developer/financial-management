@@ -12,7 +12,6 @@ import { updateExpenseSchema } from '@packages/models/expenses/schema';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
-import { ApiDocumentation } from './api-docs';
 
 export interface LambdaExpensesStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -117,65 +116,5 @@ export class LambdaExpensesStack extends BaseStack {
 
     const categoriesResource = expensesResource.addResource('categories');
     categoriesResource.addMethod('GET', integration, gateway.authOnly());
-
-    // ── Documentation ────────────────────────────────────
-    const docs = new ApiDocumentation(this, gateway.api, stackName);
-    docs.addResource({
-      path: '/expenses',
-      description: 'Manage user expenses (income/outcome)',
-      methods: [
-        {
-          method: 'GET',
-          description: 'List expenses for the authenticated user (paginated)',
-          queryParameters: [
-            {
-              name: 'limit',
-              description: 'Max items per page (1-100, default 20)',
-            },
-            {
-              name: 'cursor',
-              description: 'Pagination cursor from previous response',
-            },
-          ],
-          responses: {
-            '200': 'Paginated list of expenses with next_cursor and has_more',
-          },
-        },
-        {
-          method: 'POST',
-          description: 'Create a new expense for the authenticated user',
-          requestBody:
-            'CreateExpense schema: name, value, currency_id, expense_type_id, expense_category_id (optional)',
-        },
-      ],
-    });
-    docs.addResource({
-      path: '/expenses/{id}',
-      description: 'Operations on a single expense by ID',
-      methods: [
-        { method: 'GET', description: 'Get a single expense by ID' },
-        {
-          method: 'PUT',
-          description: 'Full update of an expense',
-          requestBody: 'UpdateExpense schema',
-        },
-        {
-          method: 'PATCH',
-          description: 'Partial update of an expense',
-          requestBody: 'PatchExpense schema (minProperties: 1)',
-        },
-        { method: 'DELETE', description: 'Delete an expense by ID' },
-      ],
-    });
-    docs.addResource({
-      path: '/expenses/types',
-      description: 'Expense type catalog (income/outcome)',
-      methods: [{ method: 'GET', description: 'List all expense types' }],
-    });
-    docs.addResource({
-      path: '/expenses/categories',
-      description: 'Expense category catalog',
-      methods: [{ method: 'GET', description: 'List all expense categories' }],
-    });
   }
 }

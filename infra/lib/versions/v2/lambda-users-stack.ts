@@ -11,7 +11,6 @@ import {
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
-import { ApiDocumentation } from './api-docs';
 
 export interface LambdaUsersStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -95,34 +94,5 @@ export class LambdaUsersStack extends BaseStack {
       integration,
       gateway.authWithBodyAndParams(patchModel),
     );
-
-    // ── Documentation ────────────────────────────────────
-    const docs = new ApiDocumentation(this, gateway.api, stackName);
-    docs.addResource({
-      path: '/users',
-      description: 'User management (registration and profile)',
-      methods: [
-        {
-          method: 'POST',
-          description:
-            'Create a new user (called by Cognito PostConfirmation trigger)',
-          requestBody:
-            'CreateUser schema: uid, email (required), first_name, last_name, locale, picture, phone, identities, provider_id (optional)',
-        },
-      ],
-    });
-    docs.addResource({
-      path: '/users/{id}',
-      description: 'Operations on a single user profile by UID',
-      methods: [
-        { method: 'GET', description: 'Get user profile by UID' },
-        {
-          method: 'PATCH',
-          description: 'Update user profile',
-          requestBody:
-            'PatchUser schema: first_name, last_name, locale, picture, phone, document_id (minProperties: 1)',
-        },
-      ],
-    });
   }
 }

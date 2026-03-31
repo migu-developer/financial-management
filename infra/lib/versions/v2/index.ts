@@ -8,6 +8,7 @@ import { LambdaExpensesStack } from './lambda-expenses-stack';
 import { LambdaDocumentsStack } from './lambda-documents-stack';
 import { LambdaCurrenciesStack } from './lambda-currencies-stack';
 import { LambdaUsersStack } from './lambda-users-stack';
+import { ApiDocsStack } from './api-docs-stack';
 
 const createApiGatewayStack: NamedStackFactory = {
   name: 'ApiGateway',
@@ -133,12 +134,32 @@ const createLambdaUsersStack: NamedStackFactory = {
     ),
 };
 
-// ApiGateway MUST be first — lambda stacks depend on it via deps.getStack('ApiGateway')
+const createApiDocsStack: NamedStackFactory = {
+  name: 'ApiDocs',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new ApiDocsStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.API_DOCS}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.API_DOCS),
+        deps,
+        description: 'API Gateway documentation parts for all services',
+      },
+    ),
+};
+
+// Order matters:
+// 1. ApiGateway first (lambdas depend on it)
+// 2. Lambda stacks (add resources to the API)
+// 3. ApiDocs last (documents the fully-built API)
+// 4. AmplifyHosting (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,
   createLambdaDocumentsStack,
   createLambdaCurrenciesStack,
   createLambdaUsersStack,
+  createApiDocsStack,
   createAmplifyHostingStack,
 ];

@@ -6,7 +6,6 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
-import { ApiDocumentation } from './api-docs';
 
 export interface LambdaCurrenciesStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -60,15 +59,5 @@ export class LambdaCurrenciesStack extends BaseStack {
     const integration = ApiGatewayStack.integration(lambda);
     const currenciesResource = gateway.api.root.addResource('currencies');
     currenciesResource.addMethod('GET', integration, gateway.authOnly());
-
-    // ── Documentation ────────────────────────────────────
-    const docs = new ApiDocumentation(this, gateway.api, stackName);
-    docs.addResource({
-      path: '/currencies',
-      description: 'Currency catalog',
-      methods: [
-        { method: 'GET', description: 'List all supported currencies' },
-      ],
-    });
   }
 }

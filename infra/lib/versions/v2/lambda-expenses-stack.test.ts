@@ -1,13 +1,6 @@
 import { Construct } from 'constructs';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
 
-jest.mock('./api-docs', () => ({
-  ApiDocumentation: jest.fn().mockImplementation(() => ({
-    addResource: jest.fn(),
-    createVersion: jest.fn(),
-  })),
-}));
-
 jest.mock('./api-gateway-stack', () => ({
   ApiGatewayStack: {
     integration: jest.fn().mockReturnValue({ integrationId: 'mock' }),
