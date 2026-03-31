@@ -1,23 +1,33 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
+import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import {
+  createUserSchema,
+  patchUserSchema,
+} from '@packages/models/users/schema';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
 
-export interface LambdaDocumentsStackProps extends BaseStackProps {
+export interface LambdaUsersStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
   readonly allowedOrigins: string[];
 }
 
-export class LambdaDocumentsStack extends BaseStack {
-  private readonly allowedMethods: string[] = ['GET', 'OPTIONS'];
+export class LambdaUsersStack extends BaseStack {
+  private readonly allowedMethods: string[] = [
+    'GET',
+    'POST',
+    'PATCH',
+    'OPTIONS',
+  ];
 
-  constructor(scope: Construct, id: string, props: LambdaDocumentsStackProps) {
+  constructor(scope: Construct, id: string, props: LambdaUsersStackProps) {
     const {
       version,
       stackName,
@@ -32,11 +42,11 @@ export class LambdaDocumentsStack extends BaseStack {
     const gateway = deps?.getStack('ApiGateway') as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
-    const lambda = new NodejsFunction(this, `${stackName}-DocumentsFn`, {
+    const lambda = new NodejsFunction(this, `${stackName}-UsersFn`, {
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/documents/src/index.ts',
+        '../../../node_modules/@services/users/src/index.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,
@@ -53,9 +63,34 @@ export class LambdaDocumentsStack extends BaseStack {
       },
     });
 
+    // ── Models ───────────────────────────────────────────────
+    const createModel = gateway.createModel(
+      `${stackName}-CreateUserModel`,
+      'CreateUser',
+      createUserSchema as JsonSchema,
+    );
+    const patchModel = gateway.createModel(
+      `${stackName}-PatchUserModel`,
+      'PatchUser',
+      patchUserSchema as JsonSchema,
+    );
+
     // ── Routes ───────────────────────────────────────────────
     const integration = ApiGatewayStack.integration(lambda);
-    const documentsResource = gateway.api.root.addResource('documents');
-    documentsResource.addMethod('GET', integration, gateway.authOnly());
+
+    const usersResource = gateway.api.root.addResource('users');
+    usersResource.addMethod(
+      'POST',
+      integration,
+      gateway.authWithBody(createModel),
+    );
+
+    const singleUserResource = usersResource.addResource('{id}');
+    singleUserResource.addMethod('GET', integration, gateway.authOnly());
+    singleUserResource.addMethod(
+      'PATCH',
+      integration,
+      gateway.authWithBodyAndParams(patchModel),
+    );
   }
 }

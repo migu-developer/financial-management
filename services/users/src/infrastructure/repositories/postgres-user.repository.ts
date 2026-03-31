@@ -57,6 +57,11 @@ export class PostgresUserRepository implements UserRepository {
       values.push(input.picture);
       paramIndex++;
     }
+    if (input.phone !== undefined) {
+      setClauses.push('phone');
+      values.push(input.phone);
+      paramIndex++;
+    }
     if (input.identities !== undefined) {
       setClauses.push('identities');
       values.push(input.identities);

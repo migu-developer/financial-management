@@ -144,7 +144,7 @@ describe('AmplifyHostingStack', () => {
     );
   });
 
-  test('calls deps.getStack for LambdaExpenses', () => {
+  test('calls deps.getStack for ApiGateway', () => {
     const app = { node: { tryGetContext: jest.fn(), children: [] } };
     new AmplifyHostingStack(
       app as unknown as Construct,
@@ -164,7 +164,7 @@ describe('AmplifyHostingStack', () => {
         enableAutoBuild: false,
       },
     );
-    expect(mockGetStack).toHaveBeenCalledWith('LambdaExpenses');
+    expect(mockGetStack).toHaveBeenCalledWith('ApiGateway');
   });
 
   test('exposes amplifyApp and defaultBranch', () => {

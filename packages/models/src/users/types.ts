@@ -25,6 +25,7 @@ export interface CreateUserInput {
   last_name?: string;
   locale?: string;
   picture?: string;
+  phone?: string;
   identities?: string;
   provider_id?: string;
 }

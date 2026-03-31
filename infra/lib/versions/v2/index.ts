@@ -3,9 +3,30 @@ import { AmplifyHostingStack, AmplifyStage } from './amplify-hosting-stack';
 import type { Construct } from 'constructs';
 import { fullStackResource } from '@config/entry-config';
 import { ActiveStack } from './stacks';
+import { ApiGatewayStack } from './api-gateway-stack';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
 import { LambdaDocumentsStack } from './lambda-documents-stack';
 import { LambdaCurrenciesStack } from './lambda-currencies-stack';
+import { LambdaUsersStack } from './lambda-users-stack';
+
+const createApiGatewayStack: NamedStackFactory = {
+  name: 'ApiGateway',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new ApiGatewayStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.API_GATEWAY}Stack`),
+      {
+        deps,
+        version,
+        stackName: fullStackResource(version, ActiveStack.API_GATEWAY),
+        description: 'Shared API Gateway for all financial management services',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? '',
+      },
+    ),
+};
 
 const createAmplifyHostingStack: NamedStackFactory = {
   name: 'AmplifyHosting',
@@ -48,7 +69,6 @@ const createLambdaExpensesStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
-        stage: process.env.STAGE ?? '',
       },
     ),
 };
@@ -69,7 +89,6 @@ const createLambdaDocumentsStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
-        stage: process.env.STAGE ?? '',
       },
     ),
 };
@@ -90,14 +109,36 @@ const createLambdaCurrenciesStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
-        stage: process.env.STAGE ?? '',
       },
     ),
 };
 
+const createLambdaUsersStack: NamedStackFactory = {
+  name: 'LambdaUsers',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new LambdaUsersStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_USERS}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.LAMBDA_USERS),
+        deps,
+        description: 'Lambda function for users service',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+      },
+    ),
+};
+
+// ApiGateway MUST be first — lambda stacks depend on it via deps.getStack('ApiGateway')
 export const v2Stacks: NamedStackFactory[] = [
+  createApiGatewayStack,
   createLambdaExpensesStack,
   createLambdaDocumentsStack,
   createLambdaCurrenciesStack,
+  createLambdaUsersStack,
   createAmplifyHostingStack,
 ];

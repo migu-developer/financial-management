@@ -1,55 +1,24 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
-import { importFromVersion } from '@utils/cross-version';
-import { StackDeps } from '@utils/types';
-import { CfnOutput, Duration } from 'aws-cdk-lib';
-import {
-  AuthorizationType,
-  CognitoUserPoolsAuthorizer,
-  GatewayResponse,
-  JsonSchema,
-  LambdaIntegration,
-  MethodOptions,
-  Model,
-  RequestValidator,
-  ResponseType,
-  RestApi,
-} from 'aws-cdk-lib/aws-apigateway';
-import { UserPool } from 'aws-cdk-lib/aws-cognito';
+import type { StackDeps } from '@utils/types';
+import { Duration } from 'aws-cdk-lib';
+import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import {
   createExpenseSchema,
   patchExpenseSchema,
 } from '@packages/models/expenses';
-import { ErrorCode } from '@packages/models/shared/utils/errors';
+import { updateExpenseSchema } from '@packages/models/expenses/schema';
 import { Construct } from 'constructs';
 import { join } from 'path';
-import { updateExpenseSchema } from '@packages/models/expenses/schema';
-import { errorsSchema } from '@packages/models/expenses/error.schema';
+import { ApiGatewayStack } from './api-gateway-stack';
 
 export interface LambdaExpensesStackProps extends BaseStackProps {
-  /** Optional: only needed if this stack depends on other v2 stacks. */
   readonly deps?: StackDeps;
-
-  /** Database URL. */
   readonly databaseUrl: string;
-
-  /** Database readonly URL. */
   readonly databaseReadonlyUrl: string;
-
-  /** Allowed origins for CORS. */
   readonly allowedOrigins: string[];
-
-  /** Api gateway stage. */
-  readonly stage: string;
 }
-
-const errorCodeToResponseType: Record<ErrorCode, ResponseType> = {
-  [ErrorCode.BAD_REQUEST_BODY]: ResponseType.BAD_REQUEST_BODY,
-  [ErrorCode.BAD_REQUEST_PARAMETERS]: ResponseType.BAD_REQUEST_PARAMETERS,
-  [ErrorCode.UNAUTHORIZED]: ResponseType.UNAUTHORIZED,
-  [ErrorCode.ACCESS_DENIED]: ResponseType.ACCESS_DENIED,
-};
 
 export class LambdaExpensesStack extends BaseStack {
   private readonly allowedMethods: string[] = [
@@ -61,8 +30,6 @@ export class LambdaExpensesStack extends BaseStack {
     'OPTIONS',
   ];
 
-  public readonly api: RestApi;
-
   constructor(scope: Construct, id: string, props: LambdaExpensesStackProps) {
     const {
       version,
@@ -71,9 +38,11 @@ export class LambdaExpensesStack extends BaseStack {
       databaseUrl,
       databaseReadonlyUrl,
       allowedOrigins,
-      stage,
+      deps,
     } = props;
     super(scope, id, { version, stackName, description });
+
+    const gateway = deps?.getStack('ApiGateway') as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
     const lambda = new NodejsFunction(this, `${stackName}-ExpensesFn`, {
@@ -97,183 +66,53 @@ export class LambdaExpensesStack extends BaseStack {
       },
     });
 
-    // ── API Gateway (REST API) ─────────────────────────────────────
-    this.api = new RestApi(this, `${stackName}-ExpensesApi`, {
-      restApiName: `${stackName}-ExpensesApi`,
-      description: 'API for expenses service',
-      deployOptions: {
-        stageName: stage,
-      },
-      defaultCorsPreflightOptions: {
-        allowOrigins: allowedOrigins,
-        allowMethods: this.allowedMethods,
-        allowHeaders: [
-          'Content-Type',
-          'Authorization',
-          'X-Amz-Date',
-          'X-Api-Key',
-          'X-Amz-Security-Token',
-        ],
-        allowCredentials: true,
-        maxAge: Duration.seconds(300),
-      },
-    });
-
-    // ── Custom Error Responses ─────────────────────────────────
-    // Returns validation details instead of generic "Invalid request body"
-    for (const error of errorsSchema) {
-      new GatewayResponse(this, `${stackName}-${error.name}`, {
-        restApi: this.api,
-        type: errorCodeToResponseType[error.type],
-        statusCode: error.statusCode.toString(),
-        responseHeaders: {
-          'Access-Control-Allow-Origin': "'*'",
-        },
-        templates: {
-          'application/json': JSON.stringify(error.template),
-        },
-      });
-    }
-
-    // ── Request Validators ────────────────────────────────────
-    const bodyValidator = new RequestValidator(
-      this,
-      `${stackName}-BodyValidator`,
-      {
-        restApi: this.api,
-        requestValidatorName: `${stackName}-validate-body`,
-        validateRequestBody: true,
-        validateRequestParameters: false,
-      },
-    );
-
-    const paramsValidator = new RequestValidator(
-      this,
-      `${stackName}-ParamsValidator`,
-      {
-        restApi: this.api,
-        requestValidatorName: `${stackName}-validate-params`,
-        validateRequestBody: false,
-        validateRequestParameters: true,
-      },
-    );
-
-    const bodyAndParamsValidator = new RequestValidator(
-      this,
-      `${stackName}-BodyAndParamsValidator`,
-      {
-        restApi: this.api,
-        requestValidatorName: `${stackName}-validate-body-and-params`,
-        validateRequestBody: true,
-        validateRequestParameters: true,
-      },
-    );
-
-    // ── JSON Schema Models (from @packages/models) ─────────────
-    const createExpenseModel = new Model(
-      this,
+    // ── Models ───────────────────────────────────────────────
+    const createModel = gateway.createModel(
       `${stackName}-CreateExpenseModel`,
-      {
-        restApi: this.api,
-        contentType: 'application/json',
-        modelName: 'CreateExpense',
-        schema: createExpenseSchema as JsonSchema,
-      },
+      'CreateExpense',
+      createExpenseSchema as JsonSchema,
     );
-
-    const updateExpenseModel = new Model(
-      this,
+    const updateModel = gateway.createModel(
       `${stackName}-UpdateExpenseModel`,
-      {
-        restApi: this.api,
-        contentType: 'application/json',
-        modelName: 'UpdateExpense',
-        schema: updateExpenseSchema as JsonSchema,
-      },
+      'UpdateExpense',
+      updateExpenseSchema as JsonSchema,
     );
-
-    const patchExpenseModel = new Model(
-      this,
+    const patchModel = gateway.createModel(
       `${stackName}-PatchExpenseModel`,
-      {
-        restApi: this.api,
-        contentType: 'application/json',
-        modelName: 'PatchExpense',
-        schema: patchExpenseSchema as JsonSchema,
-      },
+      'PatchExpense',
+      patchExpenseSchema as JsonSchema,
     );
 
-    // ── Cognito Authorizer ─────────────────────────────────
-    const usersPoolArn = importFromVersion(this, 'v1', 'Auth', 'UserPoolArn');
+    // ── Routes ───────────────────────────────────────────────
+    const integration = ApiGatewayStack.integration(lambda);
+    const api = gateway.api;
 
-    const usersPool = UserPool.fromUserPoolArn(
-      this,
-      `${stackName}-ImportedUsersPool`,
-      usersPoolArn,
+    const expensesResource = api.root.addResource('expenses');
+    expensesResource.addMethod('GET', integration, gateway.authOnly());
+    expensesResource.addMethod(
+      'POST',
+      integration,
+      gateway.authWithBody(createModel),
     );
 
-    const authorizer = new CognitoUserPoolsAuthorizer(
-      this,
-      `${stackName}-ExpensesAuthorizer`,
-      { cognitoUserPools: [usersPool] },
-    );
-
-    // ── Lambda Integration ─────────────────────────────────
-    const integration = new LambdaIntegration(lambda);
-
-    // ── Method Options ─────────────────────────────────────
-    const authOnly: MethodOptions = {
-      authorizer,
-      authorizationType: AuthorizationType.COGNITO,
-      requestValidator: paramsValidator,
-    };
-
-    const authWithCreateBody: MethodOptions = {
-      authorizer,
-      authorizationType: AuthorizationType.COGNITO,
-      requestValidator: bodyValidator,
-      requestModels: { 'application/json': createExpenseModel },
-    };
-
-    const authWithUpdateBody: MethodOptions = {
-      authorizer,
-      authorizationType: AuthorizationType.COGNITO,
-      requestValidator: bodyAndParamsValidator,
-      requestModels: { 'application/json': updateExpenseModel },
-    };
-
-    const authWithPatchBody: MethodOptions = {
-      authorizer,
-      authorizationType: AuthorizationType.COGNITO,
-      requestValidator: bodyAndParamsValidator,
-      requestModels: { 'application/json': patchExpenseModel },
-    };
-
-    // ── /expenses resource (collection) ────────────────────
-    const expensesResource = this.api.root.addResource('expenses');
-    expensesResource.addMethod('GET', integration, authOnly);
-    expensesResource.addMethod('POST', integration, authWithCreateBody);
-
-    // ── /expenses/{id} resource (single item) ──────────────
     const singleExpenseResource = expensesResource.addResource('{id}');
-    singleExpenseResource.addMethod('GET', integration, authOnly);
-    singleExpenseResource.addMethod('PUT', integration, authWithUpdateBody);
-    singleExpenseResource.addMethod('PATCH', integration, authWithPatchBody);
-    singleExpenseResource.addMethod('DELETE', integration, authOnly);
+    singleExpenseResource.addMethod('GET', integration, gateway.authOnly());
+    singleExpenseResource.addMethod(
+      'PUT',
+      integration,
+      gateway.authWithBodyAndParams(updateModel),
+    );
+    singleExpenseResource.addMethod(
+      'PATCH',
+      integration,
+      gateway.authWithBodyAndParams(patchModel),
+    );
+    singleExpenseResource.addMethod('DELETE', integration, gateway.authOnly());
 
-    // ── /expenses/types resource ────────────────────────────
-    const expensesTypesResource = expensesResource.addResource('types');
-    expensesTypesResource.addMethod('GET', integration, authOnly);
+    const typesResource = expensesResource.addResource('types');
+    typesResource.addMethod('GET', integration, gateway.authOnly());
 
-    // ── /expenses/categories resource ──────────────────────
-    const expensesCategoriesResource =
-      expensesResource.addResource('categories');
-    expensesCategoriesResource.addMethod('GET', integration, authOnly);
-
-    // ── Output ─────────────────────────────────────────────
-    new CfnOutput(this, `${stackName}-ExpensesApiUrl`, {
-      value: this.api.url,
-      description: 'URL of the expenses API',
-    });
+    const categoriesResource = expensesResource.addResource('categories');
+    categoriesResource.addMethod('GET', integration, gateway.authOnly());
   }
 }

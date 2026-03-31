@@ -5,7 +5,7 @@ import { importFromVersion } from '@utils/cross-version';
 import type { Construct } from 'constructs';
 import { StackDeps } from '@utils/types';
 import { ActiveStack } from './stacks';
-import { LambdaExpensesStack } from './lambda-expenses-stack';
+import { ApiGatewayStack } from './api-gateway-stack';
 
 export type AmplifyStage = 'PRODUCTION' | 'DEVELOPMENT';
 export type AmplifyPlatform = 'WEB' | 'MOBILE';
@@ -93,8 +93,8 @@ export class AmplifyHostingStack extends BaseStack {
     );
 
     // ── Import from v2 ─────────────────────────────────
-    const expensesApiStack = deps?.getStack(ActiveStack.LAMBDA_EXPENSES) as
-      | LambdaExpensesStack
+    const apiGatewayStack = deps?.getStack(ActiveStack.API_GATEWAY) as
+      | ApiGatewayStack
       | undefined;
 
     const envVars: CfnApp.EnvironmentVariableProperty[] = [
@@ -107,7 +107,7 @@ export class AmplifyHostingStack extends BaseStack {
       { name: 'ASSETS_BUCKET_NAME', value: assetsBucketName },
       { name: 'ASSETS_BUCKET_URL', value: props.assetsBucketUrl },
       { name: 'APPLICATION_URL', value: props.applicationUrl },
-      { name: 'EXPENSES_API_URL', value: expensesApiStack?.api.url ?? '' },
+      { name: 'API_URL', value: apiGatewayStack?.api.url ?? '' },
     ];
 
     /** SPA rewrite: non-file requests serve index.html for client-side routing (React Native web). */

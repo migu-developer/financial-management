@@ -3,7 +3,9 @@
  */
 export enum ActiveStack {
   AMPLIFY_HOSTING = 'AmplifyHosting',
+  API_GATEWAY = 'ApiGateway',
   LAMBDA_EXPENSES = 'LambdaExpenses',
   LAMBDA_DOCUMENTS = 'LambdaDocuments',
   LAMBDA_CURRENCIES = 'LambdaCurrencies',
+  LAMBDA_USERS = 'LambdaUsers',
 }
