@@ -3,9 +3,16 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
 } from '@packages/models/expenses';
+import type {
+  PaginationParams,
+  PaginatedResult,
+} from '@packages/models/shared/pagination';
 
 export interface ExpenseRepository {
-  findAllByUserUid(uid: string): Promise<Expense[]>;
+  findAllByUserUid(
+    uid: string,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<Expense>>;
   findByIdAndUserUid(id: string, uid: string): Promise<Expense | null>;
   create(
     input: Omit<CreateExpenseInput, 'user_id'>,

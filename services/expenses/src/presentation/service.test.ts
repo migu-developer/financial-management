@@ -112,7 +112,7 @@ const validBody = JSON.stringify({
 });
 
 describe('ExpensesService', () => {
-  it('executeGET returns 200 with expenses from db', async () => {
+  it('executeGET returns 200 with paginated expenses from db', async () => {
     const dbService: DatabaseService = {
       query: jest.fn(),
       queryReadOnly: jest.fn().mockResolvedValue([mockExpense]),
@@ -122,9 +122,16 @@ describe('ExpensesService', () => {
       makeApp({}, dbService),
     ).executeGET();
     expect(response.status).toBe(HttpCode.SUCCESS);
-    const body = (await response.json()) as { success: boolean; data: unknown };
+    const body = (await response.json()) as {
+      success: boolean;
+      data: unknown[];
+      has_more: boolean;
+      next_cursor: string | null;
+    };
     expect(body.success).toBe(true);
     expect(body.data).toEqual([mockExpense]);
+    expect(body.has_more).toBe(false);
+    expect(body.next_cursor).toBeNull();
   });
 
   it('executeGET propagates db errors', async () => {

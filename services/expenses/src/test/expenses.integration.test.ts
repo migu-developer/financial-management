@@ -122,15 +122,17 @@ describe('PostgresExpenseRepository — integration', () => {
         expense_type_id: outcomeType.id,
       });
 
-      const expenses = await repo.findAllByUserUid(userA.uid);
+      const result = await repo.findAllByUserUid(userA.uid, { limit: 20 });
 
-      expect(expenses).toHaveLength(1);
-      expect(expenses[0]!.name).toBe('A expense');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]!.name).toBe('A expense');
     });
 
     it('returns empty array when user has no expenses', async () => {
-      const expenses = await repo.findAllByUserUid(userA.uid);
-      expect(expenses).toEqual([]);
+      const result = await repo.findAllByUserUid(userA.uid, { limit: 20 });
+      expect(result.data).toEqual([]);
+      expect(result.has_more).toBe(false);
+      expect(result.next_cursor).toBeNull();
     });
 
     it('returns expenses ordered by created_at DESC', async () => {
@@ -148,10 +150,45 @@ describe('PostgresExpenseRepository — integration', () => {
         expense_type_id: outcomeType.id,
       });
 
-      const expenses = await repo.findAllByUserUid(userA.uid);
+      const result = await repo.findAllByUserUid(userA.uid, { limit: 20 });
 
-      expect(expenses[0]!.name).toBe('Second');
-      expect(expenses[1]!.name).toBe('First');
+      expect(result.data[0]!.name).toBe('Second');
+      expect(result.data[1]!.name).toBe('First');
+    });
+
+    it('paginates with limit and cursor', async () => {
+      const fixture = new ExpenseFixture(dbService, userA.id);
+      await fixture.insert({
+        name: 'Expense 1',
+        value: 100,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+      await fixture.insert({
+        name: 'Expense 2',
+        value: 200,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+      await fixture.insert({
+        name: 'Expense 3',
+        value: 300,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+
+      const page1 = await repo.findAllByUserUid(userA.uid, { limit: 2 });
+      expect(page1.data).toHaveLength(2);
+      expect(page1.has_more).toBe(true);
+      expect(page1.next_cursor).not.toBeNull();
+
+      const page2 = await repo.findAllByUserUid(userA.uid, {
+        limit: 2,
+        cursor: page1.next_cursor!,
+      });
+      expect(page2.data).toHaveLength(1);
+      expect(page2.has_more).toBe(false);
+      expect(page2.next_cursor).toBeNull();
     });
   });
 

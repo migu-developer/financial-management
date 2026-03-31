@@ -3,6 +3,14 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
 } from '@packages/models/expenses';
+import type {
+  PaginationParams,
+  PaginatedResult,
+} from '@packages/models/shared/pagination';
+import {
+  decodeCursor,
+  buildPaginatedResult,
+} from '@packages/models/shared/pagination';
 import type { ExpenseRepository } from '@services/expenses/domain/repositories/expense.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import {
@@ -24,15 +32,30 @@ const USER_SUBQUERY = `(SELECT u.id FROM financial_management.users u WHERE u.ui
 export class PostgresExpenseRepository implements ExpenseRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
-  async findAllByUserUid(uid: string): Promise<Expense[]> {
-    return this.dbService.queryReadOnly<Expense>(
+  async findAllByUserUid(
+    uid: string,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<Expense>> {
+    const params: unknown[] = [uid, pagination.limit + 1];
+    let cursorClause = '';
+
+    if (pagination.cursor) {
+      const { created_at, id } = decodeCursor(pagination.cursor);
+      cursorClause = 'AND (e.created_at, e.id) < ($3, $4)';
+      params.push(created_at, id);
+    }
+
+    const rows = await this.dbService.queryReadOnly<Expense>(
       `SELECT ${EXPENSE_COLUMNS}
        FROM financial_management.expenses e
        JOIN financial_management.users u ON e.user_id = u.id
-       WHERE u.uid = $1
-       ORDER BY e.created_at DESC`,
-      [uid],
+       WHERE u.uid = $1 ${cursorClause}
+       ORDER BY e.created_at DESC, e.id DESC
+       LIMIT $2`,
+      params,
     );
+
+    return buildPaginatedResult(rows, pagination.limit);
   }
 
   async findByIdAndUserUid(id: string, uid: string): Promise<Expense | null> {
