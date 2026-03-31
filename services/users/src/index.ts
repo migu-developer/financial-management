@@ -19,7 +19,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
   const logger = new LoggerServiceImplementation();
 
   try {
-    const claims: UserProfile = getUserProfile(
+    const user: UserProfile = getUserProfile(
       event.requestContext.authorizer as {
         [key: string]: unknown;
       },
@@ -29,13 +29,14 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       httpMethod: event.httpMethod,
       path: event.path,
       resource: event.resource,
-      claims: claims,
+      authorizer: event.requestContext.authorizer,
+      user: user,
     });
 
     const app = new Application({
       event: event,
       logger,
-      user: claims,
+      user,
       dbService,
     });
 

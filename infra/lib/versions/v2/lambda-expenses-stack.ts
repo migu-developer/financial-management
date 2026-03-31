@@ -55,6 +55,8 @@ export class LambdaExpensesStack extends BaseStack {
         format: OutputFormat.ESM,
         sourceMap: true,
         minify: true,
+        banner:
+          "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
       handler: 'handler',
       timeout: Duration.seconds(30),
