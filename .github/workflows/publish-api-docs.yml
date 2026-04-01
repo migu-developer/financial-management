@@ -1,0 +1,195 @@
+# Publish API documentation to S3 after infrastructure deploy.
+#
+# Exports the OpenAPI spec from API Gateway and uploads it alongside
+# Swagger UI to the files.migudev.com S3 bucket for public access.
+#
+# Trigger: fires automatically after Deploy Infrastructure succeeds.
+#
+# URLs:
+#   staging:    https://files.migudev.com/api-docs/staging/index.html
+#   production: https://files.migudev.com/api-docs/production/index.html
+
+name: Publish API Docs
+
+on:
+  workflow_run:
+    workflows: ['Deploy Infrastructure']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-docs-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: ⚙️ Resolve environment
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      env_name: ${{ steps.resolve.outputs.env_name }}
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+    steps:
+      - name: 📥 Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
+      - name: ⚙️ Resolve environment from deploy artifacts
+        id: resolve
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          ARTIFACTS=$(curl -sS \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts")
+
+          if echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-production")' >/dev/null 2>&1; then
+            ENV_NAME="production"
+          else
+            ENV_NAME="staging"
+          fi
+
+          echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "Resolved environment: ${ENV_NAME}"
+
+  publish:
+    name: 📚 Publish API Docs (${{ needs.setup.outputs.env_name }})
+    needs: [setup]
+    if: needs.setup.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    environment:
+      name: ${{ needs.setup.outputs.env_name }}
+
+    env:
+      DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      PROJECT_PREFIX: ${{ vars.PROJECT_PREFIX }}
+      STAGE: ${{ vars.STAGE }}
+      API_DOCS_BUCKET: ${{ vars.API_DOCS_BUCKET }}
+      API_DOCS_PREFIX: ${{ vars.API_DOCS_PREFIX }}
+      DEPLOY_ENV: ${{ needs.setup.outputs.env_name }}
+
+    steps:
+      - name: 📥 Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
+      - name: 📦 Download CDK outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: cdk-outputs-${{ env.DEPLOY_ENV }}
+          path: .
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔐 Assume deployment role
+        uses: ./.github/actions/assume_role
+        with:
+          role-arn: ${{ env.DEPLOY_ROLE_ARN }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: 🔍 Extract API Gateway ID from CDK outputs
+        id: api
+        shell: bash
+        run: |
+          CDK_FILE=$(find . -name "cdk-outputs.json" -type f | head -1)
+          echo "Found CDK outputs at: $CDK_FILE"
+          API_URL=$(jq -r 'to_entries[].value | to_entries[] | select(.key | contains("ApiUrl")) | .value' "$CDK_FILE" | head -1)
+          API_ID=$(echo "$API_URL" | grep -oP '[a-z0-9]+(?=\.execute-api)')
+          echo "api_id=$API_ID" >> "$GITHUB_OUTPUT"
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "API Gateway ID: $API_ID"
+          echo "API URL: $API_URL"
+
+      - name: 📤 Export OpenAPI spec
+        shell: bash
+        run: |
+          mkdir -p api-docs
+          aws apigateway get-export \
+            --rest-api-id "${{ steps.api.outputs.api_id }}" \
+            --stage-name "$STAGE" \
+            --export-type oas30 \
+            --accepts application/json \
+            api-docs/openapi.json
+          echo "OpenAPI spec exported successfully"
+
+      - name: 🎨 Download Swagger UI
+        shell: bash
+        run: |
+          SWAGGER_VERSION="5.21.0"
+          curl -fsSL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui-bundle.js" -o api-docs/swagger-ui-bundle.js
+          curl -fsSL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui.css" -o api-docs/swagger-ui.css
+          echo "Swagger UI v${SWAGGER_VERSION} downloaded"
+
+      - name: 📝 Generate index.html
+        shell: bash
+        run: |
+          cat > api-docs/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Financial Management API</title>
+            <link rel="stylesheet" href="swagger-ui.css">
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="swagger-ui-bundle.js"></script>
+            <script>
+              SwaggerUIBundle({
+                url: 'openapi.json',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [SwaggerUIBundle.presets.apis],
+                layout: 'BaseLayout',
+              });
+            </script>
+          </body>
+          </html>
+          HTMLEOF
+
+      - name: ☁️ Upload to S3
+        shell: bash
+        run: |
+          aws s3 sync api-docs/ "s3://${API_DOCS_BUCKET}/${API_DOCS_PREFIX}/" \
+            --delete \
+            --cache-control "public, max-age=300"
+          echo "Uploaded to s3://${API_DOCS_BUCKET}/${API_DOCS_PREFIX}/"
+
+      - name: 📋 Job summary
+        if: always()
+        shell: bash
+        run: |
+          DOCS_URL="https://${API_DOCS_BUCKET}/${API_DOCS_PREFIX}/index.html"
+          API_URL="${{ steps.api.outputs.api_url }}"
+
+          {
+            echo "### 📚 API Documentation Published"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Environment | \`$DEPLOY_ENV\` |"
+            echo "| API Gateway | \`${{ steps.api.outputs.api_id }}\` |"
+            echo "| API URL | $API_URL |"
+            echo "| Docs URL | [$DOCS_URL]($DOCS_URL) |"
+            echo "| Region | \`$AWS_REGION\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
