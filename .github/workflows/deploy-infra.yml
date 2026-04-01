@@ -162,8 +162,11 @@ jobs:
         run: |
           missing=()
           [[ -z "$DEPLOY_ROLE_ARN" ]] && missing+=("DEPLOY_ROLE_ARN")
+          [[ -z "$AWS_REGION" ]] && missing+=("AWS_REGION")
           [[ -z "$PROJECT_PREFIX" ]] && missing+=("PROJECT_PREFIX")
+          [[ -z "$STAGE" ]] && missing+=("STAGE")
           [[ -z "$DATABASE_URL" ]] && missing+=("DATABASE_URL")
+          [[ -z "$ALLOWED_ORIGINS" ]] && missing+=("ALLOWED_ORIGINS")
           if [[ ${#missing[@]} -gt 0 ]]; then
             echo "::error::Missing required secrets/variables: ${missing[*]}"
             exit 1

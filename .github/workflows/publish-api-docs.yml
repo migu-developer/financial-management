@@ -20,13 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: >-
-    api-docs-${{
-      (github.event_name == 'workflow_run' ||
-       (github.event_name == 'release' && github.event.release.prerelease == true))
-      && 'staging'
-      || 'production'
-    }}
+  group: api-docs-${{ github.event.workflow_run.id }}
   cancel-in-progress: false
 
 jobs:
@@ -47,11 +41,27 @@ jobs:
           sparse-checkout: .github/actions
           sparse-checkout-cone-mode: false
 
-      - name: ⚙️ Resolve environment
+      - name: ⚙️ Resolve environment from deploy artifacts
         id: resolve
-        uses: ./.github/actions/resolve_deploy_env
-        with:
-          deploy_paths: '^(infra/|services/|packages/)'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          ARTIFACTS=$(curl -sS \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts")
+
+          if echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-production")' >/dev/null 2>&1; then
+            ENV_NAME="production"
+          else
+            ENV_NAME="staging"
+          fi
+
+          echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "Resolved environment: ${ENV_NAME}"
 
   publish:
     name: 📚 Publish API Docs (${{ needs.setup.outputs.env_name }})
@@ -86,6 +96,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: cdk-outputs-${{ env.DEPLOY_ENV }}
+          path: .
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -99,7 +110,9 @@ jobs:
         id: api
         shell: bash
         run: |
-          API_URL=$(jq -r 'to_entries[].value | to_entries[] | select(.key | contains("ApiUrl")) | .value' cdk-outputs.json | head -1)
+          CDK_FILE=$(find . -name "cdk-outputs.json" -type f | head -1)
+          echo "Found CDK outputs at: $CDK_FILE"
+          API_URL=$(jq -r 'to_entries[].value | to_entries[] | select(.key | contains("ApiUrl")) | .value' "$CDK_FILE" | head -1)
           API_ID=$(echo "$API_URL" | grep -oP '[a-z0-9]+(?=\.execute-api)')
           echo "api_id=$API_ID" >> "$GITHUB_OUTPUT"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
@@ -122,8 +135,8 @@ jobs:
         shell: bash
         run: |
           SWAGGER_VERSION="5.21.0"
-          curl -sL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui-bundle.js" -o api-docs/swagger-ui-bundle.js
-          curl -sL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui.css" -o api-docs/swagger-ui.css
+          curl -fsSL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui-bundle.js" -o api-docs/swagger-ui-bundle.js
+          curl -fsSL "https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui.css" -o api-docs/swagger-ui.css
           echo "Swagger UI v${SWAGGER_VERSION} downloaded"
 
       - name: 📝 Generate index.html
