@@ -13,9 +13,9 @@ export const VERSION_STACKS: Record<string, NamedStackFactory[]> = {
 };
 
 /**
- * Default version when no --context version=X is passed
+ * Default versions when no deploy versions are configured.
  */
-export const DEFAULT_VERSION = 'v1';
+export const DEFAULT_VERSIONS = ['v1'];
 
 /**
  * List of valid versions (useful for validation and scripts)

@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "keywords": [],
-  "author": "",
+  "author": "Miguel Angel Gutierrez Maya",
   "license": "ISC",
   "packageManager": "pnpm@10.29.3",
   "devDependencies": {
@@ -26,6 +26,10 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
-    "@aws-sdk/client-s3": "catalog:"
+    "@aws-sdk/client-cognito-identity-provider": "catalog:",
+    "@aws-sdk/client-s3": "catalog:",
+    "@packages/models": "workspace:*",
+    "@services/shared": "workspace:*",
+    "@services/users": "workspace:*"
   }
 }

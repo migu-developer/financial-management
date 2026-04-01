@@ -14,7 +14,8 @@
       "@utils/*": ["lib/utils/*"],
       "@config/*": ["lib/config/*"],
       "@core/*": ["lib/core/*"],
-      "@versions/*": ["lib/versions/*"]
+      "@versions/*": ["lib/versions/*"],
+      "@packages/models/*": ["node_modules/@packages/models/src/*"]
     },
     "noImplicitAny": true,
     "strictNullChecks": true,

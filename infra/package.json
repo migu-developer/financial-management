@@ -29,10 +29,16 @@
   },
   "dependencies": {
     "@packages/cognito": "workspace:*",
-    "@services/auth": "workspace:*",
+    "@packages/models": "workspace:*",
+    "@services/expenses": "workspace:*",
+    "@services/shared": "workspace:*",
+    "@services/currencies": "workspace:*",
+    "@services/documents": "workspace:*",
+    "@services/users": "workspace:*",
     "aws-cdk-lib": "catalog:",
     "constructs": "catalog:"
   },
+  "author": "Miguel Angel Gutierrez Maya",
   "packageManager": "pnpm@10.29.3",
   "engines": {
     "node": ">=24"

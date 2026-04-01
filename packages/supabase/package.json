@@ -1,0 +1,20 @@
+{
+  "name": "@packages/supabase",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Supabase local development for the financial management project",
+  "scripts": {
+    "start": "supabase start",
+    "stop": "supabase stop",
+    "status": "supabase status",
+    "reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "supabase": "catalog:"
+  },
+  "author": "Miguel Angel Gutierrez Maya",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -41,6 +41,28 @@
     },
     "email:upload": {
       "cache": false
+    },
+    "supabase:start": {
+      "cache": false
+    },
+    "supabase:stop": {
+      "cache": false
+    },
+    "supabase:status": {
+      "cache": false
+    },
+    "supabase:reset": {
+      "cache": false
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_READONLY_URL",
+        "DATABASE_SCHEMA",
+        "TEST_RUN_ID"
+      ]
     }
   }
 }

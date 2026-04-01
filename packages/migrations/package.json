@@ -1,0 +1,38 @@
+{
+  "name": "@packages/migrations",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PostgreSQL schema migration runner for the financial management project",
+  "scripts": {
+    "migrate": "tsx src/cli.ts migrate",
+    "rollback": "tsx src/cli.ts rollback",
+    "status": "tsx src/cli.ts status",
+    "create-migration": "tsx src/cli.ts create-migration",
+    "export": "tsx src/cli.ts export",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "dotenv": "catalog:",
+    "pg": "^8.16.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.4",
+    "@types/yargs": "^17.0.33",
+    "@packages/config": "workspace:*",
+    "eslint": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "jest": "catalog:",
+    "@types/jest": "catalog:",
+    "ts-jest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.29.3"
+}

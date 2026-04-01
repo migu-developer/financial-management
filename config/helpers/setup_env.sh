@@ -4,5 +4,7 @@
 
 [[ -f ./config/.env.production ]] || touch config/.env.production
 
-echo "✅ Copying default environment variables..."
-cp ./config/.env.defaults ./config/.env.local
+if [[ ! -f ./config/.env.local ]]; then
+  echo "Copying default environment variables..."
+  cp ./config/.env.defaults ./config/.env.local
+fi
