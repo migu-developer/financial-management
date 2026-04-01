@@ -1,4 +1,5 @@
 import { LinkProviderUseCase } from '@pre-signup/application/use-cases/link-provider.use-case';
+import { LinkExistingProvidersUseCase } from '@pre-signup/application/use-cases/link-existing-providers.use-case';
 import { parseExternalProvider } from '@pre-signup/infrastructure/adapters/provider-parser';
 import type { CognitoAdminPort } from '@pre-signup/domain/ports/cognito-admin.port';
 import type { PreSignUpEvent, PreSignUpTriggerSource } from '@pre-signup/types';
@@ -11,6 +12,7 @@ export type TriggerHandler = (
 export const TRIGGER_HANDLERS: Partial<
   Record<PreSignUpTriggerSource, TriggerHandler>
 > = {
+  // Social login → link to existing native user
   PreSignUp_ExternalProvider: async (event, cognitoAdmin) => {
     const { userName, userPoolId } = event;
     const email = event.request.userAttributes['email'];
@@ -30,5 +32,24 @@ export const TRIGGER_HANDLERS: Partial<
     });
 
     return result.action;
+  },
+
+  // Native signup → link any existing social accounts to this new native user
+  PreSignUp_SignUp: async (event, cognitoAdmin) => {
+    const { userName, userPoolId } = event;
+    const email = event.request.userAttributes['email'];
+
+    const useCase = new LinkExistingProvidersUseCase(cognitoAdmin);
+    const result = await useCase.execute({
+      userPoolId,
+      email: email!,
+      nativeUsername: userName,
+    });
+
+    if (result.action === 'linked') {
+      return `linked-providers:${result.linkedProviders.join(',')}`;
+    }
+
+    return 'no-existing-providers';
   },
 };
