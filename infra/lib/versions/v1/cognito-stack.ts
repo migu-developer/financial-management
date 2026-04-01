@@ -179,6 +179,20 @@ export class CognitoStack extends BaseStack {
         'Cognito PreSignUp trigger — links external providers to existing native accounts',
     });
 
+    // Grant permissions BEFORE UserPool to avoid circular dependency.
+    // Use account-scoped ARN pattern instead of userPool.userPoolArn.
+    preSignUpFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminLinkProviderForUser',
+        ],
+        resources: [
+          `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,
+        ],
+      }),
+    );
+
     // ── User Pool ──────────────────────────────────────
     this.userPool = new UserPool(this, 'UserPool', {
       selfSignUpEnabled: true,
@@ -203,17 +217,6 @@ export class CognitoStack extends BaseStack {
       }),
       removalPolicy,
     });
-
-    // ── PreSignUp IAM permissions (account linking) ───
-    preSignUpFn.addToRolePolicy(
-      new PolicyStatement({
-        actions: [
-          'cognito-idp:ListUsers',
-          'cognito-idp:AdminLinkProviderForUser',
-        ],
-        resources: [this.userPool.userPoolArn],
-      }),
-    );
 
     // ── SNS Monthly Spend Limit ───────────────────────
     new AwsCustomResource(this, 'SnsMonthlySpendLimit', {
