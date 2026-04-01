@@ -47,6 +47,7 @@ jobs:
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
+          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 170
           pg_dump --version
 
       - name: 📌 Install dependencies
