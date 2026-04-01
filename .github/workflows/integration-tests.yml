@@ -35,17 +35,25 @@ jobs:
       TEST_RUN_ID: ${{ github.run_id }}
 
     steps:
-      - name: Checkout
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Configure pnpm and Node.js
+      - name: 🔧 Configure pnpm and Node.js
         uses: ./.github/actions/configure_pnpm
 
-      - name: Install dependencies
+      - name: 🐘 Install PostgreSQL 17 client
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+
+      - name: 📌 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Export schema DDL from Supabase test database
+      - name: 📤 Export schema DDL from Supabase test database
         run: pnpm migrations:export
 
-      - name: Run integration tests
+      - name: 🧪 Run integration tests
         run: pnpm test:integration
