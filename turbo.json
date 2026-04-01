@@ -56,7 +56,13 @@
     },
     "test:integration": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_READONLY_URL",
+        "DATABASE_SCHEMA",
+        "TEST_RUN_ID"
+      ]
     }
   }
 }
