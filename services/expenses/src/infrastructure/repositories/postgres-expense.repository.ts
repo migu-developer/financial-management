@@ -55,7 +55,31 @@ export class PostgresExpenseRepository implements ExpenseRepository {
       params,
     );
 
-    return buildPaginatedResult(rows, pagination.limit);
+    const result = buildPaginatedResult(rows, pagination.limit);
+
+    if (!pagination.cursor) {
+      const countRows = await this.dbService.queryReadOnly<{ count: string }>(
+        `SELECT COUNT(*) as count
+         FROM financial_management.expenses e
+         JOIN financial_management.users u ON e.user_id = u.id
+         WHERE u.uid = $1`,
+        [uid],
+      );
+      result.total_count = parseInt(countRows[0]?.count ?? '0', 10);
+    }
+
+    return result;
+  }
+
+  async countByUserUid(uid: string): Promise<number> {
+    const rows = await this.dbService.queryReadOnly<{ count: string }>(
+      `SELECT COUNT(*) as count
+       FROM financial_management.expenses e
+       JOIN financial_management.users u ON e.user_id = u.id
+       WHERE u.uid = $1`,
+      [uid],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
   }
 
   async findByIdAndUserUid(id: string, uid: string): Promise<Expense | null> {

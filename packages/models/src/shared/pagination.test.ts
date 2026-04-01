@@ -96,4 +96,17 @@ describe('buildPaginatedResult', () => {
     expect(result.has_more).toBe(false);
     expect(result.next_cursor).toBeNull();
   });
+
+  it('does not include total_count by default', () => {
+    const items = [makeItem('a', 1)];
+    const result = buildPaginatedResult(items, 5);
+    expect(result.total_count).toBeUndefined();
+  });
+
+  it('allows total_count to be set after build', () => {
+    const items = [makeItem('a', 1)];
+    const result = buildPaginatedResult(items, 5);
+    result.total_count = 42;
+    expect(result.total_count).toBe(42);
+  });
 });

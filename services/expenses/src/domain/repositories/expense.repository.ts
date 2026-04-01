@@ -13,6 +13,7 @@ export interface ExpenseRepository {
     uid: string,
     pagination: PaginationParams,
   ): Promise<PaginatedResult<Expense>>;
+  countByUserUid(uid: string): Promise<number>;
   findByIdAndUserUid(id: string, uid: string): Promise<Expense | null>;
   create(
     input: Omit<CreateExpenseInput, 'user_id'>,

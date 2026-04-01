@@ -112,10 +112,13 @@ const validBody = JSON.stringify({
 });
 
 describe('ExpensesService', () => {
-  it('executeGET returns 200 with paginated expenses from db', async () => {
+  it('executeGET returns 200 with paginated expenses and total_count on first page', async () => {
     const dbService: DatabaseService = {
       query: jest.fn(),
-      queryReadOnly: jest.fn().mockResolvedValue([mockExpense]),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ count: '1' }]),
       end: jest.fn(),
     };
     const response = await new ExpensesService(
@@ -127,11 +130,13 @@ describe('ExpensesService', () => {
       data: unknown[];
       has_more: boolean;
       next_cursor: string | null;
+      total_count: number;
     };
     expect(body.success).toBe(true);
     expect(body.data).toEqual([mockExpense]);
     expect(body.has_more).toBe(false);
     expect(body.next_cursor).toBeNull();
+    expect(body.total_count).toBe(1);
   });
 
   it('executeGET propagates db errors', async () => {

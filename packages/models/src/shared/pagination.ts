@@ -7,6 +7,7 @@ export interface PaginatedResult<T> {
   data: T[];
   next_cursor: string | null;
   has_more: boolean;
+  total_count?: number;
 }
 
 const DEFAULT_LIMIT = 20;

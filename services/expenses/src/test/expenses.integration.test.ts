@@ -133,6 +133,7 @@ describe('PostgresExpenseRepository — integration', () => {
       expect(result.data).toEqual([]);
       expect(result.has_more).toBe(false);
       expect(result.next_cursor).toBeNull();
+      expect(result.total_count).toBe(0);
     });
 
     it('returns expenses ordered by created_at DESC', async () => {
@@ -181,6 +182,7 @@ describe('PostgresExpenseRepository — integration', () => {
       expect(page1.data).toHaveLength(2);
       expect(page1.has_more).toBe(true);
       expect(page1.next_cursor).not.toBeNull();
+      expect(page1.total_count).toBe(3);
 
       const page2 = await repo.findAllByUserUid(userA.uid, {
         limit: 2,
@@ -189,6 +191,53 @@ describe('PostgresExpenseRepository — integration', () => {
       expect(page2.data).toHaveLength(1);
       expect(page2.has_more).toBe(false);
       expect(page2.next_cursor).toBeNull();
+      expect(page2.total_count).toBeUndefined();
+    });
+  });
+
+  describe('countByUserUid', () => {
+    it('returns 0 when user has no expenses', async () => {
+      const count = await repo.countByUserUid(userA.uid);
+      expect(count).toBe(0);
+    });
+
+    it('returns correct count for user', async () => {
+      const fixture = new ExpenseFixture(dbService, userA.id);
+      await fixture.insert({
+        name: 'Expense 1',
+        value: 100,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+      await fixture.insert({
+        name: 'Expense 2',
+        value: 200,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+
+      const count = await repo.countByUserUid(userA.uid);
+      expect(count).toBe(2);
+    });
+
+    it('does not count other users expenses', async () => {
+      const fixtureA = new ExpenseFixture(dbService, userA.id);
+      const fixtureB = new ExpenseFixture(dbService, userB.id);
+      await fixtureA.insert({
+        name: 'A',
+        value: 100,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+      await fixtureB.insert({
+        name: 'B',
+        value: 200,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+      });
+
+      expect(await repo.countByUserUid(userA.uid)).toBe(1);
+      expect(await repo.countByUserUid(userB.uid)).toBe(1);
     });
   });
 
