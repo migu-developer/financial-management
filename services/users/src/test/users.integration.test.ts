@@ -121,6 +121,64 @@ describe('PostgresUserRepository — integration', () => {
     });
   });
 
+  describe('findByEmail', () => {
+    it('returns user when email matches', async () => {
+      const inserted = await userFixture.insert();
+      const found = await repo.findByEmail(inserted.email);
+
+      expect(found).not.toBeNull();
+      expect(found!.id).toBe(inserted.id);
+      expect(found!.uid).toBe(inserted.uid);
+    });
+
+    it('returns null when email does not exist', async () => {
+      const found = await repo.findByEmail('nonexistent@test.com');
+      expect(found).toBeNull();
+    });
+  });
+
+  describe('updateUid', () => {
+    it('updates uid for existing email', async () => {
+      const inserted = await userFixture.insert();
+      const newUid = 'f0000000-0000-0000-0000-000000000099';
+
+      const updated = await repo.updateUid(
+        inserted.email,
+        newUid,
+        inserted.email,
+      );
+
+      expect(updated.uid).toBe(newUid);
+      expect(updated.email).toBe(inserted.email);
+      expect(updated.modified_by).toBe(inserted.email);
+    });
+
+    it('throws when email does not exist', async () => {
+      await expect(
+        repo.updateUid(
+          'nonexistent@test.com',
+          'f0000000-0000-0000-0000-000000000099',
+          'ghost@test.com',
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('preserves other fields after uid update', async () => {
+      const inserted = await userFixture.insert();
+      const newUid = 'f0000000-0000-0000-0000-000000000088';
+
+      const updated = await repo.updateUid(
+        inserted.email,
+        newUid,
+        inserted.email,
+      );
+
+      expect(updated.first_name).toBe(inserted.first_name);
+      expect(updated.last_name).toBe(inserted.last_name);
+      expect(updated.locale).toBe(inserted.locale);
+    });
+  });
+
   describe('patch', () => {
     it('updates only provided fields', async () => {
       const inserted = await userFixture.insert();

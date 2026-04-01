@@ -29,6 +29,16 @@ export class PostgresUserRepository implements UserRepository {
     return rows[0] ?? null;
   }
 
+  async findByEmail(email: string): Promise<UserProfile | null> {
+    const rows = await this.dbService.queryReadOnly<UserProfile>(
+      `SELECT ${USER_COLUMNS}
+       FROM financial_management.users
+       WHERE email = $1`,
+      [email],
+    );
+    return rows[0] ?? null;
+  }
+
   async create(
     input: CreateUserInput,
     createdBy: string,
@@ -134,6 +144,22 @@ export class PostgresUserRepository implements UserRepository {
        WHERE uid = $${uidParam}
        RETURNING ${USER_COLUMNS}`,
       values,
+    );
+    if (!rows[0]) throw new ModuleNotFoundError();
+    return rows[0];
+  }
+
+  async updateUid(
+    email: string,
+    newUid: string,
+    modifiedBy: string,
+  ): Promise<UserProfile> {
+    const rows = await this.dbService.query<UserProfile>(
+      `UPDATE financial_management.users
+       SET uid = $1, modified_by = $2
+       WHERE email = $3
+       RETURNING ${USER_COLUMNS}`,
+      [newUid, modifiedBy, email],
     );
     if (!rows[0]) throw new ModuleNotFoundError();
     return rows[0];

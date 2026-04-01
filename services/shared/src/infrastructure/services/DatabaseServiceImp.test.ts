@@ -22,6 +22,40 @@ beforeEach(() => {
   );
 });
 
+describe('PostgresDatabaseService.requiresSsl', () => {
+  it('returns true for Supabase pooler URLs', () => {
+    expect(
+      PostgresDatabaseService.requiresSsl(
+        'postgresql://user:pass@aws-1-us-east-1.pooler.supabase.com:6543/postgres',
+      ),
+    ).toBe(true);
+  });
+
+  it('returns true for AWS RDS URLs', () => {
+    expect(
+      PostgresDatabaseService.requiresSsl(
+        'postgresql://user:pass@my-db.cluster-abc.us-east-1.rds.amazonaws.com:5432/postgres',
+      ),
+    ).toBe(true);
+  });
+
+  it('returns false for localhost', () => {
+    expect(
+      PostgresDatabaseService.requiresSsl(
+        'postgresql://postgres:postgres@localhost:54322/postgres',
+      ),
+    ).toBe(false);
+  });
+
+  it('returns false for 127.0.0.1', () => {
+    expect(
+      PostgresDatabaseService.requiresSsl(
+        'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('PostgresDatabaseService.query', () => {
   it('throws DatabaseError when DATABASE_URL is not set', async () => {
     const orig = process.env['DATABASE_URL'];

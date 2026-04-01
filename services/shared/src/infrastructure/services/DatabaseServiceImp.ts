@@ -6,11 +6,20 @@ export class PostgresDatabaseService extends DatabaseService {
   private writePool: Pool | null = null;
   private readPool: Pool | null = null;
 
+  static requiresSsl(connectionString: string): boolean {
+    return (
+      connectionString.includes('pooler.supabase.com') ||
+      connectionString.includes('amazonaws.com')
+    );
+  }
+
   private getWritePool(connectionString: string): Pool {
     this.writePool ??= new Pool({
       connectionString,
       max: 3,
-      ssl: { rejectUnauthorized: false },
+      ...(PostgresDatabaseService.requiresSsl(connectionString) && {
+        ssl: { rejectUnauthorized: false },
+      }),
     });
     return this.writePool;
   }
@@ -19,7 +28,9 @@ export class PostgresDatabaseService extends DatabaseService {
     this.readPool ??= new Pool({
       connectionString,
       max: 3,
-      ssl: { rejectUnauthorized: false },
+      ...(PostgresDatabaseService.requiresSsl(connectionString) && {
+        ssl: { rejectUnauthorized: false },
+      }),
     });
     return this.readPool;
   }
