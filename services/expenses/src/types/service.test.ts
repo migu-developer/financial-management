@@ -1,5 +1,6 @@
 import { Service } from './service';
 import { Application } from '@services/expenses/presentation/application';
+import { ServiceNotImplementedError } from '@packages/models/shared/utils/errors';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import type { LoggerService } from '@services/shared/domain/services/logger';
 import type { DatabaseService } from '@services/shared/domain/services/database';
@@ -90,43 +91,33 @@ describe('Service (default wrappers)', () => {
     expect(new Service(app).application).toBe(app);
   });
 
-  it('executeGET returns a Response with "Not implemented" body', async () => {
-    const response = await new Service(makeApp()).executeGET();
-    expect(response).toBeInstanceOf(Response);
-    expect(await response.text()).toBe('Not implemented');
-  });
-
-  it('executePOST returns a Response', async () => {
-    expect(await new Service(makeApp()).executePOST()).toBeInstanceOf(Response);
-  });
-
-  it('executePUT returns a Response', async () => {
-    expect(await new Service(makeApp()).executePUT()).toBeInstanceOf(Response);
-  });
-
-  it('executePATCH returns a Response', async () => {
-    expect(await new Service(makeApp()).executePATCH()).toBeInstanceOf(
-      Response,
+  it('executeGET throws ServiceNotImplementedError', async () => {
+    await expect(new Service(makeApp()).executeGET()).rejects.toThrow(
+      ServiceNotImplementedError,
     );
   });
 
-  it('executeDELETE returns a Response', async () => {
-    expect(await new Service(makeApp()).executeDELETE()).toBeInstanceOf(
-      Response,
+  it('executePOST throws ServiceNotImplementedError', async () => {
+    await expect(new Service(makeApp()).executePOST()).rejects.toThrow(
+      ServiceNotImplementedError,
     );
   });
 
-  it('all default methods return "Not implemented" body', async () => {
-    const service = new Service(makeApp());
-    const methods = [
-      service.executeGET(),
-      service.executePOST(),
-      service.executePUT(),
-      service.executePATCH(),
-      service.executeDELETE(),
-    ];
-    const responses = await Promise.all(methods);
-    const bodies = await Promise.all(responses.map((r) => r.text()));
-    expect(bodies.every((b) => b === 'Not implemented')).toBe(true);
+  it('executePUT throws ServiceNotImplementedError', async () => {
+    await expect(new Service(makeApp()).executePUT()).rejects.toThrow(
+      ServiceNotImplementedError,
+    );
+  });
+
+  it('executePATCH throws ServiceNotImplementedError', async () => {
+    await expect(new Service(makeApp()).executePATCH()).rejects.toThrow(
+      ServiceNotImplementedError,
+    );
+  });
+
+  it('executeDELETE throws ServiceNotImplementedError', async () => {
+    await expect(new Service(makeApp()).executeDELETE()).rejects.toThrow(
+      ServiceNotImplementedError,
+    );
   });
 });

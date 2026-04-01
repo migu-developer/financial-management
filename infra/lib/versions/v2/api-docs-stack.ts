@@ -2,6 +2,7 @@ import { BaseStack, BaseStackProps } from '@core/base-stack';
 import type { StackDeps } from '@utils/types';
 import { Construct } from 'constructs';
 import { ApiGatewayStack } from './api-gateway-stack';
+import { ActiveStack } from './stacks';
 import { ApiDocumentation } from './api-docs';
 
 export interface ApiDocsStackProps extends BaseStackProps {
@@ -13,7 +14,7 @@ export class ApiDocsStack extends BaseStack {
     const { version, stackName, description, deps } = props;
     super(scope, id, { version, stackName, description });
 
-    const gateway = deps?.getStack('ApiGateway') as ApiGatewayStack;
+    const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
     const docs = new ApiDocumentation(this, gateway.api, stackName);
 
     // ── API-level documentation ──────────────────────────

@@ -21,9 +21,9 @@ describe('LoggerServiceImplementation', () => {
     logger = new LoggerServiceImplementation();
   });
 
-  it('creates the underlying Logger with serviceName "expenses-service"', () => {
+  it('creates the underlying Logger with default serviceName "app"', () => {
     expect(jest.mocked(Logger)).toHaveBeenCalledWith({
-      serviceName: 'expenses-service',
+      serviceName: 'app',
     });
   });
 

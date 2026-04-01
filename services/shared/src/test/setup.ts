@@ -22,7 +22,8 @@ export class TestDatabaseService extends DatabaseService {
       throw new DatabaseError('testRunId is required for integration tests');
     }
     this.sourceSchema = sourceSchema;
-    this.testSchema = `${sourceSchema}_${testRunId}_test`;
+    const sanitizedRunId = testRunId.replace(/[^A-Za-z0-9_]/g, '_');
+    this.testSchema = `${sourceSchema}_${sanitizedRunId}_test`;
   }
 
   get schema(): string {

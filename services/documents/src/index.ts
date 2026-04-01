@@ -62,7 +62,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
     response = ErrorHandler.handle(error, logger);
   } finally {
     if (response !== undefined) {
-      response.headers = addCors(response);
+      response.headers = addCors(response, event.headers);
       logger.info(`Response: ${JSON.stringify(response)}`, handler.name);
     }
   }

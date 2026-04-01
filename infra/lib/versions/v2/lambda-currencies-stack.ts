@@ -6,6 +6,7 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
+import { ActiveStack } from './stacks';
 
 export interface LambdaCurrenciesStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -29,7 +30,7 @@ export class LambdaCurrenciesStack extends BaseStack {
     } = props;
     super(scope, id, { version, stackName, description });
 
-    const gateway = deps?.getStack('ApiGateway') as ApiGatewayStack;
+    const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
     const lambda = new NodejsFunction(this, `${stackName}-CurrenciesFn`, {

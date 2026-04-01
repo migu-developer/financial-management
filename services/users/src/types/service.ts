@@ -28,35 +28,35 @@ class BaseService {
 const ExecuteGETWrapper = (superclass: typeof BaseService) =>
   class extends superclass {
     override async executeGET(): Promise<Response> {
-      return Promise.resolve(new Response('Not implemented'));
+      return super.executeGET();
     }
   };
 
 const ExecutePOSTWrapper = (superclass: typeof BaseService) =>
   class extends superclass {
     override async executePOST(): Promise<Response> {
-      return Promise.resolve(new Response('Not implemented'));
+      return super.executePOST();
     }
   };
 
 const ExecutePUTWrapper = (superclass: typeof BaseService) =>
   class extends superclass {
     override async executePUT(): Promise<Response> {
-      return Promise.resolve(new Response('Not implemented'));
+      return super.executePUT();
     }
   };
 
 const ExecutePATCHWrapper = (superclass: typeof BaseService) =>
   class extends superclass {
     override async executePATCH(): Promise<Response> {
-      return Promise.resolve(new Response('Not implemented'));
+      return super.executePATCH();
     }
   };
 
 const ExecuteDELETEWrapper = (superclass: typeof BaseService) =>
   class extends superclass {
     override async executeDELETE(): Promise<Response> {
-      return Promise.resolve(new Response('Not implemented'));
+      return super.executeDELETE();
     }
   };
 

@@ -12,6 +12,7 @@ import { updateExpenseSchema } from '@packages/models/expenses/schema';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
+import { ActiveStack } from './stacks';
 
 export interface LambdaExpensesStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
@@ -42,7 +43,7 @@ export class LambdaExpensesStack extends BaseStack {
     } = props;
     super(scope, id, { version, stackName, description });
 
-    const gateway = deps?.getStack('ApiGateway') as ApiGatewayStack;
+    const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
     const lambda = new NodejsFunction(this, `${stackName}-ExpensesFn`, {
