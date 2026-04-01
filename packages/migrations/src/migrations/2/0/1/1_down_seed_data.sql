@@ -1,4 +1,3 @@
-SET search_path TO financial_management;
 
 DELETE FROM documents;
 DELETE FROM providers;

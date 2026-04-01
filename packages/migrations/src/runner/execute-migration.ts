@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Pool, PoolClient } from 'pg';
 import type { Version } from 'src/interfaces/version';
 import type { DatabaseConfig } from 'src/interfaces/database';
@@ -17,7 +19,13 @@ export interface MigrateOptions {
 
 function computeChecksum(versionDir: string): string {
   const hash = crypto.createHash('sha256');
-  hash.update(versionDir);
+  const files = fs
+    .readdirSync(versionDir)
+    .sort()
+    .filter((f) => f.endsWith('.sql') || f.endsWith('.ts'));
+  for (const file of files) {
+    hash.update(fs.readFileSync(path.join(versionDir, file)));
+  }
   return hash.digest('hex').slice(0, 16);
 }
 

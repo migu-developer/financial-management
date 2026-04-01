@@ -1,4 +1,3 @@
-SET search_path TO financial_management;
 
 -- Listado paginado de expenses por usuario ordenado por fecha (el query mas frecuente)
 CREATE INDEX idx_expenses_user_created_at

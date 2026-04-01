@@ -207,11 +207,11 @@ export default config({
         fs.writeFileSync(path.join(dir, 'version.ts'), versionTs);
         fs.writeFileSync(
           path.join(dir, `1_up_${slug}.sql`),
-          `SET search_path TO financial_management;\n\n-- TODO: Write UP migration\n`,
+          `-- TODO: Write UP migration\n`,
         );
         fs.writeFileSync(
           path.join(dir, `1_down_${slug}.sql`),
-          `SET search_path TO financial_management;\n\n-- TODO: Write DOWN migration\n`,
+          `-- TODO: Write DOWN migration\n`,
         );
 
         logger.success(`Created migration ${versionStr} at ${dir}`);

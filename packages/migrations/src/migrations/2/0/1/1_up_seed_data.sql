@@ -1,4 +1,3 @@
-SET search_path TO financial_management;
 
 -- Currencies (solo países soportados: CO, MX, AR, UY, FI)
 INSERT INTO currencies (id, code, name, symbol, country) VALUES

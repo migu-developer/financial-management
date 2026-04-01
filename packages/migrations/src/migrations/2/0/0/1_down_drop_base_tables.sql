@@ -1,4 +1,3 @@
-SET search_path TO financial_management;
 
 -- Revoke grants from readonly_lambda_role
 REVOKE readonly_lambda_role FROM readonly_lambda;

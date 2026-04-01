@@ -56,9 +56,7 @@ describe('getAppConfig', () => {
     test('throws for invalid version in array', () => {
       expect(() =>
         getAppConfig(versionStacks, defaultVersions, ['v99'], undefined),
-      ).toThrow(
-        'Invalid version: "v99". Use one of: v1, v2. Example: cdk deploy --context version=v1',
-      );
+      ).toThrow('Invalid version: "v99". Valid versions: v1, v2.');
     });
 
     test('throws for invalid version even when mixed with valid ones', () => {

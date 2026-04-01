@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "PostgreSQL schema migration runner for the financial management project",
-  "bin": {
-    "db-migrate": "./src/cli.ts"
-  },
   "scripts": {
     "migrate": "tsx src/cli.ts migrate",
     "rollback": "tsx src/cli.ts rollback",

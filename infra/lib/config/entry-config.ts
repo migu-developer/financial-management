@@ -30,8 +30,7 @@ export function getAppConfig(
   for (const version of versions) {
     if (!validVersions.includes(version)) {
       throw new Error(
-        `Invalid version: "${version}". Use one of: ${validVersions.join(', ')}. ` +
-          `Example: cdk deploy --context version=v1`,
+        `Invalid version: "${version}". Valid versions: ${validVersions.join(', ')}.`,
       );
     }
 

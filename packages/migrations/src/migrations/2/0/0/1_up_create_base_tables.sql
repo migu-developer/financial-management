@@ -1,4 +1,3 @@
-SET search_path TO financial_management;
 
 -- Extensiones requeridas (se instalan a nivel de DB, no de schema)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
