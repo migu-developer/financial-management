@@ -14,4 +14,6 @@ export interface CognitoAdminPort {
     providerName: string,
     providerUserId: string,
   ): Promise<void>;
+
+  deleteUser(userPoolId: string, username: string): Promise<void>;
 }

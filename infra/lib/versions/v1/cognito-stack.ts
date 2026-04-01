@@ -168,6 +168,7 @@ export class CognitoStack extends BaseStack {
         actions: [
           'cognito-idp:ListUsers',
           'cognito-idp:AdminLinkProviderForUser',
+          'cognito-idp:AdminDeleteUser',
         ],
         resources: [
           `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,

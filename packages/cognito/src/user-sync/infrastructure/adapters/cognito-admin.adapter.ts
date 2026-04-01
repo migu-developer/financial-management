@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
   AdminLinkProviderForUserCommand,
+  AdminDeleteUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import type {
   CognitoAdminPort,
@@ -56,6 +57,14 @@ export class CognitoAdminAdapter implements CognitoAdminPort {
       },
     });
 
+    await this.client.send(command);
+  }
+
+  async deleteUser(userPoolId: string, username: string): Promise<void> {
+    const command = new AdminDeleteUserCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+    });
     await this.client.send(command);
   }
 }

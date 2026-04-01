@@ -6,6 +6,7 @@ function makePort(overrides: Partial<CognitoAdminPort> = {}): CognitoAdminPort {
   return {
     listUsersByEmail: jest.fn().mockResolvedValue([]),
     linkProviderToUser: jest.fn().mockResolvedValue(undefined),
+    deleteUser: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

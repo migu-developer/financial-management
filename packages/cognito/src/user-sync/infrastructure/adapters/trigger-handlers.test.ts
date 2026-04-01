@@ -65,6 +65,7 @@ function makeDeps(
     cognitoAdmin: {
       listUsersByEmail: jest.fn().mockResolvedValue([]),
       linkProviderToUser: jest.fn().mockResolvedValue(undefined),
+      deleteUser: jest.fn().mockResolvedValue(undefined),
       ...cognitoOverrides,
     },
   };

@@ -5,6 +5,7 @@ function makePort(overrides: Partial<CognitoAdminPort> = {}): CognitoAdminPort {
   return {
     listUsersByEmail: jest.fn().mockResolvedValue([]),
     linkProviderToUser: jest.fn().mockResolvedValue(undefined),
+    deleteUser: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -16,17 +17,11 @@ const input = {
 };
 
 describe('LinkExistingProvidersUseCase', () => {
-  it('links all social providers to native user', async () => {
+  it('deletes social users before linking them to native user', async () => {
     const port = makePort({
       listUsersByEmail: jest.fn().mockResolvedValue([
         {
           username: 'Google_111',
-          attributes: { email: 'test@example.com' },
-          enabled: true,
-          status: 'EXTERNAL_PROVIDER',
-        },
-        {
-          username: 'Facebook_222',
           attributes: { email: 'test@example.com' },
           enabled: true,
           status: 'EXTERNAL_PROVIDER',
@@ -36,21 +31,70 @@ describe('LinkExistingProvidersUseCase', () => {
     const useCase = new LinkExistingProvidersUseCase(port);
     const result = await useCase.execute(input);
 
-    expect(result.action).toBe('linked');
-    expect(result.linkedProviders).toEqual(['Google', 'Facebook']);
-    expect(port.linkProviderToUser).toHaveBeenCalledTimes(2);
+    // Delete must be called BEFORE link
+    expect(port.deleteUser).toHaveBeenCalledWith(
+      'us-east-1_test',
+      'Google_111',
+    );
     expect(port.linkProviderToUser).toHaveBeenCalledWith(
       'us-east-1_test',
       'native-uuid-user',
       'Google',
       '111',
     );
-    expect(port.linkProviderToUser).toHaveBeenCalledWith(
-      'us-east-1_test',
-      'native-uuid-user',
-      'Facebook',
-      '222',
-    );
+    expect(result.action).toBe('linked');
+    expect(result.linkedProviders).toEqual(['Google']);
+  });
+
+  it('deletes and links multiple social providers', async () => {
+    const port = makePort({
+      listUsersByEmail: jest.fn().mockResolvedValue([
+        {
+          username: 'Google_111',
+          attributes: {},
+          enabled: true,
+          status: 'EXTERNAL_PROVIDER',
+        },
+        {
+          username: 'Facebook_222',
+          attributes: {},
+          enabled: true,
+          status: 'EXTERNAL_PROVIDER',
+        },
+      ]),
+    });
+    const useCase = new LinkExistingProvidersUseCase(port);
+    const result = await useCase.execute(input);
+
+    expect(port.deleteUser).toHaveBeenCalledTimes(2);
+    expect(port.linkProviderToUser).toHaveBeenCalledTimes(2);
+    expect(result.linkedProviders).toEqual(['Google', 'Facebook']);
+  });
+
+  it('calls delete before link for each social user', async () => {
+    const callOrder: string[] = [];
+    const port = makePort({
+      listUsersByEmail: jest.fn().mockResolvedValue([
+        {
+          username: 'Google_111',
+          attributes: {},
+          enabled: true,
+          status: 'EXTERNAL_PROVIDER',
+        },
+      ]),
+      deleteUser: jest.fn().mockImplementation(() => {
+        callOrder.push('delete');
+        return Promise.resolve();
+      }),
+      linkProviderToUser: jest.fn().mockImplementation(() => {
+        callOrder.push('link');
+        return Promise.resolve();
+      }),
+    });
+    const useCase = new LinkExistingProvidersUseCase(port);
+    await useCase.execute(input);
+
+    expect(callOrder).toEqual(['delete', 'link']);
   });
 
   it('skips when no social users exist', async () => {
@@ -59,7 +103,7 @@ describe('LinkExistingProvidersUseCase', () => {
     const result = await useCase.execute(input);
 
     expect(result.action).toBe('skipped');
-    expect(result.linkedProviders).toEqual([]);
+    expect(port.deleteUser).not.toHaveBeenCalled();
     expect(port.linkProviderToUser).not.toHaveBeenCalled();
   });
 
@@ -68,7 +112,7 @@ describe('LinkExistingProvidersUseCase', () => {
       listUsersByEmail: jest.fn().mockResolvedValue([
         {
           username: 'another-native-uuid',
-          attributes: { email: 'test@example.com' },
+          attributes: {},
           enabled: true,
           status: 'CONFIRMED',
         },
@@ -78,32 +122,7 @@ describe('LinkExistingProvidersUseCase', () => {
     const result = await useCase.execute(input);
 
     expect(result.action).toBe('skipped');
-    expect(port.linkProviderToUser).not.toHaveBeenCalled();
-  });
-
-  it('only links social users, not native ones', async () => {
-    const port = makePort({
-      listUsersByEmail: jest.fn().mockResolvedValue([
-        {
-          username: 'Google_111',
-          attributes: { email: 'test@example.com' },
-          enabled: true,
-          status: 'EXTERNAL_PROVIDER',
-        },
-        {
-          username: 'some-other-native',
-          attributes: { email: 'test@example.com' },
-          enabled: true,
-          status: 'CONFIRMED',
-        },
-      ]),
-    });
-    const useCase = new LinkExistingProvidersUseCase(port);
-    const result = await useCase.execute(input);
-
-    expect(result.action).toBe('linked');
-    expect(result.linkedProviders).toEqual(['Google']);
-    expect(port.linkProviderToUser).toHaveBeenCalledTimes(1);
+    expect(port.deleteUser).not.toHaveBeenCalled();
   });
 
   it('propagates errors', async () => {
