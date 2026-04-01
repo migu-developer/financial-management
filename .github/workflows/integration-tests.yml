@@ -1,5 +1,7 @@
 # Integration Tests: runs services against the Supabase test database.
 # Runs on PRs (to any branch) and on push to main.
+# Each run creates an isolated test schema using the GitHub run ID
+# to prevent collisions between concurrent runs.
 # Note: does not run on release events — integration tests are guaranteed to have
 # already run on the underlying commit when it was pushed to main.
 name: Integration Tests
@@ -18,11 +20,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      env_name: ${{ steps.resolve.outputs.env_name }}
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve environment and check CI
+        id: resolve
+        uses: ./.github/actions/resolve_deploy_env
+        with:
+          deploy_paths: '^(services/|packages/|\.github/workflows/integration-tests\.yml)'
+
   integration-tests:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    name: Integration tests
+    needs: [setup]
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+      && needs.setup.outputs.should_deploy == 'true'
+    name: Integration tests (${{ needs.setup.outputs.env_name }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: ${{ needs.setup.outputs.env_name }}
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -31,17 +60,17 @@ jobs:
       TEST_RUN_ID: ${{ github.run_id }}
 
     steps:
-      - name: 📥 Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🔧 Configure pnpm and Node.js
+      - name: Configure pnpm and Node.js
         uses: ./.github/actions/configure_pnpm
 
-      - name: 📌 Install dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: 📤 Export schema DDL from Supabase test database
+      - name: Export schema DDL from Supabase test database
         run: pnpm migrations:export
 
-      - name: 🧪 Run integration tests
+      - name: Run integration tests
         run: pnpm test:integration
