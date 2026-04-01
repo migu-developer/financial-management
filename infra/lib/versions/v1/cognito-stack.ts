@@ -162,26 +162,8 @@ export class CognitoStack extends BaseStack {
       },
     });
 
-    // ── Pre-Signup Lambda Trigger (account linking) ────
-    const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
-      runtime: Runtime.NODEJS_22_X,
-      entry: join(
-        __dirname,
-        '../../../node_modules/@packages/cognito/src/pre-signup/index.ts',
-      ),
-      handler: 'handler',
-      bundling: {
-        format: OutputFormat.ESM,
-        sourceMap: true,
-        minify: true,
-      },
-      description:
-        'Cognito PreSignUp trigger — links external providers to existing native accounts',
-    });
-
-    // Grant permissions BEFORE UserPool to avoid circular dependency.
-    // Use account-scoped ARN pattern instead of userPool.userPoolArn.
-    preSignUpFn.addToRolePolicy(
+    // UserSyncFn also needs Cognito admin permissions for linking social accounts
+    userSyncFn.addToRolePolicy(
       new PolicyStatement({
         actions: [
           'cognito-idp:ListUsers',
@@ -204,7 +186,6 @@ export class CognitoStack extends BaseStack {
       enableSmsRole: true,
       snsRegion: props.snsRegion,
       lambdaTriggers: {
-        preSignUp: preSignUpFn,
         customMessage: customMessageFn,
         postConfirmation: userSyncFn,
         postAuthentication: userSyncFn,

@@ -1,4 +1,4 @@
-import type { CognitoAdminPort } from '@pre-signup/domain/ports/cognito-admin.port';
+import type { CognitoAdminPort } from '@user-sync/domain/ports/cognito-admin.port';
 import { LinkExistingProvidersUseCase } from './link-existing-providers.use-case';
 
 function makePort(overrides: Partial<CognitoAdminPort> = {}): CognitoAdminPort {

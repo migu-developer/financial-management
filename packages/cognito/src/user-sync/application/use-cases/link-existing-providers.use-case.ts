@@ -1,5 +1,5 @@
-import type { CognitoAdminPort } from '@pre-signup/domain/ports/cognito-admin.port';
-import { parseExternalProvider } from '@pre-signup/infrastructure/adapters/provider-parser';
+import type { CognitoAdminPort } from '@user-sync/domain/ports/cognito-admin.port';
+import { parseExternalProvider } from '@user-sync/infrastructure/adapters/provider-parser';
 
 export interface LinkExistingProvidersInput {
   userPoolId: string;

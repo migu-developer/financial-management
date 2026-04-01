@@ -6,7 +6,7 @@ import {
 import type {
   CognitoAdminPort,
   CognitoUser,
-} from '@pre-signup/domain/ports/cognito-admin.port';
+} from '@user-sync/domain/ports/cognito-admin.port';
 
 export class CognitoAdminAdapter implements CognitoAdminPort {
   constructor(private readonly client: CognitoIdentityProviderClient) {}

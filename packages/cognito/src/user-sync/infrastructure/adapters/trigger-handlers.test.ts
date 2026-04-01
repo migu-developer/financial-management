@@ -1,10 +1,12 @@
 import type { UserSyncPort } from '@user-sync/domain/ports/user-sync.port';
+import type { CognitoAdminPort } from '@user-sync/domain/ports/cognito-admin.port';
 import type { UserProfile } from '@packages/models/users/types';
-import { TRIGGER_HANDLERS } from './trigger-handlers';
+import type { CognitoUserSyncEvent } from '@user-sync/types';
+import { TRIGGER_HANDLERS, type TriggerDeps } from './trigger-handlers';
 
 const mockUser: UserProfile = {
   id: 'user-1',
-  uid: 'a0000000-0000-0000-0000-000000000001',
+  uid: 'native-sub-001',
   email: 'test@example.com',
   first_name: 'Miguel',
   last_name: 'Gutierrez',
@@ -22,32 +24,56 @@ const mockUser: UserProfile = {
   modified_by: 'test@example.com',
 };
 
-const attrs: Record<string, string> = {
-  sub: 'a0000000-0000-0000-0000-000000000001',
-  email: 'test@example.com',
-  given_name: 'Miguel',
-  family_name: 'Gutierrez',
-  locale: 'en',
-  picture: 'https://example.com/photo.jpg',
-  phone_number: '+573001234567',
-};
-
-function makePort(overrides: Partial<UserSyncPort> = {}): UserSyncPort {
+function buildEvent(
+  triggerSource: CognitoUserSyncEvent['triggerSource'],
+  userName = 'native-uuid',
+  sub = 'native-sub-001',
+): CognitoUserSyncEvent {
   return {
-    findByUid: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(mockUser),
-    patch: jest.fn().mockResolvedValue(mockUser),
-    ...overrides,
+    version: '1',
+    region: 'us-east-1',
+    userPoolId: 'us-east-1_test',
+    triggerSource,
+    userName,
+    callerContext: { awsSdkVersion: '3.0', clientId: 'test-client' },
+    request: {
+      userAttributes: {
+        sub,
+        email: 'test@example.com',
+        given_name: 'Miguel',
+        family_name: 'Gutierrez',
+        locale: 'en',
+      },
+    },
+    response: {},
+  };
+}
+
+function makeDeps(
+  dbOverrides: Partial<UserSyncPort> = {},
+  cognitoOverrides: Partial<CognitoAdminPort> = {},
+): TriggerDeps {
+  return {
+    dbPort: {
+      findByUid: jest.fn().mockResolvedValue(null),
+      findByEmail: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue(mockUser),
+      patch: jest.fn().mockResolvedValue(mockUser),
+      updateUid: jest.fn().mockResolvedValue(mockUser),
+      ...dbOverrides,
+    },
+    cognitoAdmin: {
+      listUsersByEmail: jest.fn().mockResolvedValue([]),
+      linkProviderToUser: jest.fn().mockResolvedValue(undefined),
+      ...cognitoOverrides,
+    },
   };
 }
 
 describe('TRIGGER_HANDLERS', () => {
-  it('has handlers for PostConfirmation_ConfirmSignUp and PostAuthentication_Authentication', () => {
+  it('has handlers for PostConfirmation and PostAuthentication', () => {
     expect(TRIGGER_HANDLERS.PostConfirmation_ConfirmSignUp).toBeDefined();
     expect(TRIGGER_HANDLERS.PostAuthentication_Authentication).toBeDefined();
-  });
-
-  it('does not have a handler for PostConfirmation_ConfirmForgotPassword', () => {
     expect(
       TRIGGER_HANDLERS.PostConfirmation_ConfirmForgotPassword,
     ).toBeUndefined();
@@ -56,93 +82,189 @@ describe('TRIGGER_HANDLERS', () => {
   describe('PostConfirmation_ConfirmSignUp', () => {
     const handle = TRIGGER_HANDLERS.PostConfirmation_ConfirmSignUp!;
 
-    it('creates user when not found and returns "created"', async () => {
-      const port = makePort();
-      const action = await handle(attrs, port);
+    describe('native signup', () => {
+      it('creates user in DB when no one exists', async () => {
+        const deps = makeDeps();
+        const event = buildEvent('PostConfirmation_ConfirmSignUp');
+        const action = await handle(event, deps);
 
-      expect(port.findByUid).toHaveBeenCalledWith(attrs['sub']);
-      expect(port.create).toHaveBeenCalledWith(
-        expect.objectContaining({ uid: attrs['sub'], email: attrs['email'] }),
-        attrs['email'],
-      );
-      expect(action).toBe('created');
-    });
-
-    it('skips create when user exists and returns "skipped"', async () => {
-      const port = makePort({
-        findByUid: jest.fn().mockResolvedValue(mockUser),
+        expect(deps.dbPort.findByEmail).toHaveBeenCalledWith(
+          'test@example.com',
+        );
+        expect(deps.dbPort.create).toHaveBeenCalled();
+        expect(action).toContain('created');
       });
-      const action = await handle(attrs, port);
 
-      expect(port.create).not.toHaveBeenCalled();
-      expect(action).toBe('skipped');
+      it('updates uid when social user already exists in DB', async () => {
+        const deps = makeDeps({
+          findByEmail: jest.fn().mockResolvedValue({
+            ...mockUser,
+            uid: 'old-social-sub',
+          }),
+        });
+        const event = buildEvent(
+          'PostConfirmation_ConfirmSignUp',
+          'native-uuid',
+          'new-native-sub',
+        );
+        const action = await handle(event, deps);
+
+        expect(deps.dbPort.updateUid).toHaveBeenCalledWith(
+          'test@example.com',
+          'new-native-sub',
+          'test@example.com',
+        );
+        expect(deps.dbPort.create).not.toHaveBeenCalled();
+        expect(action).toContain('uid-updated');
+      });
+
+      it('links existing social accounts in Cognito', async () => {
+        const deps = makeDeps(
+          {},
+          {
+            listUsersByEmail: jest.fn().mockResolvedValue([
+              {
+                username: 'Google_111',
+                attributes: {},
+                enabled: true,
+                status: 'EXTERNAL_PROVIDER',
+              },
+            ]),
+          },
+        );
+        const event = buildEvent('PostConfirmation_ConfirmSignUp');
+        const action = await handle(event, deps);
+
+        expect(deps.cognitoAdmin.linkProviderToUser).toHaveBeenCalledWith(
+          'us-east-1_test',
+          'native-uuid',
+          'Google',
+          '111',
+        );
+        expect(action).toContain('linked:Google');
+      });
     });
 
-    it('maps cognito attributes to CreateUserInput', async () => {
-      const port = makePort();
-      await handle(attrs, port);
+    describe('social signup', () => {
+      it('creates user in DB when no one exists', async () => {
+        const deps = makeDeps();
+        const event = buildEvent(
+          'PostConfirmation_ConfirmSignUp',
+          'Google_111',
+          'social-sub',
+        );
+        const action = await handle(event, deps);
 
-      expect(port.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          first_name: 'Miguel',
-          last_name: 'Gutierrez',
-          locale: 'en',
-          picture: 'https://example.com/photo.jpg',
-          phone: '+573001234567',
-        }),
-        attrs['email'],
-      );
+        expect(deps.dbPort.create).toHaveBeenCalled();
+        expect(action).toBe('created');
+      });
+
+      it('links to native in Cognito when native exists in DB', async () => {
+        const deps = makeDeps(
+          {
+            findByEmail: jest.fn().mockResolvedValue(mockUser),
+          },
+          {
+            listUsersByEmail: jest.fn().mockResolvedValue([
+              {
+                username: 'native-uuid',
+                attributes: {},
+                enabled: true,
+                status: 'CONFIRMED',
+              },
+              {
+                username: 'Google_111',
+                attributes: {},
+                enabled: true,
+                status: 'EXTERNAL_PROVIDER',
+              },
+            ]),
+          },
+        );
+        const event = buildEvent(
+          'PostConfirmation_ConfirmSignUp',
+          'Google_111',
+          'social-sub',
+        );
+        const action = await handle(event, deps);
+
+        expect(deps.dbPort.create).not.toHaveBeenCalled();
+        expect(action).toContain('linked-to-native');
+      });
+
+      it('skips linking when native not in Cognito', async () => {
+        const deps = makeDeps(
+          {
+            findByEmail: jest.fn().mockResolvedValue(mockUser),
+          },
+          {
+            listUsersByEmail: jest.fn().mockResolvedValue([
+              {
+                username: 'Google_111',
+                attributes: {},
+                enabled: true,
+                status: 'EXTERNAL_PROVIDER',
+              },
+            ]),
+          },
+        );
+        const event = buildEvent(
+          'PostConfirmation_ConfirmSignUp',
+          'Google_111',
+          'social-sub',
+        );
+        const action = await handle(event, deps);
+
+        expect(action).toBe('native-not-in-cognito');
+      });
     });
   });
 
   describe('PostAuthentication_Authentication', () => {
     const handle = TRIGGER_HANDLERS.PostAuthentication_Authentication!;
 
-    it('patches user when found and returns "updated"', async () => {
-      const port = makePort({
+    it('patches user when found by uid', async () => {
+      const deps = makeDeps({
         findByUid: jest.fn().mockResolvedValue(mockUser),
       });
-      const action = await handle(attrs, port);
+      const event = buildEvent('PostAuthentication_Authentication');
+      const action = await handle(event, deps);
 
-      expect(port.patch).toHaveBeenCalledWith(
-        attrs['sub'],
-        expect.objectContaining({
-          first_name: 'Miguel',
-          last_name: 'Gutierrez',
-          locale: 'en',
-        }),
-        attrs['email'],
-      );
-      expect(port.create).not.toHaveBeenCalled();
+      expect(deps.dbPort.patch).toHaveBeenCalled();
       expect(action).toBe('updated');
     });
 
-    it('creates user on first login when not found and returns "created"', async () => {
-      const port = makePort();
-      const action = await handle(attrs, port);
-
-      expect(port.create).toHaveBeenCalledWith(
-        expect.objectContaining({ uid: attrs['sub'], email: attrs['email'] }),
-        attrs['email'],
+    it('migrates uid and patches when found by email only', async () => {
+      const deps = makeDeps({
+        findByUid: jest.fn().mockResolvedValue(null),
+        findByEmail: jest.fn().mockResolvedValue({
+          ...mockUser,
+          uid: 'old-sub',
+        }),
+      });
+      const event = buildEvent(
+        'PostAuthentication_Authentication',
+        'Google_111',
+        'new-sub',
       );
-      expect(port.patch).not.toHaveBeenCalled();
-      expect(action).toBe('created');
+      const action = await handle(event, deps);
+
+      expect(deps.dbPort.updateUid).toHaveBeenCalledWith(
+        'test@example.com',
+        'new-sub',
+        'test@example.com',
+      );
+      expect(deps.dbPort.patch).toHaveBeenCalled();
+      expect(action).toBe('uid-migrated+updated');
     });
 
-    it('maps cognito attributes to PatchUserInput (no uid/email/identities)', async () => {
-      const port = makePort({
-        findByUid: jest.fn().mockResolvedValue(mockUser),
-      });
-      await handle(attrs, port);
+    it('creates user when not found at all', async () => {
+      const deps = makeDeps();
+      const event = buildEvent('PostAuthentication_Authentication');
+      const action = await handle(event, deps);
 
-      const patchArg = (port.patch as jest.Mock).mock.calls[0][1] as Record<
-        string,
-        unknown
-      >;
-      expect(patchArg).not.toHaveProperty('uid');
-      expect(patchArg).not.toHaveProperty('email');
-      expect(patchArg).not.toHaveProperty('identities');
-      expect(patchArg.phone).toBe('+573001234567');
+      expect(deps.dbPort.create).toHaveBeenCalled();
+      expect(action).toBe('created');
     });
   });
 });

@@ -34,8 +34,10 @@ const createInput: CreateUserInput = {
 function makePort(overrides: Partial<UserSyncPort> = {}): UserSyncPort {
   return {
     findByUid: jest.fn().mockResolvedValue(null),
+    findByEmail: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue(mockUser),
     patch: jest.fn().mockResolvedValue(mockUser),
+    updateUid: jest.fn().mockResolvedValue(mockUser),
     ...overrides,
   };
 }

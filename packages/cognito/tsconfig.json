@@ -7,7 +7,6 @@
     "paths": {
       "@custom-message/*": ["./src/custom-message/*"],
       "@user-sync/*": ["./src/user-sync/*"],
-      "@pre-signup/*": ["./src/pre-signup/*"],
       "@packages/models/*": ["node_modules/@packages/models/src/*"],
       "@services/shared/*": ["node_modules/@services/shared/src/*"],
       "@services/users/*": ["node_modules/@services/users/src/*"]
