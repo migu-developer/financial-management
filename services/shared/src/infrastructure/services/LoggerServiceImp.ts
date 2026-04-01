@@ -8,9 +8,9 @@ import { Logger } from '@aws-lambda-powertools/logger';
 export class LoggerServiceImplementation implements LoggerService {
   private readonly logger: Logger;
 
-  constructor() {
+  constructor(serviceName?: string) {
     this.logger = new Logger({
-      serviceName: 'expenses-service',
+      serviceName: serviceName ?? process.env['PROJECT_PREFIX'] ?? 'app',
     });
   }
 

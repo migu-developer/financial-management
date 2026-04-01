@@ -18,12 +18,29 @@ describe('LoggerServiceImplementation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env['PROJECT_PREFIX'];
     logger = new LoggerServiceImplementation();
   });
 
-  it('creates the underlying Logger with default serviceName "app"', () => {
+  it('uses default serviceName "app" when no env var or param', () => {
     expect(jest.mocked(Logger)).toHaveBeenCalledWith({
       serviceName: 'app',
+    });
+  });
+
+  it('uses PROJECT_PREFIX env var when set', () => {
+    process.env['PROJECT_PREFIX'] = 'financial-management';
+    new LoggerServiceImplementation();
+    expect(jest.mocked(Logger)).toHaveBeenLastCalledWith({
+      serviceName: 'financial-management',
+    });
+  });
+
+  it('uses constructor param over env var', () => {
+    process.env['PROJECT_PREFIX'] = 'from-env';
+    new LoggerServiceImplementation('from-param');
+    expect(jest.mocked(Logger)).toHaveBeenLastCalledWith({
+      serviceName: 'from-param',
     });
   });
 
