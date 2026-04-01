@@ -20,43 +20,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup:
-    name: Resolve environment
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-    outputs:
-      env_name: ${{ steps.resolve.outputs.env_name }}
-      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
-    steps:
-      - name: Checkout actions
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/actions
-          sparse-checkout-cone-mode: false
-
-      - name: Resolve environment and check CI
-        id: resolve
-        uses: ./.github/actions/resolve_deploy_env
-        with:
-          deploy_paths: '^(services/|packages/|\.github/workflows/integration-tests\.yml)'
-
   integration-tests:
-    needs: [setup]
-    if: >-
-      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-      && needs.setup.outputs.should_deploy == 'true'
-    name: Integration tests (${{ needs.setup.outputs.env_name }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: Integration tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
-      name: ${{ needs.setup.outputs.env_name }}
+      name: staging
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DATABASE_READONLY_URL: ${{ secrets.DATABASE_READONLY_URL }}
-      DATABASE_SCHEMA: ${{ secrets.DATABASE_SCHEMA }}
+      DATABASE_SCHEMA: ${{ vars.DATABASE_SCHEMA }}
       TEST_RUN_ID: ${{ github.run_id }}
 
     steps:
