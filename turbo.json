@@ -53,6 +53,16 @@
     },
     "supabase:reset": {
       "cache": false
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_READONLY_URL",
+        "DATABASE_SCHEMA",
+        "TEST_RUN_ID"
+      ]
     }
   }
 }

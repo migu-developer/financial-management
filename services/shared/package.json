@@ -1,0 +1,31 @@
+{
+  "name": "@services/shared",
+  "version": "1.0.0",
+  "description": "Shared services for the application",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "catalog:",
+    "@packages/models": "workspace:*",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@packages/config": "workspace:*",
+    "@packages/migrations": "workspace:*",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "eslint": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "typescript": "catalog:"
+  },
+  "keywords": [],
+  "author": "Miguel Angel Gutierrez Maya",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.3"
+}

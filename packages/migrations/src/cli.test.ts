@@ -47,6 +47,19 @@ jest.mock('./lib/logger', () => ({
   },
 }));
 
+const mockExecSync = jest.fn();
+const mockMkdirSync = jest.fn();
+const mockWriteFileSync = jest.fn();
+
+jest.mock('node:child_process', () => ({
+  execSync: (...args: unknown[]) => mockExecSync(...args),
+}));
+
+jest.mock('node:fs', () => ({
+  mkdirSync: (...args: unknown[]) => mockMkdirSync(...args),
+  writeFileSync: (...args: unknown[]) => mockWriteFileSync(...args),
+}));
+
 const { executeMigrations, rollbackLast } = jest.requireMock<
   typeof import('./runner/execute-migration')
 >('./runner/execute-migration');
@@ -189,6 +202,150 @@ describe('cli', () => {
       });
 
       await run(['status']);
+
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  describe('export', () => {
+    const fakeDump = [
+      'CREATE SCHEMA financial_management;',
+      '',
+      'CREATE TABLE financial_management.users (',
+      '    id uuid PRIMARY KEY',
+      ');',
+      '',
+      'ALTER TABLE financial_management.users ENABLE ROW LEVEL SECURITY;',
+      '',
+      '-- Name: authenticated_select; Type: POLICY; Schema: financial_management',
+      '--',
+      '',
+      'CREATE POLICY authenticated_select ON financial_management.users FOR SELECT TO authenticated USING (true);',
+      '',
+      'CREATE POLICY authenticated_insert ON financial_management.users',
+      '    FOR INSERT TO authenticated',
+      '    WITH CHECK ((uid = auth.uid()));',
+      '',
+      'CREATE INDEX idx_users_email ON financial_management.users USING btree (email);',
+    ].join('\n');
+
+    beforeEach(() => {
+      mockExecSync.mockReset();
+      mockMkdirSync.mockReset();
+      mockWriteFileSync.mockReset();
+    });
+
+    it('calls pg_dump with correct schema and connection string', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'pg_dump --schema-only --no-owner --no-privileges --schema=financial_management',
+        ),
+        expect.objectContaining({ encoding: 'utf8' }),
+      );
+    });
+
+    it('writes the cleaned output to the output file', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      expect(mockMkdirSync).toHaveBeenCalledWith(expect.any(String), {
+        recursive: true,
+      });
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('schema.sql'),
+        expect.any(String),
+        'utf8',
+      );
+    });
+
+    it('strips ENABLE ROW LEVEL SECURITY statements', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      const written = mockWriteFileSync.mock.calls[0][1] as string;
+      expect(written).not.toContain('ENABLE ROW LEVEL SECURITY');
+    });
+
+    it('strips single-line CREATE POLICY statements', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      const written = mockWriteFileSync.mock.calls[0][1] as string;
+      expect(written).not.toContain('CREATE POLICY authenticated_select');
+    });
+
+    it('strips multi-line CREATE POLICY statements', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      const written = mockWriteFileSync.mock.calls[0][1] as string;
+      expect(written).not.toContain('CREATE POLICY authenticated_insert');
+      expect(written).not.toContain('auth.uid()');
+    });
+
+    it('strips POLICY comment headers', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      const written = mockWriteFileSync.mock.calls[0][1] as string;
+      expect(written).not.toContain('Type: POLICY;');
+    });
+
+    it('preserves non-RLS statements', async () => {
+      mockExecSync.mockReturnValue(fakeDump);
+
+      await run(['export']);
+
+      const written = mockWriteFileSync.mock.calls[0][1] as string;
+      expect(written).toContain('CREATE SCHEMA financial_management;');
+      expect(written).toContain('CREATE TABLE financial_management.users');
+      expect(written).toContain('CREATE INDEX idx_users_email');
+    });
+
+    it('falls back to Docker container when local pg_dump fails', async () => {
+      mockExecSync
+        .mockImplementationOnce(() => {
+          throw new Error('version mismatch');
+        })
+        .mockReturnValueOnce('supabase_db_test\n')
+        .mockReturnValueOnce('CREATE SCHEMA financial_management;');
+
+      await run(['export']);
+
+      expect(mockExecSync).toHaveBeenCalledTimes(3);
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining('docker exec supabase_db_test pg_dump'),
+        expect.objectContaining({ encoding: 'utf8' }),
+      );
+    });
+
+    it('sets process.exitCode when no Docker container found', async () => {
+      mockExecSync
+        .mockImplementationOnce(() => {
+          throw new Error('version mismatch');
+        })
+        .mockReturnValueOnce('\n');
+
+      await run(['export']);
+
+      expect(process.exitCode).toBe(1);
+    });
+
+    it('sets process.exitCode on general error', async () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('pg_dump not found');
+      });
+
+      await run(['export']);
 
       expect(process.exitCode).toBe(1);
     });

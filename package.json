@@ -11,6 +11,7 @@
     "lint:fix": "turbo lint:fix",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:integration": "turbo run test:integration --concurrency 1",
     "clean": "turbo clean",
     "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
     "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,json,css,scss,md,yml,yaml}\"",
@@ -28,7 +29,8 @@
     "migrations:migrate": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts migrate",
     "migrations:rollback": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts rollback",
     "migrations:status": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts status",
-    "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration"
+    "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration",
+    "migrations:export": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts export"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

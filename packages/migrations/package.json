@@ -11,6 +11,7 @@
     "rollback": "tsx src/cli.ts rollback",
     "status": "tsx src/cli.ts status",
     "create-migration": "tsx src/cli.ts create-migration",
+    "export": "tsx src/cli.ts export",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

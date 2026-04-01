@@ -5,13 +5,27 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "jest",
+    "test:integration": "jest --config src/test/jest.config.ts --runInBand",
+    "execute": "for f in src/exec/*.ts; do tsx \"$f\"; done"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "catalog:",
+    "@packages/models": "workspace:*",
+    "@services/shared": "workspace:*"
   },
   "devDependencies": {
+    "@packages/config": "workspace:*",
+    "@types/pg": "catalog:",
+    "@types/jest": "catalog:",
+    "dotenv": "catalog:",
     "@types/node": "catalog:",
-    "typescript": "catalog:",
     "eslint": "catalog:",
-    "@packages/config": "workspace:*"
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   },
   "keywords": [],
   "author": "Miguel Angel Gutierrez Maya",

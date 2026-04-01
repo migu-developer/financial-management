@@ -8,6 +8,7 @@ packages:
 
 catalog:
   '@aws-lambda-powertools/logger': ^2.10.0
+  '@aws-sdk/client-cognito-identity-provider': ^3.1021.0
   '@aws-sdk/client-s3': ^3.1000.0
   '@babel/parser': ^7.29.0
   '@babel/traverse': ^7.29.0
@@ -74,6 +75,8 @@ catalog:
   react-native-svg: ^15.15.3
   react-native-web: ~0.21.0
   react-native-worklets: 0.5.1
+  pg: ^8.16.0
+  '@types/pg': ^8.20.0
   supabase: ^2.83.0
   tailwindcss: ^4.2.1
   ts-jest: ^29.4.6

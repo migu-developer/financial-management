@@ -81,6 +81,9 @@ export interface CognitoStackProps extends BaseStackProps {
   // Protection
   readonly removalProtect: boolean;
   readonly cognitoEmailsPrefix: string;
+  // Database (for user sync trigger)
+  readonly databaseUrl: string;
+  readonly databaseReadonlyUrl: string;
 }
 
 /**
@@ -136,6 +139,72 @@ export class CognitoStack extends BaseStack {
       assetsStack.bucket.grantRead(customMessageFn);
     }
 
+    // ── User Sync Lambda Trigger ─────────────────────
+    const userSyncFn = new NodejsFunction(this, 'UserSyncFn', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: join(
+        __dirname,
+        '../../../node_modules/@packages/cognito/src/user-sync/index.ts',
+      ),
+      handler: 'handler',
+      bundling: {
+        format: OutputFormat.ESM,
+        sourceMap: true,
+        minify: true,
+        banner:
+          "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      },
+      description:
+        'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
+      environment: {
+        DATABASE_URL: props.databaseUrl,
+        DATABASE_READONLY_URL: props.databaseReadonlyUrl,
+      },
+    });
+
+    // UserSyncFn also needs Cognito admin permissions for linking social accounts
+    userSyncFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminLinkProviderForUser',
+          'cognito-idp:AdminDeleteUser',
+        ],
+        resources: [
+          `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,
+        ],
+      }),
+    );
+
+    // ── Pre-Signup Lambda Trigger (social account linking) ──
+    const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: join(
+        __dirname,
+        '../../../node_modules/@packages/cognito/src/pre-signup/index.ts',
+      ),
+      handler: 'handler',
+      bundling: {
+        format: OutputFormat.ESM,
+        sourceMap: true,
+        minify: true,
+      },
+      description:
+        'Cognito PreSignUp — links social providers to existing native accounts before signup',
+    });
+
+    preSignUpFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminLinkProviderForUser',
+        ],
+        resources: [
+          `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,
+        ],
+      }),
+    );
+
     // ── User Pool ──────────────────────────────────────
     this.userPool = new UserPool(this, 'UserPool', {
       selfSignUpEnabled: true,
@@ -147,7 +216,10 @@ export class CognitoStack extends BaseStack {
       enableSmsRole: true,
       snsRegion: props.snsRegion,
       lambdaTriggers: {
+        preSignUp: preSignUpFn,
         customMessage: customMessageFn,
+        postConfirmation: userSyncFn,
+        postAuthentication: userSyncFn,
       },
       email: UserPoolEmail.withSES({
         fromEmail: props.sesFromEmail,
