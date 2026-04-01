@@ -175,6 +175,35 @@ export class CognitoStack extends BaseStack {
       }),
     );
 
+    // ── Pre-Signup Lambda Trigger (social account linking) ──
+    const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: join(
+        __dirname,
+        '../../../node_modules/@packages/cognito/src/pre-signup/index.ts',
+      ),
+      handler: 'handler',
+      bundling: {
+        format: OutputFormat.ESM,
+        sourceMap: true,
+        minify: true,
+      },
+      description:
+        'Cognito PreSignUp — links social providers to existing native accounts before signup',
+    });
+
+    preSignUpFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminLinkProviderForUser',
+        ],
+        resources: [
+          `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,
+        ],
+      }),
+    );
+
     // ── User Pool ──────────────────────────────────────
     this.userPool = new UserPool(this, 'UserPool', {
       selfSignUpEnabled: true,
@@ -186,6 +215,7 @@ export class CognitoStack extends BaseStack {
       enableSmsRole: true,
       snsRegion: props.snsRegion,
       lambdaTriggers: {
+        preSignUp: preSignUpFn,
         customMessage: customMessageFn,
         postConfirmation: userSyncFn,
         postAuthentication: userSyncFn,

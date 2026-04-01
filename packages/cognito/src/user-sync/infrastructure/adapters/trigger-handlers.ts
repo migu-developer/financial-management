@@ -1,5 +1,4 @@
 import { LinkExistingProvidersUseCase } from '@user-sync/application/use-cases/link-existing-providers.use-case';
-import { LinkProviderUseCase } from '@user-sync/application/use-cases/link-provider.use-case';
 import { parseExternalProvider } from '@user-sync/infrastructure/adapters/provider-parser';
 import {
   mapToCreateInput,
@@ -26,15 +25,18 @@ export const TRIGGER_HANDLERS: Partial<
   Record<UserSyncTriggerSource, TriggerHandler>
 > = {
   /**
-   * PostConfirmation fires after Cognito creates a user (native or social).
+   * PostConfirmation fires after Cognito creates a user.
+   *
+   * Social signup (PreSignUp already handled linking to native if exists):
+   *   - If email exists in DB → skip (native owns the record, PreSignUp linked)
+   *   - If email not in DB → create user
    *
    * Native signup:
-   *   - If email exists in DB (social was first) → update uid to native's sub + link socials
-   *   - If email not in DB → create user + link socials if any exist in Cognito
-   *
-   * Social signup:
-   *   - If email exists in DB (native was first) → link social to native in Cognito (uid stays native)
-   *   - If email not in DB → create user in DB
+   *   - If email exists in DB (social was first) → update uid to native's sub
+   *   - If email not in DB → create user
+   *   - Link existing social accounts in Cognito to this native user
+   *     (uses LinkExistingProviders — these socials have NOT been signed up
+   *      under native yet, so adminLinkProviderForUser works)
    */
   PostConfirmation_ConfirmSignUp: async (event, { dbPort, cognitoAdmin }) => {
     const attrs = event.request.userAttributes;
@@ -45,40 +47,15 @@ export const TRIGGER_HANDLERS: Partial<
 
     if (isSocial) {
       const existing = await dbPort.findByEmail(email);
-
       if (existing) {
-        // Native user already in DB → link this social to the native in Cognito
-        const provider = parseExternalProvider(event.userName)!;
-        const cognitoUsers = await cognitoAdmin.listUsersByEmail(
-          event.userPoolId,
-          email,
-        );
-        const nativeUser = cognitoUsers.find(
-          (u) => parseExternalProvider(u.username) === null,
-        );
-
-        if (nativeUser) {
-          const linkUseCase = new LinkProviderUseCase(cognitoAdmin);
-          await linkUseCase.execute({
-            userPoolId: event.userPoolId,
-            email,
-            providerName: provider.name,
-            providerUserId: provider.userId,
-          });
-          actions.push('linked-to-native');
-        } else {
-          actions.push('native-not-in-cognito');
-        }
+        actions.push('skipped');
       } else {
         await dbPort.create(mapToCreateInput(attrs), email);
         actions.push('created');
       }
     } else {
-      // Native signup
       const existing = await dbPort.findByEmail(email);
-
       if (existing) {
-        // Social user was first → update uid to native's sub
         await dbPort.updateUid(email, uid, email);
         actions.push('uid-updated');
       } else {
@@ -86,7 +63,6 @@ export const TRIGGER_HANDLERS: Partial<
         actions.push('created');
       }
 
-      // Link any existing social accounts in Cognito to this native user
       const linkUseCase = new LinkExistingProvidersUseCase(cognitoAdmin);
       const linkResult = await linkUseCase.execute({
         userPoolId: event.userPoolId,
@@ -103,7 +79,7 @@ export const TRIGGER_HANDLERS: Partial<
 
   /**
    * PostAuthentication fires on every login.
-   * Upsert: if user exists → patch, if not → create.
+   * Upsert: find by uid → patch, find by email → migrate uid + patch, else → create.
    */
   PostAuthentication_Authentication: async (event, { dbPort }) => {
     const attrs = event.request.userAttributes;
@@ -111,13 +87,11 @@ export const TRIGGER_HANDLERS: Partial<
     const email = attrs['email']!;
 
     const existing = await dbPort.findByUid(uid);
-
     if (existing) {
       await dbPort.patch(uid, mapToPatchInput(attrs), email);
       return 'updated';
     }
 
-    // User might exist with different uid (social→native migration)
     const byEmail = await dbPort.findByEmail(email);
     if (byEmail) {
       await dbPort.updateUid(email, uid, email);
