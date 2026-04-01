@@ -162,6 +162,23 @@ export class CognitoStack extends BaseStack {
       },
     });
 
+    // ── Pre-Signup Lambda Trigger (account linking) ────
+    const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: join(
+        __dirname,
+        '../../../node_modules/@packages/cognito/src/pre-signup/index.ts',
+      ),
+      handler: 'handler',
+      bundling: {
+        format: OutputFormat.ESM,
+        sourceMap: true,
+        minify: true,
+      },
+      description:
+        'Cognito PreSignUp trigger — links external providers to existing native accounts',
+    });
+
     // ── User Pool ──────────────────────────────────────
     this.userPool = new UserPool(this, 'UserPool', {
       selfSignUpEnabled: true,
@@ -173,6 +190,7 @@ export class CognitoStack extends BaseStack {
       enableSmsRole: true,
       snsRegion: props.snsRegion,
       lambdaTriggers: {
+        preSignUp: preSignUpFn,
         customMessage: customMessageFn,
         postConfirmation: userSyncFn,
         postAuthentication: userSyncFn,
@@ -185,6 +203,17 @@ export class CognitoStack extends BaseStack {
       }),
       removalPolicy,
     });
+
+    // ── PreSignUp IAM permissions (account linking) ───
+    preSignUpFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminLinkProviderForUser',
+        ],
+        resources: [this.userPool.userPoolArn],
+      }),
+    );
 
     // ── SNS Monthly Spend Limit ───────────────────────
     new AwsCustomResource(this, 'SnsMonthlySpendLimit', {

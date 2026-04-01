@@ -7,12 +7,20 @@ export class PostgresDatabaseService extends DatabaseService {
   private readPool: Pool | null = null;
 
   private getWritePool(connectionString: string): Pool {
-    this.writePool ??= new Pool({ connectionString, max: 3 });
+    this.writePool ??= new Pool({
+      connectionString,
+      max: 3,
+      ssl: { rejectUnauthorized: false },
+    });
     return this.writePool;
   }
 
   private getReadPool(connectionString: string): Pool {
-    this.readPool ??= new Pool({ connectionString, max: 3 });
+    this.readPool ??= new Pool({
+      connectionString,
+      max: 3,
+      ssl: { rejectUnauthorized: false },
+    });
     return this.readPool;
   }
 

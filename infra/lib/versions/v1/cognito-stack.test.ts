@@ -34,7 +34,9 @@ jest.mock('aws-cdk-lib', () => {
 });
 
 jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
-  NodejsFunction: jest.fn().mockImplementation(() => ({})),
+  NodejsFunction: jest.fn().mockImplementation(() => ({
+    addToRolePolicy: jest.fn(),
+  })),
   OutputFormat: { ESM: 'ESM' },
 }));
 
