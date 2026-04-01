@@ -1,0 +1,220 @@
+# Deploy infrastructure (CDK) to AWS for staging and production environments.
+#
+# Automatic deploy fires after Integration Tests pass on main when changes
+# are detected in relevant paths.
+# Release and manual triggers always deploy regardless of changed paths.
+#
+# Environment resolution (single source of truth: setup job):
+#   staging    — Integration Tests pass on main  OR  pre-release
+#   production — published release (non-pre-release)
+#   manual     — environment chosen via workflow_dispatch input
+#
+# Authentication: OIDC — no static AWS keys required.
+# The IAM role is assumed via GitHub's OIDC provider (id-token: write).
+#
+# Configure per environment in GitHub Settings → Environments:
+#
+#   Required secrets:
+#     DEPLOY_ROLE_ARN        — ARN of the IAM role with CDK deploy permissions
+#     DATABASE_URL           — Write connection string (Supabase pooler)
+#     DATABASE_READONLY_URL  — Read-only connection string
+#     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET
+#     APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+#     MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT_ID
+#     ACCESS_TOKEN_NAME
+#
+#   Required variables:
+#     AWS_REGION, PROJECT_PREFIX, STAGE, ALLOWED_ORIGINS
+#     AMPLIFY_DEFAULT_BRANCH, AMPLIFY_STAGE, AMPLIFY_REPOSITORY
+#     AMPLIFY_ENABLE_AUTO_BUILD, AMPLIFY_CLIENT_MAIN_ROOT
+#     ASSETS_BUCKET_URL, ASSETS_BUCKET_PREFIX, APPLICATION_URL
+#     COGNITO_DOMAIN_PREFIX, COGNITO_CALLBACK_URLS, COGNITO_LOGOUT_URLS
+#     COGNITO_REMOVAL_PROTECT, COGNITO_EMAILS_PREFIX
+#     SES_FROM_EMAIL, SES_REPLY_TO, SNS_MONTHLY_SPEND_LIMIT, SMS_BLOCKED_COUNTRIES
+
+name: Deploy Infrastructure
+
+on:
+  workflow_run:
+    workflows: ['Integration Tests']
+    types: [completed]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      dry_run:
+        description: 'Simulate the deploy without running CDK (for testing)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: >-
+    infra-deploy-${{
+      (github.event_name == 'workflow_run' ||
+       (github.event_name == 'release' && github.event.release.prerelease == true))
+      && 'staging'
+      || inputs.environment
+      || 'production'
+    }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: ⚙️ Resolve environment & verify CI
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      env_name: ${{ steps.resolve.outputs.env_name }}
+      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+    steps:
+      - name: 📥 Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
+      - name: ⚙️ Resolve environment and check CI
+        id: resolve
+        uses: ./.github/actions/resolve_deploy_env
+        with:
+          deploy_paths: '^(infra/|services/|packages/|\.github/workflows/deploy-infra\.yml)'
+
+  deploy:
+    name: 🚀 CDK Deploy (${{ needs.setup.outputs.env_name }})
+    needs: [setup]
+    if: needs.setup.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: ${{ needs.setup.outputs.env_name }}
+
+    env:
+      DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      DEPLOY_ENV: ${{ needs.setup.outputs.env_name }}
+      # CDK env vars
+      PROJECT_PREFIX: ${{ vars.PROJECT_PREFIX }}
+      STAGE: ${{ vars.STAGE }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_READONLY_URL: ${{ secrets.DATABASE_READONLY_URL }}
+      ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+      # Amplify
+      AMPLIFY_DEFAULT_BRANCH: ${{ vars.AMPLIFY_DEFAULT_BRANCH }}
+      AMPLIFY_STAGE: ${{ vars.AMPLIFY_STAGE }}
+      AMPLIFY_REPOSITORY: ${{ vars.AMPLIFY_REPOSITORY }}
+      AMPLIFY_ENABLE_AUTO_BUILD: ${{ vars.AMPLIFY_ENABLE_AUTO_BUILD }}
+      AMPLIFY_CLIENT_MAIN_ROOT: ${{ vars.AMPLIFY_CLIENT_MAIN_ROOT }}
+      ACCESS_TOKEN_NAME: ${{ secrets.ACCESS_TOKEN_NAME }}
+      ASSETS_BUCKET_URL: ${{ vars.ASSETS_BUCKET_URL }}
+      ASSETS_BUCKET_PREFIX: ${{ vars.ASSETS_BUCKET_PREFIX }}
+      APPLICATION_URL: ${{ vars.APPLICATION_URL }}
+      # Cognito
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+      FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+      APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+      MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+      MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+      MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+      COGNITO_DOMAIN_PREFIX: ${{ vars.COGNITO_DOMAIN_PREFIX }}
+      COGNITO_CALLBACK_URLS: ${{ vars.COGNITO_CALLBACK_URLS }}
+      COGNITO_LOGOUT_URLS: ${{ vars.COGNITO_LOGOUT_URLS }}
+      COGNITO_REMOVAL_PROTECT: ${{ vars.COGNITO_REMOVAL_PROTECT }}
+      COGNITO_EMAILS_PREFIX: ${{ vars.COGNITO_EMAILS_PREFIX }}
+      SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
+      SES_REPLY_TO: ${{ vars.SES_REPLY_TO }}
+      SNS_MONTHLY_SPEND_LIMIT: ${{ vars.SNS_MONTHLY_SPEND_LIMIT }}
+      SMS_BLOCKED_COUNTRIES: ${{ vars.SMS_BLOCKED_COUNTRIES }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Configure pnpm and Node.js
+        uses: ./.github/actions/configure_pnpm
+
+      - name: 📌 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ✅ Validate required configuration
+        shell: bash
+        run: |
+          missing=()
+          [[ -z "$DEPLOY_ROLE_ARN" ]] && missing+=("DEPLOY_ROLE_ARN")
+          [[ -z "$PROJECT_PREFIX" ]] && missing+=("PROJECT_PREFIX")
+          [[ -z "$DATABASE_URL" ]] && missing+=("DATABASE_URL")
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error::Missing required secrets/variables: ${missing[*]}"
+            exit 1
+          fi
+          echo "✅ All required secrets and variables are set."
+
+      - name: 🔐 Assume deployment role
+        uses: ./.github/actions/assume_role
+        with:
+          role-arn: ${{ env.DEPLOY_ROLE_ARN }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: 🏗️ CDK Deploy
+        shell: bash
+        run: |
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "::notice::Dry run — running cdk diff instead of deploy"
+            pnpm --filter @infra exec -- npx cdk diff --all
+          else
+            pnpm --filter @infra exec -- npx cdk deploy --all --require-approval never --outputs-file cdk-outputs.json
+          fi
+
+      - name: 📤 Upload CDK outputs
+        if: success() && env.DRY_RUN != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-outputs-${{ env.DEPLOY_ENV }}
+          path: infra/cdk-outputs.json
+          retention-days: 5
+
+      - name: 📋 Job summary
+        if: always()
+        shell: bash
+        run: |
+          RELEASE="${{ github.event.release.tag_name || 'n/a' }}"
+          TRIGGER="${{ github.event_name }}"
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            TITLE="🏗️ Infrastructure deploy (dry run)"
+          else
+            TITLE="🏗️ Infrastructure deployed"
+          fi
+
+          {
+            echo "### $TITLE"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Environment | \`$DEPLOY_ENV\` |"
+            echo "| Trigger | \`$TRIGGER\` |"
+            echo "| Release | $RELEASE |"
+            echo "| Region | \`$AWS_REGION\` |"
+            echo "| Project | \`$PROJECT_PREFIX\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
