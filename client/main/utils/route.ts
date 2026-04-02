@@ -14,6 +14,7 @@ export const ROUTES = {
   dashboard: {
     index: '/dashboard',
     home: '/dashboard/home',
+    expenses: '/dashboard/expenses',
   },
   privacy: '/privacy',
   terms: '/terms',

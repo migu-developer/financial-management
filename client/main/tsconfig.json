@@ -15,6 +15,7 @@
       "@features/ui": ["./node_modules/@features/ui/src/index.ts"],
       "@features/ui/*": ["./node_modules/@features/ui/src/*"],
       "@packages/i18n": ["./node_modules/@packages/i18n/src/index.ts"],
+      "@packages/models/*": ["./node_modules/@packages/models/src/*"],
       "@packages/utils": ["./node_modules/@packages/utils/src/index.ts"],
       "@packages/utils/*": ["./node_modules/@packages/utils/src/*"]
     }

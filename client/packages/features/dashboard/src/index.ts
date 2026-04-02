@@ -25,3 +25,11 @@ export { UserMenu } from './presentation/components/web/molecules/user-menu';
 
 // Mobile layouts
 export { DashboardMobileLayout } from './presentation/components/mobile/layouts/dashboard-mobile-layout';
+
+// Expenses
+export { ExpensesPage } from './presentation/pages/expenses';
+export {
+  ExpenseProvider,
+  useExpenses,
+} from './presentation/providers/expense-provider';
+export type { ExpenseContextValue } from './presentation/providers/expense-provider';

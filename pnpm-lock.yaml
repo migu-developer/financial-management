@@ -309,6 +309,9 @@ importers:
       '@packages/i18n':
         specifier: workspace:*
         version: link:../packages/i18n
+      '@packages/models':
+        specifier: workspace:*
+        version: link:../../packages/models
       '@packages/utils':
         specifier: workspace:*
         version: link:../packages/utils
@@ -518,12 +521,18 @@ importers:
 
   client/packages/features/dashboard:
     dependencies:
+      '@expo/vector-icons':
+        specifier: 'catalog:'
+        version: 15.1.1(expo-font@14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@features/ui':
         specifier: workspace:*
         version: link:../ui
       '@packages/i18n':
         specifier: workspace:*
         version: link:../../i18n
+      '@packages/models':
+        specifier: workspace:*
+        version: link:../../../../packages/models
       '@packages/utils':
         specifier: workspace:*
         version: link:../../utils
