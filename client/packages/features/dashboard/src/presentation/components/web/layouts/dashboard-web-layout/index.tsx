@@ -6,20 +6,25 @@ import { WebSidebar } from '@features/dashboard/presentation/components/web/orga
 
 interface DashboardWebLayoutProps {
   children: React.ReactNode;
+  onNavigate?: (route: string) => void;
 }
 
-export function DashboardWebLayout({ children }: DashboardWebLayoutProps) {
+export function DashboardWebLayout({
+  children,
+  onNavigate,
+}: DashboardWebLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header — always on top (zIndex 100 applied inside WebHeader) */}
       <WebHeader onMenuPress={() => setSidebarOpen(true)} />
-
-      {/* Content area: pages + sidebar overlay */}
       <View style={{ flex: 1, position: 'relative' as const }}>
         {children}
-        <WebSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <WebSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onNavigate={onNavigate}
+        />
       </View>
     </View>
   );

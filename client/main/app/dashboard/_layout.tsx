@@ -1,4 +1,4 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 
 import { useAuth } from '@features/auth';
 import {
@@ -8,12 +8,26 @@ import {
 } from '@features/dashboard';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+
+const NAVIGATE_MAP: Record<string, string> = {
+  home: ROUTES.dashboard.home,
+  expenses: ROUTES.dashboard.expenses,
+};
 
 export default function DashboardLayout() {
   const { session, loading, user, signOut } = useAuth();
+  const router = useRouter();
 
   const platformIsWeb = useMemo<boolean>(() => isWeb(), []);
+
+  const handleNavigate = useCallback(
+    (route: string) => {
+      const path = NAVIGATE_MAP[route];
+      if (path) router.push(path as never);
+    },
+    [router],
+  );
 
   if (!loading && !session) {
     return <Redirect href={ROUTES.authLogin as never} />;
@@ -27,7 +41,7 @@ export default function DashboardLayout() {
 
   return (
     <DashboardProvider user={dashboardUser} onSignOut={signOut}>
-      <Layout>
+      <Layout onNavigate={handleNavigate}>
         <Stack screenOptions={{ headerShown: false }} />
       </Layout>
     </DashboardProvider>
