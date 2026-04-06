@@ -21,6 +21,8 @@ export type { ModalProps } from './shared/atoms/modal';
 export { Badge } from './shared/atoms/badge';
 export { EmptyState } from './shared/atoms/empty-state';
 export { LoadingSpinner } from './shared/atoms/loading-spinner';
+export { SelectorField } from './shared/atoms/selector-field';
+export type { SelectorFieldProps } from './shared/atoms/selector-field';
 export { SocialAuthButton } from './shared/molecules/social-auth-button';
 export type { SocialProvider } from './shared/molecules/social-auth-button';
 export { ConfirmDialog } from './shared/molecules/confirm-dialog';
