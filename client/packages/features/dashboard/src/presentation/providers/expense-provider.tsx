@@ -14,6 +14,7 @@ import type {
   ExpenseType,
   ExpenseCategory,
 } from '@packages/models/expenses';
+import { createCache, DEFAULT_CACHE_TTL } from '@packages/utils';
 import { ApiClient } from '@features/dashboard/infrastructure/api/api-client';
 import { ExpenseApiRepository } from '@features/dashboard/infrastructure/api/expense-api-repository';
 import { ListExpensesUseCase } from '@features/dashboard/application/use-cases/list-expenses.use-case';
@@ -26,7 +27,18 @@ import {
   ListExpenseCategoriesUseCase,
 } from '@features/dashboard/application/use-cases/list-catalogs.use-case';
 
-const CATALOG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const currenciesCache = createCache<Currency[]>(
+  'cache:currencies',
+  DEFAULT_CACHE_TTL,
+);
+const expenseTypesCache = createCache<ExpenseType[]>(
+  'cache:expense-types',
+  DEFAULT_CACHE_TTL,
+);
+const expenseCategoriesCache = createCache<ExpenseCategory[]>(
+  'cache:expense-categories',
+  DEFAULT_CACHE_TTL,
+);
 
 export interface ExpenseContextValue {
   expenses: Expense[];
@@ -48,7 +60,6 @@ export interface ExpenseContextValue {
     input: Omit<CreateExpenseInput, 'user_id'>,
   ) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
-  loadCatalogs: () => Promise<void>;
 }
 
 const ExpenseContext = createContext<ExpenseContextValue | null>(null);
@@ -84,9 +95,10 @@ export function ExpenseProvider({
     [],
   );
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
-  const catalogsCachedAt = useRef<number>(0);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const expensesAbortRef = useRef<AbortController | null>(null);
+  const catalogsAbortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   const repository = useMemo(() => {
     const client = new ApiClient(apiBaseUrl, getToken);
@@ -96,25 +108,26 @@ export function ExpenseProvider({
   const clearError = useCallback(() => setError(null), []);
 
   const loadExpenses = useCallback(async () => {
-    abortControllerRef.current?.abort();
+    expensesAbortRef.current?.abort();
     const controller = new AbortController();
-    abortControllerRef.current = controller;
+    expensesAbortRef.current = controller;
 
     setInitialLoading(true);
     setError(null);
     try {
       const listUseCase = new ListExpensesUseCase(repository);
       const result = await listUseCase.execute(20);
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || !mountedRef.current) return;
       setExpenses(result.data);
       setNextCursor(result.next_cursor);
       setHasMore(result.has_more);
       if (result.total_count !== undefined) setTotalCount(result.total_count);
     } catch (err) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || !mountedRef.current) return;
       setError(err instanceof Error ? err.message : 'Failed to load expenses');
     } finally {
-      if (!controller.signal.aborted) setInitialLoading(false);
+      if (!controller.signal.aborted && mountedRef.current)
+        setInitialLoading(false);
     }
   }, [repository]);
 
@@ -124,15 +137,64 @@ export function ExpenseProvider({
     try {
       const listUseCase = new ListExpensesUseCase(repository);
       const result = await listUseCase.execute(20, nextCursor);
+      if (!mountedRef.current) return;
       setExpenses((prev) => [...prev, ...result.data]);
       setNextCursor(result.next_cursor);
       setHasMore(result.has_more);
     } catch (err) {
+      if (!mountedRef.current) return;
       setError(err instanceof Error ? err.message : 'Failed to load more');
     } finally {
-      setLoadingMore(false);
+      if (mountedRef.current) setLoadingMore(false);
     }
   }, [nextCursor, loadingMore, repository]);
+
+  const loadCatalogs = useCallback(async () => {
+    catalogsAbortRef.current?.abort();
+    const controller = new AbortController();
+    catalogsAbortRef.current = controller;
+
+    try {
+      // Try persistent cache first (AsyncStorage — survives navigation + reload)
+      const [cachedCurr, cachedTypes, cachedCats] = await Promise.all([
+        currenciesCache.get(),
+        expenseTypesCache.get(),
+        expenseCategoriesCache.get(),
+      ]);
+
+      if (cachedCurr && cachedTypes && cachedCats) {
+        if (controller.signal.aborted || !mountedRef.current) return;
+        setCurrencies(cachedCurr);
+        setExpenseTypes(cachedTypes);
+        setExpenseCategories(cachedCats);
+        setCatalogsLoaded(true);
+        return;
+      }
+
+      // Cache miss or expired — fetch from API
+      const [curr, types, cats] = await Promise.all([
+        new ListCurrenciesUseCase(repository).execute(),
+        new ListExpenseTypesUseCase(repository).execute(),
+        new ListExpenseCategoriesUseCase(repository).execute(),
+      ]);
+      if (controller.signal.aborted || !mountedRef.current) return;
+
+      setCurrencies(curr);
+      setExpenseTypes(types);
+      setExpenseCategories(cats);
+      setCatalogsLoaded(true);
+
+      // Persist to cache (fire and forget — does not block render)
+      void Promise.all([
+        currenciesCache.set(curr),
+        expenseTypesCache.set(types),
+        expenseCategoriesCache.set(cats),
+      ]);
+    } catch (err) {
+      if (controller.signal.aborted || !mountedRef.current) return;
+      setError(err instanceof Error ? err.message : 'Failed to load catalogs');
+    }
+  }, [repository]);
 
   const createExpense = useCallback(
     async (input: Omit<CreateExpenseInput, 'user_id'>) => {
@@ -161,32 +223,15 @@ export function ExpenseProvider({
     [repository, loadExpenses],
   );
 
-  const loadCatalogs = useCallback(async () => {
-    const now = Date.now();
-    if (catalogsLoaded && now - catalogsCachedAt.current < CATALOG_CACHE_TTL)
-      return;
-    try {
-      const [curr, types, cats] = await Promise.all([
-        new ListCurrenciesUseCase(repository).execute(),
-        new ListExpenseTypesUseCase(repository).execute(),
-        new ListExpenseCategoriesUseCase(repository).execute(),
-      ]);
-      setCurrencies(curr);
-      setExpenseTypes(types);
-      setExpenseCategories(cats);
-      setCatalogsLoaded(true);
-      catalogsCachedAt.current = now;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load catalogs');
-    }
-  }, [catalogsLoaded, repository]);
-
   useEffect(() => {
-    void loadExpenses();
+    mountedRef.current = true;
+    void Promise.all([loadExpenses(), loadCatalogs()]);
     return () => {
-      abortControllerRef.current?.abort();
+      mountedRef.current = false;
+      expensesAbortRef.current?.abort();
+      catalogsAbortRef.current?.abort();
     };
-  }, [loadExpenses]);
+  }, [loadExpenses, loadCatalogs]);
 
   const value = useMemo<ExpenseContextValue>(
     () => ({
@@ -206,7 +251,6 @@ export function ExpenseProvider({
       createExpense,
       updateExpense,
       deleteExpense,
-      loadCatalogs,
     }),
     [
       expenses,
@@ -225,7 +269,6 @@ export function ExpenseProvider({
       createExpense,
       updateExpense,
       deleteExpense,
-      loadCatalogs,
     ],
   );
 

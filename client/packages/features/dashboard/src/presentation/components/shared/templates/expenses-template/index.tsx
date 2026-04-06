@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { Expense, CreateExpenseInput } from '@packages/models/expenses';
 import { Button, ConfirmDialog } from '@features/ui/components';
@@ -26,17 +26,12 @@ export function ExpensesTemplate() {
     createExpense,
     updateExpense,
     deleteExpense,
-    loadCatalogs,
   } = useExpenses();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  useEffect(() => {
-    void loadCatalogs();
-  }, [loadCatalogs]);
 
   const handleCreate = useCallback(() => {
     setEditingExpense(null);
