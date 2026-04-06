@@ -53,10 +53,18 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts")
 
-          if echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-production")' >/dev/null 2>&1; then
+          HAS_STAGING=$(echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-staging")' 2>/dev/null)
+          HAS_PRODUCTION=$(echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-production")' 2>/dev/null)
+
+          if [[ -n "$HAS_PRODUCTION" ]]; then
             ENV_NAME="production"
-          else
+          elif [[ -n "$HAS_STAGING" ]]; then
             ENV_NAME="staging"
+          else
+            echo "No cdk-outputs artifact found — deploy was skipped"
+            echo "env_name=staging" >> "$GITHUB_OUTPUT"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"

@@ -7,10 +7,13 @@ import { View } from 'react-native';
  */
 interface DashboardMobileLayoutProps {
   children: React.ReactNode;
+  onNavigate?: (route: string) => void;
 }
 
 export function DashboardMobileLayout({
   children,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onNavigate: _onNavigate,
 }: DashboardMobileLayoutProps) {
   return <View style={{ flex: 1 }}>{children}</View>;
 }

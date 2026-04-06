@@ -20,9 +20,10 @@ const ANIMATION_DURATION = 250;
 interface WebSidebarProps {
   open: boolean;
   onClose: () => void;
+  onNavigate?: (route: string) => void;
 }
 
-export function WebSidebar({ open, onClose }: WebSidebarProps) {
+export function WebSidebar({ open, onClose, onNavigate }: WebSidebarProps) {
   const { t } = useTranslation('dashboard');
   const { signOut } = useDashboard();
   const { colorScheme } = useThemeActions();
@@ -99,9 +100,18 @@ export function WebSidebar({ open, onClose }: WebSidebarProps) {
           className="flex-row items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800"
           style={{ height: space.s56 }}
         >
-          <Text className="text-slate-900 dark:text-white font-bold text-base">
-            {t('sidebar.appName')}
-          </Text>
+          <Pressable
+            onPress={() => {
+              onClose();
+              onNavigate?.('home');
+            }}
+            accessibilityRole="link"
+            accessibilityLabel={t('sidebar.appName')}
+          >
+            <Text className="text-slate-900 dark:text-white font-bold text-base">
+              {t('sidebar.appName')}
+            </Text>
+          </Pressable>
           <Pressable
             onPress={onClose}
             className="w-8 h-8 items-center justify-center rounded-lg"
@@ -112,8 +122,26 @@ export function WebSidebar({ open, onClose }: WebSidebarProps) {
           </Pressable>
         </View>
 
-        {/* Nav items (future) */}
-        <View style={{ flex: 1 }} />
+        {/* Nav items */}
+        <View style={{ flex: 1 }} className="p-3">
+          <Pressable
+            onPress={() => {
+              onClose();
+              onNavigate?.('expenses');
+            }}
+            className="flex-row items-center gap-3 px-3 py-2.5 rounded-xl"
+            accessibilityRole="link"
+          >
+            <Icon
+              name="account-balance-wallet"
+              size={fontSizeScale.xl}
+              color={iconColor}
+            />
+            <Text className="text-slate-700 dark:text-slate-300 font-medium text-sm">
+              {t('sidebar.expenses')}
+            </Text>
+          </Pressable>
+        </View>
 
         {/* Footer: sign out */}
         <View className="border-t border-slate-100 dark:border-slate-800 p-3">

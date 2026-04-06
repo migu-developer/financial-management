@@ -26,6 +26,7 @@
     "@features/landing": "workspace:*",
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",
+    "@packages/models": "workspace:*",
     "@packages/utils": "workspace:*",
     "@react-navigation/bottom-tabs": "catalog:",
     "@react-navigation/elements": "catalog:",

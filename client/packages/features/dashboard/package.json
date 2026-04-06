@@ -11,8 +11,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo/vector-icons": "catalog:",
     "@features/ui": "workspace:*",
     "@packages/i18n": "workspace:*",
+    "@packages/models": "workspace:*",
     "@packages/utils": "workspace:*"
   },
   "peerDependencies": {
