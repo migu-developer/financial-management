@@ -68,14 +68,14 @@ describe('CurrencyDisplay component', () => {
       expect(props.value).toBe(100);
     });
 
-    it('symbol defaults to "$"', () => {
-      const symbol = '$';
-      expect(symbol).toBe('$');
+    it('accepts currencyCode', () => {
+      const props = { value: 100, currencyCode: 'COP' };
+      expect(props.currencyCode).toBe('COP');
     });
 
-    it('accepts custom symbol', () => {
-      const props = { value: 50, symbol: '€' };
-      expect(props.symbol).toBe('€');
+    it('currencyCode is optional', () => {
+      const props: { value: number; currencyCode?: string } = { value: 50 };
+      expect(props.currencyCode).toBeUndefined();
     });
 
     it('type is optional', () => {

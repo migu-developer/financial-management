@@ -50,7 +50,11 @@ describe('ListExpensesUseCase', () => {
 
     const result = await useCase.execute();
 
-    expect(repository.listExpenses).toHaveBeenCalledWith(undefined, undefined);
+    expect(repository.listExpenses).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      undefined,
+    );
     expect(result).toEqual(mockPaginatedResult);
   });
 
@@ -59,7 +63,11 @@ describe('ListExpensesUseCase', () => {
 
     await useCase.execute(10);
 
-    expect(repository.listExpenses).toHaveBeenCalledWith(10, undefined);
+    expect(repository.listExpenses).toHaveBeenCalledWith(
+      10,
+      undefined,
+      undefined,
+    );
   });
 
   it('passes limit and cursor parameters to repository', async () => {
@@ -67,7 +75,11 @@ describe('ListExpensesUseCase', () => {
 
     await useCase.execute(20, 'cursor-abc');
 
-    expect(repository.listExpenses).toHaveBeenCalledWith(20, 'cursor-abc');
+    expect(repository.listExpenses).toHaveBeenCalledWith(
+      20,
+      'cursor-abc',
+      undefined,
+    );
   });
 
   it('returns paginated result with has_more and next_cursor', async () => {

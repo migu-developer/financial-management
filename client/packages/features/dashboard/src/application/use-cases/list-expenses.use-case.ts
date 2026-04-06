@@ -8,7 +8,8 @@ export class ListExpensesUseCase {
   async execute(
     limit?: number,
     cursor?: string,
+    signal?: AbortSignal,
   ): Promise<PaginatedResult<Expense>> {
-    return this.repository.listExpenses(limit, cursor);
+    return this.repository.listExpenses(limit, cursor, signal);
   }
 }

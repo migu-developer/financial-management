@@ -3,7 +3,17 @@ import { ExpensesPage } from '@features/dashboard';
 import { ExpenseProvider } from '@features/dashboard/presentation/providers/expense-provider';
 import { useAuth } from '@features/auth';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+function getApiBaseUrl(): string {
+  const url = process.env.EXPO_PUBLIC_API_URL;
+  if (!url) {
+    throw new Error(
+      'EXPO_PUBLIC_API_URL is not configured. Set it in your .env file.',
+    );
+  }
+  return url;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export default function DashboardExpensesScreen() {
   const { session } = useAuth();

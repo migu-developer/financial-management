@@ -42,7 +42,10 @@ export function ExpenseCard({
       activeOpacity={0.7}
       onPress={() => onPress(expense)}
       accessibilityRole="button"
-      accessibilityLabel={`${expense.name}, ${currency?.code ?? ''} ${expense.value}`}
+      accessibilityLabel={t('expenses.card.accessibilityLabel', {
+        name: expense.name,
+        amount: `${currency?.code ?? ''} ${expense.value}`,
+      })}
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 mr-3">

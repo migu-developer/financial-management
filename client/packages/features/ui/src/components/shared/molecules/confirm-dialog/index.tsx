@@ -25,7 +25,13 @@ export function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Modal visible={visible} onClose={onClose} title={title} loading={loading}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      loading={loading}
+      closeAccessibilityLabel={cancelLabel}
+    >
       <Text className="text-neutral-600 dark:text-neutral-300 mb-6">
         {message}
       </Text>

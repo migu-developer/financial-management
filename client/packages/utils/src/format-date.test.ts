@@ -79,15 +79,40 @@ describe('formatDate', () => {
 });
 
 describe('getUserLocale', () => {
-  it('returns a non-empty string', () => {
+  it('returns navigator.language on web', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { language: 'es-CO', languages: ['es-CO', 'en-US'] },
+      writable: true,
+      configurable: true,
+    });
     const locale = getUserLocale();
-    expect(typeof locale).toBe('string');
-    expect(locale.length).toBeGreaterThan(0);
+    expect(locale).toBe('es-CO');
   });
 
-  it('returns the default locale if the user locale is not supported', () => {
+  it('returns first entry of navigator.languages', () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { language: 'en-US', languages: ['fi-FI', 'en-US'] },
+      writable: true,
+      configurable: true,
+    });
+    const locale = getUserLocale();
+    expect(locale).toBe('fi-FI');
+  });
+
+  it('falls back to en-US when navigator is undefined', () => {
+    const original = globalThis.navigator;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
     const locale = getUserLocale();
     expect(locale).toBe('en-US');
+    Object.defineProperty(globalThis, 'navigator', {
+      value: original,
+      writable: true,
+      configurable: true,
+    });
   });
 });
 

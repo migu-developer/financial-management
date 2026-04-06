@@ -56,10 +56,20 @@ export const dashboard = {
     },
     card: {
       deleteAccessibility: 'Delete expense',
+      accessibilityLabel: '{{name}}, {{amount}}',
     },
     selector: {
       selectTitle: 'Select {{field}}',
       done: 'Done',
+    },
+    errors: {
+      loadExpenses: 'Failed to load expenses',
+      loadMore: 'Failed to load more expenses',
+      loadCatalogs: 'Failed to load catalogs',
+      authExpired: 'Authentication token expired or missing',
+    },
+    modal: {
+      closeAccessibility: 'Close dialog',
     },
   },
 } as const;

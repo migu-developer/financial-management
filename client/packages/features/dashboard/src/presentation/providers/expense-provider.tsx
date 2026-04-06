@@ -15,6 +15,7 @@ import type {
   ExpenseCategory,
 } from '@packages/models/expenses';
 import { createCache, DEFAULT_CACHE_TTL } from '@packages/utils';
+import { useTranslation } from '@packages/i18n';
 import { ApiClient } from '@features/dashboard/infrastructure/api/api-client';
 import { ExpenseApiRepository } from '@features/dashboard/infrastructure/api/expense-api-repository';
 import { ListExpensesUseCase } from '@features/dashboard/application/use-cases/list-expenses.use-case';
@@ -81,6 +82,7 @@ export function ExpenseProvider({
   apiBaseUrl,
   getToken,
 }: ExpenseProviderProps) {
+  const { t } = useTranslation('dashboard');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
@@ -116,7 +118,11 @@ export function ExpenseProvider({
     setError(null);
     try {
       const listUseCase = new ListExpensesUseCase(repository);
-      const result = await listUseCase.execute(20);
+      const result = await listUseCase.execute(
+        20,
+        undefined,
+        controller.signal,
+      );
       if (controller.signal.aborted || !mountedRef.current) return;
       setExpenses(result.data);
       setNextCursor(result.next_cursor);
@@ -124,7 +130,9 @@ export function ExpenseProvider({
       if (result.total_count !== undefined) setTotalCount(result.total_count);
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to load expenses');
+      setError(
+        err instanceof Error ? err.message : t('expenses.errors.loadExpenses'),
+      );
     } finally {
       if (!controller.signal.aborted && mountedRef.current)
         setInitialLoading(false);
@@ -143,7 +151,9 @@ export function ExpenseProvider({
       setHasMore(result.has_more);
     } catch (err) {
       if (!mountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to load more');
+      setError(
+        err instanceof Error ? err.message : t('expenses.errors.loadMore'),
+      );
     } finally {
       if (mountedRef.current) setLoadingMore(false);
     }
@@ -192,7 +202,9 @@ export function ExpenseProvider({
       ]);
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'Failed to load catalogs');
+      setError(
+        err instanceof Error ? err.message : t('expenses.errors.loadCatalogs'),
+      );
     }
   }, [repository]);
 

@@ -14,6 +14,7 @@ describe('ExpenseList component', () => {
       const props = {
         expenses: [],
         expenseTypes: [],
+        expenseCategories: [],
         currencies: [],
         loading: false,
         loadingMore: false,

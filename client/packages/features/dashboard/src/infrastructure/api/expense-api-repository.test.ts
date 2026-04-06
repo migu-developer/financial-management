@@ -51,7 +51,11 @@ describe('ExpenseApiRepository', () => {
 
       const result = await repository.listExpenses();
 
-      expect(api.get).toHaveBeenCalledWith('/expenses', { limit: '20' });
+      expect(api.get).toHaveBeenCalledWith(
+        '/expenses',
+        { limit: '20' },
+        undefined,
+      );
       expect(result).toEqual({
         data: [mockExpense],
         next_cursor: null,
@@ -69,10 +73,11 @@ describe('ExpenseApiRepository', () => {
 
       await repository.listExpenses(10, 'cursor-xyz');
 
-      expect(api.get).toHaveBeenCalledWith('/expenses', {
-        limit: '10',
-        cursor: 'cursor-xyz',
-      });
+      expect(api.get).toHaveBeenCalledWith(
+        '/expenses',
+        { limit: '10', cursor: 'cursor-xyz' },
+        undefined,
+      );
     });
 
     it('maps response to PaginatedResult with has_more and next_cursor', async () => {

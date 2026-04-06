@@ -12,6 +12,7 @@ export interface ExpenseRepositoryPort {
   listExpenses(
     limit?: number,
     cursor?: string,
+    signal?: AbortSignal,
   ): Promise<PaginatedResult<Expense>>;
 
   createExpense(input: Omit<CreateExpenseInput, 'user_id'>): Promise<Expense>;

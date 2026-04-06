@@ -56,10 +56,20 @@ export const dashboard = {
     },
     card: {
       deleteAccessibility: 'Eliminar gasto',
+      accessibilityLabel: '{{name}}, {{amount}}',
     },
     selector: {
       selectTitle: 'Seleccionar {{field}}',
       done: 'Listo',
+    },
+    errors: {
+      loadExpenses: 'Error al cargar gastos',
+      loadMore: 'Error al cargar mas gastos',
+      loadCatalogs: 'Error al cargar catalogos',
+      authExpired: 'Token de autenticacion expirado o no disponible',
+    },
+    modal: {
+      closeAccessibility: 'Cerrar dialogo',
     },
   },
 } as const;

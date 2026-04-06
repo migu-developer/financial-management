@@ -47,7 +47,13 @@ export function ExpenseModal({
   };
 
   return (
-    <Modal visible={visible} onClose={onClose} title={title} loading={loading}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      loading={loading}
+      closeAccessibilityLabel={cancelLabel}
+    >
       <ExpenseForm
         expense={expense}
         currencies={currencies}

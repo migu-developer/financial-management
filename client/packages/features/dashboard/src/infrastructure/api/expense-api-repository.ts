@@ -24,6 +24,7 @@ export class ExpenseApiRepository implements ExpenseRepositoryPort {
   async listExpenses(
     limit = 20,
     cursor?: string,
+    signal?: AbortSignal,
   ): Promise<PaginatedResult<Expense>> {
     const params: Record<string, string> = { limit: String(limit) };
     if (cursor) params['cursor'] = cursor;
@@ -31,6 +32,7 @@ export class ExpenseApiRepository implements ExpenseRepositoryPort {
     const response = await this.api.get<ApiResponse<Expense[]>>(
       '/expenses',
       params,
+      signal,
     );
 
     return {
