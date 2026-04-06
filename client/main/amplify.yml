@@ -22,7 +22,7 @@ applications:
             - echo "EXPO_PUBLIC_APPLICATION_URL=$APPLICATION_URL" >> client/main/.env
             - echo "EXPO_PUBLIC_COGNITO_DOMAIN=$COGNITO_DOMAIN" >> client/main/.env
             - echo "EXPO_PUBLIC_COGNITO_REGION=$COGNITO_REGION" >> client/main/.env
-            - echo "EXPO_PUBLIC_API_URL=${API_URL%/}" >> client/main/.env
+            - echo "EXPO_PUBLIC_API_URL=$(echo $API_URL | sed 's:/$::')" >> client/main/.env
             - pnpm --filter @client/main build:web
             - pnpm --filter @client/main run fix-font-paths
       artifacts:
