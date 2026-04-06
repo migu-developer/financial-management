@@ -1,4 +1,4 @@
-import { RemovalPolicy, SecretValue } from 'aws-cdk-lib';
+import { Fn, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
 import {
   AccountRecovery,
   Mfa,
@@ -529,10 +529,18 @@ export class CognitoStack extends BaseStack {
       version,
       'Auth',
     );
+
+    // baseUrl() returns "https://prefix.auth.region.amazoncognito.com"
+    // The client expects just the hostname (without protocol) to build OAuth URLs.
+    const cognitoDomainFqdn = Fn.select(
+      2,
+      Fn.split('/', this.userPoolDomain.baseUrl()),
+    );
+
     exportForCrossVersion(
       this,
       'CognitoDomain',
-      this.userPoolDomain.domainName,
+      cognitoDomainFqdn,
       version,
       'Auth',
     );

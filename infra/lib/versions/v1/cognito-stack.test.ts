@@ -27,6 +27,14 @@ jest.mock('aws-cdk-lib', () => {
     App: jest.fn().mockImplementation(() => ({
       node: { tryGetContext: jest.fn(), children: [] },
     })),
+    Fn: {
+      select: jest.fn(
+        (_index: number, values: string[]) => values?.[_index] ?? '',
+      ),
+      split: jest.fn((_delimiter: string, value: string) =>
+        value.split(_delimiter),
+      ),
+    },
     RemovalPolicy: { RETAIN: 'Retain', DESTROY: 'Destroy' },
     SecretValue: { unsafePlainText: jest.fn().mockReturnValue('mock-secret') },
     Runtime: { NODEJS_22_X: 'nodejs22.x' },
@@ -92,7 +100,8 @@ jest.mock('aws-cdk-lib/aws-cognito', () => {
     UserPool: jest.fn().mockImplementation(() => mockUserPool),
     UserPoolClient: jest.fn().mockImplementation(() => mockUserPoolClient),
     UserPoolDomain: jest.fn().mockImplementation(() => ({
-      domainName: 'example.auth.us-east-1.amazoncognito.com',
+      domainName: 'fm-test-auth',
+      baseUrl: () => 'https://fm-test-auth.auth.us-east-1.amazoncognito.com',
     })),
     UserPoolIdentityProviderGoogle: jest
       .fn()
@@ -209,7 +218,7 @@ describe('CognitoStack', () => {
     expect(mockExportForCrossVersion).toHaveBeenCalledWith(
       expect.anything(),
       'CognitoDomain',
-      'example.auth.us-east-1.amazoncognito.com',
+      'fm-test-auth.auth.us-east-1.amazoncognito.com',
       'v1',
       'Auth',
     );
