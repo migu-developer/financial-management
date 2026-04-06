@@ -41,35 +41,32 @@ jobs:
           sparse-checkout: .github/actions
           sparse-checkout-cone-mode: false
 
-      - name: ⚙️ Resolve environment from deploy artifacts
+      - name: ⚙️ Check if deploy produced artifacts
         id: resolve
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           RUN_ID="${{ github.event.workflow_run.id }}"
-          ARTIFACTS=$(curl -sS \
+          RESPONSE=$(curl -sS \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts")
 
-          HAS_STAGING=$(echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-staging")' 2>/dev/null)
-          HAS_PRODUCTION=$(echo "$ARTIFACTS" | jq -e '.artifacts[] | select(.name == "cdk-outputs-production")' 2>/dev/null)
+          ARTIFACT_NAMES=$(echo "$RESPONSE" | jq -r '.artifacts[].name // empty')
+          echo "Artifacts found: ${ARTIFACT_NAMES:-none}"
 
-          if [[ -n "$HAS_PRODUCTION" ]]; then
-            ENV_NAME="production"
-          elif [[ -n "$HAS_STAGING" ]]; then
-            ENV_NAME="staging"
+          if echo "$ARTIFACT_NAMES" | grep -q '^cdk-outputs-production$'; then
+            echo "env_name=production" >> "$GITHUB_OUTPUT"
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          elif echo "$ARTIFACT_NAMES" | grep -q '^cdk-outputs-staging$'; then
+            echo "env_name=staging" >> "$GITHUB_OUTPUT"
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No cdk-outputs artifact found — deploy was skipped"
+            echo "No cdk-outputs artifact found — infra deploy was skipped, skipping docs publish"
             echo "env_name=staging" >> "$GITHUB_OUTPUT"
             echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
           fi
-
-          echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
-          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
-          echo "Resolved environment: ${ENV_NAME}"
 
   publish:
     name: 📚 Publish API Docs (${{ needs.setup.outputs.env_name }})
