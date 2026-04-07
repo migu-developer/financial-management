@@ -88,8 +88,8 @@ export default function AuthCallbackScreen() {
 
     // ── Redirect flow ───────────────────────────────────────────────────────
     // This path runs when the page was navigated to directly (full redirect,
-    // not a popup).  Read the PKCE data that useSocialSignIn persisted in
-    // sessionStorage before triggering the OAuth redirect.
+    // not a popup).  consumePendingOAuth() reads the PKCE data that
+    // useSocialSignIn persisted in AsyncStorage before the OAuth redirect.
 
     // Facebook appends #_=_ which can move query params into the hash.
     // Try expo-router params first, then fall back to parsing the hash.

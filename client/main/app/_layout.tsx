@@ -15,7 +15,7 @@ import { useThemeActions } from '@features/ui';
 preventAutoHideAsync();
 
 // Hydrate Cognito storage adapter from AsyncStorage before any auth operations.
-// This is a top-level await that resolves before the first render.
+// Starts at module scope; awaited in handleReady before showing content.
 const authStorageReady = initAuthStorage();
 
 function StatusBarDisplay(): React.ReactNode {

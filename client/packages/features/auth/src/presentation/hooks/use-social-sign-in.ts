@@ -99,13 +99,13 @@ async function pollForCallbackUrl(
  * Orchestrates the full social OAuth flow with platform-aware strategy:
  *
  * Web:
- *  - Persists PKCE + provider in sessionStorage before opening the browser session.
+ *  - Persists PKCE + provider in AsyncStorage before opening the browser session.
  *  - Uses openAuthSessionAsync (popup on desktop, in-app browser on mobile web).
  *  - If the popup closes successfully, processes the callback URL in the hook.
  *  - If COOP headers prevent postMessage (production), uses BroadcastChannel
  *    (primary) or localStorage (fallback) to receive the callback URL from the popup.
  *  - If the session is handled by the /auth/callback route instead (redirect flow),
- *    the sessionStorage entry is consumed there and onSuccess is NOT called here.
+ *    the AsyncStorage entry is consumed there and onSuccess is NOT called here.
  *
  * Native (iOS / Android):
  *  - Uses openAuthSessionAsync with the system browser.
@@ -235,9 +235,7 @@ export function useSocialSignIn(
         onSuccess();
       } catch (e) {
         cleanupPopupStorage();
-        if (isWeb() && typeof sessionStorage !== 'undefined') {
-          sessionStorage.removeItem(OAUTH_STORAGE_KEY);
-        }
+        await AsyncStorage.removeItem(OAUTH_STORAGE_KEY).catch(() => {});
         const msg = e instanceof Error ? e.message : 'Social sign in failed';
         setError(msg);
       } finally {
