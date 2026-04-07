@@ -87,6 +87,13 @@ catalog:
   typescript: ^5.9.3
   typescript-eslint: ^8.58.0
 
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+blockExoticSubdeps: true
+strictDepBuilds: true
+verifyStoreIntegrity: true
+verifyDepsBeforeRun: warn
+
 onlyBuiltDependencies:
   - esbuild
   - sharp
