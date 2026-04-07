@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, View } from 'react-native';
 import type {
   Expense,
   ExpenseType,
@@ -8,6 +8,9 @@ import type {
 } from '@packages/models/expenses';
 import { LoadingSpinner, EmptyState } from '@features/ui/components';
 import { ExpenseCard } from '@features/dashboard/presentation/components/shared/molecules/expense-card';
+import { ExpenseCardSkeleton } from '@features/dashboard/presentation/components/shared/molecules/expense-card-skeleton';
+
+const SKELETON_COUNT = 5;
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -39,7 +42,13 @@ export function ExpenseList({
   emptyDescription,
 }: ExpenseListProps) {
   if (loading && expenses.length === 0) {
-    return <LoadingSpinner fullScreen />;
+    return (
+      <View className="flex-1" style={{ paddingBottom: 24 }}>
+        {Array.from({ length: SKELETON_COUNT }, (_, i) => (
+          <ExpenseCardSkeleton key={i} />
+        ))}
+      </View>
+    );
   }
 
   if (!loading && expenses.length === 0) {

@@ -35,11 +35,11 @@ describe('ExpenseList component', () => {
   });
 
   describe('rendering logic', () => {
-    it('shows loading spinner when loading and expenses is empty', () => {
+    it('shows skeleton loader when loading and expenses is empty', () => {
       const loading = true;
       const expenses: unknown[] = [];
-      const showSpinner = loading && expenses.length === 0;
-      expect(showSpinner).toBe(true);
+      const showSkeleton = loading && expenses.length === 0;
+      expect(showSkeleton).toBe(true);
     });
 
     it('shows empty state when not loading and expenses is empty', () => {
@@ -55,11 +55,11 @@ describe('ExpenseList component', () => {
       expect(showList).toBe(true);
     });
 
-    it('does not show spinner when loading but expenses exist', () => {
+    it('does not show skeleton when loading but expenses exist', () => {
       const loading = true;
       const expenses = [{ id: '1' }];
-      const showSpinner = loading && expenses.length === 0;
-      expect(showSpinner).toBe(false);
+      const showSkeleton = loading && expenses.length === 0;
+      expect(showSkeleton).toBe(false);
     });
   });
 
