@@ -1,3 +1,6 @@
+// Auth initialization
+export { initAuthStorage } from './infrastructure/cognito/cognito-auth-repository';
+
 // Auth Provider + context
 export { AuthProvider, useAuth } from './presentation/providers/auth-provider';
 

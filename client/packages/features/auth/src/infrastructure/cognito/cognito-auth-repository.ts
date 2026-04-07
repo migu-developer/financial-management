@@ -56,15 +56,26 @@ const PROVIDER_MAP: Record<SocialProvider, string> = {
 
 export class CognitoAuthRepository implements AuthRepository {
   private readonly pool: CognitoUserPool;
+  private readonly storage?: Storage;
 
   // Stores in-progress CognitoUser instances during multi-step auth flows.
   // Key: normalized username (email or phone). Cleared after each flow completes.
   private readonly pending = new Map<string, PendingEntry>();
 
-  constructor() {
+  constructor(storage?: Storage) {
+    this.storage = storage;
     this.pool = new CognitoUserPool({
       UserPoolId: cognitoConfig.userPoolId,
       ClientId: cognitoConfig.clientId,
+      ...(storage && { Storage: storage }),
+    });
+  }
+
+  private createCognitoUser(username: string): CognitoUser {
+    return new CognitoUser({
+      Username: username,
+      Pool: this.pool,
+      ...(this.storage && { Storage: this.storage }),
     });
   }
 
@@ -75,7 +86,7 @@ export class CognitoAuthRepository implements AuthRepository {
     password: string,
   ): Promise<AuthChallengeResult> {
     return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: identifier, Pool: this.pool });
+      const user = this.createCognitoUser(identifier);
       const authDetails = new AuthenticationDetails({
         Username: identifier,
         Password: password,
@@ -237,7 +248,7 @@ export class CognitoAuthRepository implements AuthRepository {
 
   async confirmSignUp(identifier: string, code: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: identifier, Pool: this.pool });
+      const user = this.createCognitoUser(identifier);
       user.confirmRegistration(code, true, (err) => {
         if (err) return reject(this.mapError(err));
         resolve();
@@ -247,7 +258,7 @@ export class CognitoAuthRepository implements AuthRepository {
 
   async resendConfirmationCode(identifier: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: identifier, Pool: this.pool });
+      const user = this.createCognitoUser(identifier);
       user.resendConfirmationCode((err) => {
         if (err) return reject(this.mapError(err));
         resolve();
@@ -329,10 +340,7 @@ export class CognitoAuthRepository implements AuthRepository {
       (accessToken.payload['username'] as string | undefined) ??
       (accessToken.payload['sub'] as string);
 
-    const cognitoUser = new CognitoUser({
-      Username: username,
-      Pool: this.pool,
-    });
+    const cognitoUser = this.createCognitoUser(username);
     cognitoUser.setSignInUserSession(cognitoSession);
 
     return this.mapSession(cognitoSession);
@@ -344,7 +352,7 @@ export class CognitoAuthRepository implements AuthRepository {
     identifier: string,
   ): Promise<ForgotPasswordDelivery> {
     return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: identifier, Pool: this.pool });
+      const user = this.createCognitoUser(identifier);
       user.forgotPassword({
         onSuccess: () => {
           resolve({ destination: identifier, medium: IdentifierType.EMAIL });
@@ -374,7 +382,7 @@ export class CognitoAuthRepository implements AuthRepository {
     newPassword: string,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: identifier, Pool: this.pool });
+      const user = this.createCognitoUser(identifier);
       user.confirmPassword(code, newPassword, {
         onSuccess: () => resolve(),
         onFailure: (err) => reject(this.mapError(err)),
@@ -559,7 +567,10 @@ export class CognitoAuthRepository implements AuthRepository {
       userId,
       email: get('email') ?? '',
       givenName: get('given_name') ?? '',
-      fullname: get('name') ?? '',
+      fullname:
+        get('name') ||
+        [get('given_name'), get('family_name')].filter(Boolean).join(' ') ||
+        '',
       phoneNumber: get('phone_number'),
       birthdate: get('birthdate'),
       profilePicture: get('picture'),
@@ -607,4 +618,16 @@ export class CognitoAuthRepository implements AuthRepository {
   }
 }
 
-export const cognitoAuthRepository = new CognitoAuthRepository();
+import { CognitoStorageAdapter } from './cognito-storage-adapter';
+
+const storageAdapter = new CognitoStorageAdapter();
+
+/**
+ * Hydrate the storage adapter from AsyncStorage.
+ * Must be called once at app startup before any auth operations.
+ */
+export async function initAuthStorage(): Promise<void> {
+  await storageAdapter.hydrate();
+}
+
+export const cognitoAuthRepository = new CognitoAuthRepository(storageAdapter);

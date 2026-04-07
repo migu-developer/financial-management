@@ -7,42 +7,43 @@ packages:
   - infra
 
 catalog:
-  '@aws-lambda-powertools/logger': ^2.10.0
-  '@aws-sdk/client-cognito-identity-provider': ^3.1021.0
-  '@aws-sdk/client-s3': ^3.1000.0
-  '@babel/parser': ^7.29.0
+  '@aws-lambda-powertools/logger': ^2.32.0
+  '@aws-sdk/client-cognito-identity-provider': ^3.1025.0
+  '@aws-sdk/client-s3': ^3.1025.0
+  '@babel/parser': ^7.29.2
   '@babel/traverse': ^7.29.0
-  '@commitlint/cli': ^20.4.3
-  '@commitlint/config-conventional': ^20.4.3
-  '@commitlint/types': ^20.4.3
-  '@expo/vector-icons': ^15.0.3
-  '@react-email/components': ^1.0.8
-  '@react-email/preview-server': ^5.2.9
-  '@react-email/tailwind': ^2.0.5
-  '@react-native-async-storage/async-storage': ^2.1.0
-  '@react-navigation/bottom-tabs': ^7.15.5
-  '@react-navigation/elements': ^2.9.10
-  '@react-navigation/native': ^7.1.33
-  '@tailwindcss/postcss': ^4.2.1
+  '@commitlint/cli': ^20.5.0
+  '@commitlint/config-conventional': ^20.5.0
+  '@commitlint/types': ^20.5.0
+  '@expo/vector-icons': ^15.1.1
+  '@react-email/components': ^1.0.11
+  '@react-email/preview-server': ^5.2.10
+  '@react-email/tailwind': ^2.0.7
+  '@react-native-async-storage/async-storage': ^2.2.0
+  '@react-navigation/bottom-tabs': ^7.15.9
+  '@react-navigation/elements': ^2.9.14
+  '@react-navigation/native': ^7.2.2
+  '@tailwindcss/postcss': ^4.2.2
   '@types/eslint-plugin-jsx-a11y': ^6.10.1
   '@types/jest': ^30.0.0
-  '@types/node': ^25.3.5
-  '@types/react': ~19.1.10
-  '@types/react-dom': ~19.1.1
+  '@types/node': ^25.5.2
+  '@types/pg': ^8.20.0
+  '@types/react': ~19.1.17
+  '@types/react-dom': ~19.1.11
   amazon-cognito-identity-js: ^6.3.16
-  aws-cdk: ^2.1106.0
-  aws-cdk-lib: ^2.238.0
+  aws-cdk: ^2.1117.0
+  aws-cdk-lib: ^2.248.0
   aws-sdk: ^2.1693.0
-  constructs: ^10.4.5
+  constructs: ^10.6.0
   cross-env: ^10.1.0
-  dotenv: ^17.3.1
+  dotenv: ^17.4.1
   esbuild: ^0.27.3
-  eslint: ^10.0.0
+  eslint: ^10.2.0
   eslint-config-expo: ~10.0.0
   eslint-config-prettier: ^10.1.8
   eslint-plugin-jsx-a11y: ^6.10.2
-  eslint-plugin-react: ^7.37.2
-  eslint-plugin-react-hooks: ^5.0.0
+  eslint-plugin-react: ^7.37.5
+  eslint-plugin-react-hooks: ^5.2.0
   expo: ~54.0.33
   expo-auth-session: ~7.0.10
   expo-constants: ~18.0.13
@@ -59,45 +60,63 @@ catalog:
   expo-system-ui: ~6.0.9
   expo-web-browser: ~15.0.10
   husky: ^9.1.7
-  jest: ^30.2.0
-  libphonenumber-js: ^1.12.38
-  nativewind: ^4.2.2
+  jest: ^30.3.0
+  libphonenumber-js: ^1.12.41
+  nativewind: ^4.2.3
+  pg: ^8.20.0
   prettier: ^3.8.1
   react: 19.1.0
   react-dom: 19.1.0
-  react-email: ^5.2.9
+  react-email: ^5.2.10
   react-native: 0.81.5
-  react-native-gesture-handler: ~2.28.0
+  react-native-gesture-handler: ~2.31.0
   react-native-qrcode-svg: ^6.3.21
-  react-native-reanimated: ~4.1.1
-  react-native-safe-area-context: ~5.6.0
-  react-native-screens: ~4.16.0
-  react-native-svg: ^15.15.3
-  react-native-web: ~0.21.0
+  react-native-reanimated: ~4.1.7
+  react-native-safe-area-context: ~5.7.0
+  react-native-screens: ~4.24.0
+  react-native-svg: ^15.15.4
+  react-native-web: ~0.21.2
   react-native-worklets: 0.5.1
-  pg: ^8.16.0
-  '@types/pg': ^8.20.0
-  supabase: ^2.83.0
-  tailwindcss: ^4.2.1
-  ts-jest: ^29.4.6
+  supabase: ^2.85.0
+  tailwindcss: ^4.2.2
+  ts-jest: ^29.4.9
   ts-node: ^10.9.2
   tsconfig-paths: ^4.2.0
   tsx: ^4.21.0
-  turbo: ^2.8.14
+  turbo: ^2.9.4
   typescript: ^5.9.3
-  typescript-eslint: ^8.55.0
+  typescript-eslint: ^8.58.0
+
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+blockExoticSubdeps: true
+strictDepBuilds: true
+verifyStoreIntegrity: true
+verifyDepsBeforeRun: warn
 
 onlyBuiltDependencies:
+  - esbuild
+  - sharp
   - supabase
+  - unrs-resolver
 
 overrides:
+  '@xmldom/xmldom': '>=0.8.12'
   ajv: '>=6.14.0 <7.0.0'
   conf>ajv: ^8.17.0
   esbuild: 0.27.3
-  fast-xml-parser: '>=5.3.8'
+  fast-xml-parser: '>=5.5.6'
+  flatted: '>=3.4.2'
+  handlebars: '>=4.7.9'
+  micromatch>picomatch: '>=4.0.4'
   minimatch: '>=10.2.1'
-  tar: '>=7.5.10'
+  minimatch>brace-expansion: '>=5.0.5'
+  node-forge: '>=1.4.0'
+  picomatch: '>=4.0.4'
+  socket.io-parser: '>=4.2.6'
+  tar: '>=7.5.11'
+  undici: '>=6.24.0'
+  yaml: '>=2.8.3'
 
 patchedDependencies:
-  '@commitlint/config-validator@20.4.3': patches/@commitlint__config-validator@20.4.3.patch
-  '@react-email/preview-server@5.2.9': patches/@react-email__preview-server@5.2.9.patch
+  '@commitlint/config-validator@20.5.0': patches/@commitlint__config-validator@20.5.0.patch

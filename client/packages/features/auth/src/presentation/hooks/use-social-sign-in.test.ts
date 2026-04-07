@@ -101,7 +101,26 @@ function getHookState(baseIndex: number) {
   };
 }
 
-// ── sessionStorage polyfill ──────────────────────────────────────────────────
+// ── AsyncStorage mock (for PKCE persistence) ────────────────────────────────
+
+const asyncStore = new Map<string, string>();
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn((k: string) => Promise.resolve(asyncStore.get(k) ?? null)),
+    setItem: jest.fn((k: string, v: string) => {
+      asyncStore.set(k, v);
+      return Promise.resolve();
+    }),
+    removeItem: jest.fn((k: string) => {
+      asyncStore.delete(k);
+      return Promise.resolve();
+    }),
+  },
+}));
+
+// ── localStorage polyfill (still needed for popup cross-window communication) ──
 
 const storage = new Map<string, string>();
 
@@ -142,6 +161,7 @@ describe('useSocialSignIn', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     storage.clear();
+    asyncStore.clear();
     // Record the stateStore counter before each hook call
     // so we know which indices belong to this test's hook instance
     baseIndex = stateCounter;
@@ -215,17 +235,17 @@ describe('useSocialSignIn', () => {
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
-    it('clears sessionStorage after successful popup flow', async () => {
+    it('clears AsyncStorage after successful popup flow', async () => {
       setupMocks();
       baseIndex = stateCounter;
       const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
-      expect(storage.has(OAUTH_STORAGE_KEY)).toBe(false);
+      expect(asyncStore.has(OAUTH_STORAGE_KEY)).toBe(false);
     });
   });
 
-  describe('sessionStorage persistence (web redirect flow)', () => {
+  describe('AsyncStorage persistence (web redirect flow)', () => {
     it('persists PKCE data before opening auth session', async () => {
       let storedValue: string | null = null;
 
@@ -237,9 +257,9 @@ describe('useSocialSignIn', () => {
         pkce: DEFAULT_PKCE,
       });
 
-      // Capture sessionStorage at the moment openAuthSessionAsync is called
+      // Capture AsyncStorage at the moment openAuthSessionAsync is called
       (openAuthSessionAsync as jest.Mock).mockImplementation(async () => {
-        storedValue = storage.get(OAUTH_STORAGE_KEY) ?? null;
+        storedValue = asyncStore.get(OAUTH_STORAGE_KEY) ?? null;
         return { type: 'cancel' };
       });
 
@@ -349,7 +369,7 @@ describe('useSocialSignIn', () => {
       expect(state.error).toBe('Token exchange failed');
     });
 
-    it('clears sessionStorage on error', async () => {
+    it('clears AsyncStorage on error', async () => {
       setupMocks();
       mockHandleOAuthCallback.mockRejectedValue(new Error('fail'));
 
@@ -357,7 +377,7 @@ describe('useSocialSignIn', () => {
       const { initiate } = useSocialSignIn(jest.fn());
       await initiate('google');
 
-      expect(storage.has(OAUTH_STORAGE_KEY)).toBe(false);
+      expect(asyncStore.has(OAUTH_STORAGE_KEY)).toBe(false);
     });
 
     it('uses fallback message for non-Error throws', async () => {
