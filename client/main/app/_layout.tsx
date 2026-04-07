@@ -8,11 +8,15 @@ import 'react-native-reanimated';
 
 import '@/styles/global.css';
 import { ROUTE_NAMES } from '@/utils/route';
-import { AuthProvider } from '@features/auth';
+import { AuthProvider, initAuthStorage } from '@features/auth';
 import { PreferencesProvider } from './providers/preferences-provider';
 import { useThemeActions } from '@features/ui';
 
 preventAutoHideAsync();
+
+// Hydrate Cognito storage adapter from AsyncStorage before any auth operations.
+// This is a top-level await that resolves before the first render.
+const authStorageReady = initAuthStorage();
 
 function StatusBarDisplay(): React.ReactNode {
   const { colorScheme } = useThemeActions();
@@ -24,6 +28,7 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   const handleReady = useCallback(async () => {
+    await authStorageReady;
     setReady(true);
     await hideAsync();
   }, []);

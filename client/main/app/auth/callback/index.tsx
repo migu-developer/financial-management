@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-
 import { useAuth } from '@features/auth';
 import { useTranslation } from '@packages/i18n';
 import type { SocialProvider } from '@features/auth/domain/repositories/auth-repository.port';
 import {
-  OAUTH_STORAGE_KEY,
   POPUP_STATE_KEY,
   POPUP_RESULT_KEY,
   OAUTH_BROADCAST_CHANNEL,
-  type OAuthPending,
+  consumePendingOAuth,
 } from '@features/auth/presentation/hooks/use-social-sign-in';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
@@ -113,47 +111,39 @@ export default function AuthCallbackScreen() {
       return;
     }
 
-    let pending: OAuthPending | null = null;
-    if (platformIsWeb && typeof sessionStorage !== 'undefined') {
-      try {
-        const stored = sessionStorage.getItem(OAUTH_STORAGE_KEY);
-        if (stored) {
-          pending = JSON.parse(stored) as OAuthPending;
-          sessionStorage.removeItem(OAUTH_STORAGE_KEY);
-        }
-      } catch {
-        // sessionStorage unavailable
+    async function processRedirectFlow() {
+      const pending = await consumePendingOAuth();
+
+      if (!pending) {
+        router.replace(ROUTES.authLogin as never);
+        return;
       }
-    }
 
-    if (!pending) {
-      router.replace(ROUTES.authLogin as never);
-      return;
-    }
+      if (stateStr !== pending.state) {
+        router.replace(ROUTES.authLogin as never);
+        return;
+      }
 
-    if (stateStr !== pending.state) {
-      router.replace(ROUTES.authLogin as never);
-      return;
-    }
-
-    handleOAuthCallback(
-      codeStr,
-      pending.codeVerifier,
-      pending.redirectUri,
-      pending.provider as SocialProvider,
-    )
-      .then(() => {
+      try {
+        await handleOAuthCallback(
+          codeStr,
+          pending.codeVerifier,
+          pending.redirectUri,
+          pending.provider as SocialProvider,
+        );
         setStatus('success');
         setTimeout(() => {
           router.replace(ROUTES.dashboard.home as never);
         }, 600);
-      })
-      .catch(() => {
+      } catch {
         setStatus('error');
         setTimeout(() => {
           router.replace(ROUTES.authLogin as never);
         }, 1200);
-      });
+      }
+    }
+
+    processRedirectFlow();
   }, [code, state, oauthError, router, handleOAuthCallback, platformIsWeb]);
 
   return (

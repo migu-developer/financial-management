@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type {
   Expense,
   ExpenseType,
@@ -37,11 +37,10 @@ export function ExpenseCard({
   const type = expenseType?.name ?? 'outcome';
 
   return (
-    <TouchableOpacity
+    <Pressable
       className="bg-white dark:bg-slate-800 rounded-xl p-4 mb-3 border border-slate-100 dark:border-slate-700"
-      activeOpacity={0.7}
       onPress={() => onPress(expense)}
-      accessibilityRole="button"
+      accessibilityRole="link"
       accessibilityLabel={t('expenses.card.accessibilityLabel', {
         name: expense.name,
         amount: `${currency?.code ?? ''} ${expense.value}`,
@@ -73,9 +72,12 @@ export function ExpenseCard({
               type={type as 'income' | 'outcome'}
               className="text-base"
             />
-            <TouchableOpacity
+            <Pressable
               className="p-1"
-              onPress={() => onDelete(expense)}
+              onPress={(e) => {
+                e.stopPropagation();
+                onDelete(expense);
+              }}
               accessibilityRole="button"
               accessibilityLabel={t('expenses.card.deleteAccessibility')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -85,10 +87,10 @@ export function ExpenseCard({
                 size={fontSizeScale.lg}
                 color={isDark ? textTokens.dark.muted : textTokens.light.muted}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

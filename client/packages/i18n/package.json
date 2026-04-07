@@ -9,13 +9,14 @@
     "test": "jest"
   },
   "dependencies": {
-    "i18next": "^24.0.0",
-    "react-i18next": "^15.0.0"
+    "i18next": "^24.2.3",
+    "react-i18next": "^15.7.4"
   },
   "peerDependencies": {
     "react": "catalog:"
   },
   "devDependencies": {
+    "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
@@ -24,8 +25,7 @@
     "react": "catalog:",
     "ts-jest": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "catalog:",
-    "@packages/config": "workspace:*"
+    "typescript": "catalog:"
   },
   "keywords": [],
   "author": "Miguel Angel Gutierrez Maya",

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { createURL } from 'expo-linking';
 import { openAuthSessionAsync } from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { SocialProvider } from '@features/auth/domain/repositories/auth-repository.port';
 import { useAuth } from '@features/auth/presentation/providers/auth-provider';
@@ -23,6 +24,21 @@ export interface OAuthPending {
   state: string;
   provider: SocialProvider;
   redirectUri: string;
+}
+
+/**
+ * Read and consume the pending OAuth PKCE data from AsyncStorage.
+ * Used by the callback page in the redirect flow.
+ */
+export async function consumePendingOAuth(): Promise<OAuthPending | null> {
+  try {
+    const stored = await AsyncStorage.getItem(OAUTH_STORAGE_KEY);
+    if (!stored) return null;
+    await AsyncStorage.removeItem(OAUTH_STORAGE_KEY);
+    return JSON.parse(stored) as OAuthPending;
+  } catch {
+    return null;
+  }
 }
 
 export interface UseSocialSignInResult {
@@ -136,15 +152,13 @@ export function useSocialSignIn(
         );
 
         // Persist PKCE so the /auth/callback route can use it in the redirect flow.
-        if (isWeb() && typeof sessionStorage !== 'undefined') {
-          const pending: OAuthPending = {
-            codeVerifier: pkce.codeVerifier,
-            state: pkce.state,
-            provider,
-            redirectUri,
-          };
-          sessionStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify(pending));
-        }
+        const pending: OAuthPending = {
+          codeVerifier: pkce.codeVerifier,
+          state: pkce.state,
+          provider,
+          redirectUri,
+        };
+        await AsyncStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify(pending));
 
         // Store a marker in localStorage (shared between windows) so the popup
         // callback page can detect it was opened by us — even when COOP headers
@@ -194,10 +208,8 @@ export function useSocialSignIn(
           return;
         }
 
-        // Clear sessionStorage PKCE since we're handling the code exchange here.
-        if (isWeb() && typeof sessionStorage !== 'undefined') {
-          sessionStorage.removeItem(OAUTH_STORAGE_KEY);
-        }
+        // Clear PKCE since we're handling the code exchange here.
+        await AsyncStorage.removeItem(OAUTH_STORAGE_KEY).catch(() => {});
 
         // Facebook appends #_=_ which moves query params into the hash fragment.
         const cleanUrl = sanitizeOAuthUrl(callbackUrl);
