@@ -1,5 +1,5 @@
 import { CfnOutput, Fn } from 'aws-cdk-lib';
-import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
+import { CfnApp, CfnBranch, CfnDomain } from 'aws-cdk-lib/aws-amplify';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { importFromVersion } from '@utils/cross-version';
 import type { Construct } from 'constructs';
@@ -41,6 +41,18 @@ export interface AmplifyHostingStackProps extends BaseStackProps {
   readonly assetsBucketUrl: string;
   /** Application URL. */
   readonly applicationUrl: string;
+  /**
+   * Root domain matching the Route53 Hosted Zone (e.g. financial-management.migudev.com).
+   * When set alongside customDomainPrefix, Amplify creates an ACM certificate and
+   * DNS records automatically. Requires a Route53 Hosted Zone in the same AWS account.
+   */
+  readonly customDomain?: string;
+  /**
+   * Subdomain prefix for the custom domain (e.g. 'dev' for dev.financial-management.migudev.com).
+   * Use empty string '' to map the root domain directly.
+   * @default ''
+   */
+  readonly customDomainPrefix?: string;
 }
 
 /**
@@ -145,6 +157,32 @@ export class AmplifyHostingStack extends BaseStack {
       stage: props.stage,
     });
     this.defaultBranch.addDependency(this.amplifyApp);
+
+    // ── Custom domain ────────────────────────────────────
+    if (props.customDomain) {
+      const prefix = props.customDomainPrefix ?? '';
+      const domain = new CfnDomain(this, 'CustomDomain', {
+        appId: this.amplifyApp.attrAppId,
+        domainName: props.customDomain,
+        subDomainSettings: [
+          {
+            branchName: defaultBranchName,
+            prefix,
+          },
+        ],
+        enableAutoSubDomain: false,
+      });
+      domain.addDependency(this.defaultBranch);
+
+      const fullDomain = prefix
+        ? `${prefix}.${props.customDomain}`
+        : props.customDomain;
+
+      new CfnOutput(this, 'CustomDomainUrl', {
+        value: `https://${fullDomain}`,
+        description: 'Custom domain URL for the Amplify app',
+      });
+    }
 
     new CfnOutput(this, 'AmplifyAppId', {
       value: this.amplifyApp.attrAppId,
