@@ -50,6 +50,8 @@ const createAmplifyHostingStack: NamedStackFactory = {
         appRoot: process.env.AMPLIFY_CLIENT_MAIN_ROOT ?? '',
         assetsBucketUrl: process.env.ASSETS_BUCKET_URL ?? '',
         applicationUrl: process.env.APPLICATION_URL ?? '',
+        customDomain: process.env.AMPLIFY_CUSTOM_DOMAIN || undefined,
+        customDomainPrefix: process.env.AMPLIFY_CUSTOM_DOMAIN_PREFIX ?? '',
       },
     ),
 };
