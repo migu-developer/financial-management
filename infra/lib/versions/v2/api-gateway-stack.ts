@@ -5,6 +5,8 @@ import { CfnOutput, Duration } from 'aws-cdk-lib';
 import {
   AuthorizationType,
   CognitoUserPoolsAuthorizer,
+  DomainName,
+  EndpointType,
   GatewayResponse,
   type JsonSchema,
   LambdaIntegration,
@@ -13,8 +15,15 @@ import {
   RequestValidator,
   ResponseType,
   RestApi,
+  SecurityPolicy,
 } from 'aws-cdk-lib/aws-apigateway';
+import {
+  Certificate,
+  CertificateValidation,
+} from 'aws-cdk-lib/aws-certificatemanager';
 import { UserPool } from 'aws-cdk-lib/aws-cognito';
+import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { ErrorCode } from '@packages/models/shared/utils/errors';
 import { errorsSchema } from '@packages/models/expenses/error.schema';
 import { Construct } from 'constructs';
@@ -23,6 +32,12 @@ export interface ApiGatewayStackProps extends BaseStackProps {
   readonly deps?: StackDeps;
   readonly allowedOrigins: string[];
   readonly stage: string;
+  /** Root domain of the Route53 Hosted Zone (e.g. financial-management.migudev.com). */
+  readonly customDomain?: string;
+  /** Route53 Hosted Zone ID. Required when customDomain is set. */
+  readonly customDomainHostedZoneId?: string;
+  /** Subdomain prefix (e.g. 'api' or 'dev-api'). Defaults to '' for root. */
+  readonly customDomainPrefix?: string;
 }
 
 const errorCodeToResponseType: Record<ErrorCode, ResponseType> = {
@@ -40,6 +55,8 @@ export class ApiGatewayStack extends BaseStack {
   public readonly bodyValidator: RequestValidator;
   public readonly paramsValidator: RequestValidator;
   public readonly bodyAndParamsValidator: RequestValidator;
+  /** Custom domain URL (e.g. https://dev-api.example.com) or undefined if not configured. */
+  public readonly customApiUrl?: string;
 
   constructor(scope: Construct, id: string, props: ApiGatewayStackProps) {
     const { version, stackName, description, allowedOrigins, stage } = props;
@@ -50,6 +67,7 @@ export class ApiGatewayStack extends BaseStack {
       restApiName: `${stackName}-Api`,
       description: 'Shared REST API for financial management services',
       deployOptions: { stageName: stage },
+      endpointTypes: [EndpointType.REGIONAL],
       defaultCorsPreflightOptions: {
         allowOrigins: allowedOrigins,
         allowMethods: ALLOWED_METHODS,
@@ -126,6 +144,54 @@ export class ApiGatewayStack extends BaseStack {
       `${stackName}-Authorizer`,
       { cognitoUserPools: [usersPool] },
     );
+
+    // ── Custom domain ──────────────────────────────────────────
+    if (props.customDomain && props.customDomainHostedZoneId) {
+      const prefix = props.customDomainPrefix ?? '';
+      const fullDomain = prefix
+        ? `${prefix}.${props.customDomain}`
+        : props.customDomain;
+
+      const hostedZone = HostedZone.fromHostedZoneAttributes(
+        this,
+        `${stackName}-Zone`,
+        {
+          hostedZoneId: props.customDomainHostedZoneId,
+          zoneName: props.customDomain,
+        },
+      );
+
+      const certificate = new Certificate(this, `${stackName}-Certificate`, {
+        domainName: `*.${props.customDomain}`,
+        subjectAlternativeNames: [props.customDomain],
+        validation: CertificateValidation.fromDns(hostedZone),
+      });
+
+      const apiDomainName = new DomainName(this, `${stackName}-DomainName`, {
+        domainName: fullDomain,
+        certificate,
+        endpointType: EndpointType.REGIONAL,
+        securityPolicy: SecurityPolicy.TLS_1_2,
+      });
+
+      apiDomainName.addBasePathMapping(this.api, {
+        basePath: '',
+        stage: this.api.deploymentStage,
+      });
+
+      new ARecord(this, `${stackName}-ApiAliasRecord`, {
+        zone: hostedZone,
+        recordName: fullDomain,
+        target: RecordTarget.fromAlias(new ApiGatewayDomain(apiDomainName)),
+      });
+
+      this.customApiUrl = `https://${fullDomain}`;
+
+      new CfnOutput(this, 'CustomApiUrl', {
+        value: this.customApiUrl,
+        description: 'Custom domain URL for the API',
+      });
+    }
 
     // ── Output ────────────────────────────────────────────────
     new CfnOutput(this, `${stackName}-ApiUrl`, {
