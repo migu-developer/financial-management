@@ -117,8 +117,7 @@ jobs:
         run: |
           CDK_FILE=$(find . -name "cdk-outputs.json" -type f | head -1)
           echo "Found CDK outputs at: $CDK_FILE"
-          cat "$CDK_FILE" | jq '.' | head -30
-          EXECUTE_API_URL=$(jq -r '[to_entries[].value | to_entries[] | select(.key | test("ApiUrl$")) | .value] | first // empty' "$CDK_FILE")
+          EXECUTE_API_URL=$(jq -r '[to_entries[].value | to_entries[] | select(.value | strings | contains("execute-api")) | .value] | first // empty' "$CDK_FILE")
           CUSTOM_API_URL=$(jq -r '[to_entries[].value | to_entries[] | select(.key == "CustomApiUrl") | .value] | first // empty' "$CDK_FILE")
           API_ID=$(echo "$EXECUTE_API_URL" | grep -oP '[a-z0-9]+(?=\.execute-api)' || true)
           API_URL="${CUSTOM_API_URL:-$EXECUTE_API_URL}"

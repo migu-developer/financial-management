@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// CDK app entry point — instantiates all versioned stacks.
 import { App, Stack } from 'aws-cdk-lib';
 import { DEFAULT_VERSIONS, VERSION_STACKS } from '@config/versions';
 import { DEPLOY_VERSIONS } from '@versions/deploy-config';
