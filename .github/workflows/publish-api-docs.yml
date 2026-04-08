@@ -117,15 +117,15 @@ jobs:
         run: |
           CDK_FILE=$(find . -name "cdk-outputs.json" -type f | head -1)
           echo "Found CDK outputs at: $CDK_FILE"
-          API_URL=$(jq -r 'to_entries[].value | to_entries[] | select(.key | endswith("ApiUrl")) | .value' "$CDK_FILE" | head -1)
-          CUSTOM_API_URL=$(jq -r 'to_entries[].value | to_entries[] | select(.key == "CustomApiUrl") | .value // empty' "$CDK_FILE" | head -1)
-          API_ID=$(echo "$API_URL" | grep -oP '[a-z0-9]+(?=\.execute-api)')
-          DISPLAY_URL="${CUSTOM_API_URL:-$API_URL}"
+          cat "$CDK_FILE" | jq '.' | head -30
+          EXECUTE_API_URL=$(jq -r '[to_entries[].value | to_entries[] | select(.key | test("ApiUrl$")) | .value] | first // empty' "$CDK_FILE")
+          CUSTOM_API_URL=$(jq -r '[to_entries[].value | to_entries[] | select(.key == "CustomApiUrl") | .value] | first // empty' "$CDK_FILE")
+          API_ID=$(echo "$EXECUTE_API_URL" | grep -oP '[a-z0-9]+(?=\.execute-api)' || true)
+          API_URL="${CUSTOM_API_URL:-$EXECUTE_API_URL}"
           echo "api_id=$API_ID" >> "$GITHUB_OUTPUT"
-          echo "api_url=$DISPLAY_URL" >> "$GITHUB_OUTPUT"
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
           echo "API Gateway ID: $API_ID"
-          echo "API URL (execute-api): $API_URL"
-          echo "API URL (display): $DISPLAY_URL"
+          echo "API URL: $API_URL"
 
       - name: 📤 Export OpenAPI spec
         shell: bash
