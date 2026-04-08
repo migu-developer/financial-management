@@ -137,6 +137,7 @@ jobs:
       MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
       MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
       MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
+      CUSTOM_DOMAIN_HOSTED_ZONE_ID: ${{ secrets.CUSTOM_DOMAIN_HOSTED_ZONE_ID }}
       COGNITO_DOMAIN_PREFIX: ${{ vars.COGNITO_DOMAIN_PREFIX }}
       COGNITO_CALLBACK_URLS: ${{ vars.COGNITO_CALLBACK_URLS }}
       COGNITO_LOGOUT_URLS: ${{ vars.COGNITO_LOGOUT_URLS }}
@@ -148,6 +149,8 @@ jobs:
       SMS_BLOCKED_COUNTRIES: ${{ vars.SMS_BLOCKED_COUNTRIES }}
       AMPLIFY_CUSTOM_DOMAIN: ${{ vars.AMPLIFY_CUSTOM_DOMAIN }}
       AMPLIFY_CUSTOM_DOMAIN_PREFIX: ${{ vars.AMPLIFY_CUSTOM_DOMAIN_PREFIX }}
+      CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+      API_CUSTOM_DOMAIN_PREFIX: ${{ vars.API_CUSTOM_DOMAIN_PREFIX }}
 
     steps:
       - name: 📥 Checkout
@@ -171,6 +174,10 @@ jobs:
           [[ -z "$ALLOWED_ORIGINS" ]] && missing+=("ALLOWED_ORIGINS")
           if [[ ${#missing[@]} -gt 0 ]]; then
             echo "::error::Missing required secrets/variables: ${missing[*]}"
+            exit 1
+          fi
+          if [[ -n "$CUSTOM_DOMAIN" && -z "$CUSTOM_DOMAIN_HOSTED_ZONE_ID" ]]; then
+            echo "::error::CUSTOM_DOMAIN_HOSTED_ZONE_ID is required when CUSTOM_DOMAIN is set"
             exit 1
           fi
           echo "✅ All required secrets and variables are set."

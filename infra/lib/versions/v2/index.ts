@@ -25,6 +25,10 @@ const createApiGatewayStack: NamedStackFactory = {
           .split(',')
           .map((origin) => origin.trim()),
         stage: process.env.STAGE ?? '',
+        customDomain: process.env.CUSTOM_DOMAIN || undefined,
+        customDomainHostedZoneId:
+          process.env.CUSTOM_DOMAIN_HOSTED_ZONE_ID || undefined,
+        customDomainPrefix: process.env.API_CUSTOM_DOMAIN_PREFIX ?? '',
       },
     ),
 };
@@ -152,10 +156,10 @@ const createApiDocsStack: NamedStackFactory = {
 };
 
 // Order matters:
-// 1. ApiGateway first (lambdas depend on it)
+// 1. ApiGateway first (lambdas depend on it, includes certificate + custom domain)
 // 2. Lambda stacks (add resources to the API)
-// 3. ApiDocs last (documents the fully-built API)
-// 4. AmplifyHosting (references the API URL)
+// 3. ApiDocs (documents the fully-built API)
+// 4. AmplifyHosting last (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,

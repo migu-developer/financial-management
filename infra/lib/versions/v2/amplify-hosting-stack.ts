@@ -119,7 +119,10 @@ export class AmplifyHostingStack extends BaseStack {
       { name: 'ASSETS_BUCKET_NAME', value: assetsBucketName },
       { name: 'ASSETS_BUCKET_URL', value: props.assetsBucketUrl },
       { name: 'APPLICATION_URL', value: props.applicationUrl },
-      { name: 'API_URL', value: apiGatewayStack?.api.url ?? '' },
+      {
+        name: 'API_URL',
+        value: apiGatewayStack?.customApiUrl ?? apiGatewayStack?.api.url ?? '',
+      },
     ];
 
     /** SPA rewrite: non-file requests serve index.html for client-side routing (React Native web). */

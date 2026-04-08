@@ -40,6 +40,10 @@ jest.mock('aws-cdk-lib', () => {
   };
 });
 
+const mockDomainName = {
+  addBasePathMapping: jest.fn(),
+};
+
 jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   RestApi: jest.fn().mockImplementation(() => mockApi),
   CognitoUserPoolsAuthorizer: jest
@@ -50,9 +54,12 @@ jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   })),
   RequestValidator: jest.fn().mockImplementation(() => mockRequestValidator),
   Model: jest.fn().mockImplementation(() => mockModel),
+  DomainName: jest.fn().mockImplementation(() => mockDomainName),
   GatewayResponse: jest.fn(),
   CfnDocumentationPart: jest.fn(),
   CfnDocumentationVersion: jest.fn(),
+  EndpointType: { REGIONAL: 'REGIONAL' },
+  SecurityPolicy: { TLS_1_2: 'TLS_1_2' },
   ResponseType: {
     BAD_REQUEST_BODY: 'BAD_REQUEST_BODY',
     BAD_REQUEST_PARAMETERS: 'BAD_REQUEST_PARAMETERS',
@@ -66,6 +73,29 @@ jest.mock('aws-cdk-lib/aws-apigateway', () => ({
     NUMBER: 'number',
   },
   JsonSchemaVersion: { DRAFT4: 'http://json-schema.org/draft-04/schema#' },
+}));
+
+jest.mock('aws-cdk-lib/aws-certificatemanager', () => ({
+  Certificate: jest.fn().mockImplementation(() => ({
+    certificateArn: 'arn:aws:acm:us-east-1:123:certificate/mock',
+  })),
+  CertificateValidation: {
+    fromDns: jest.fn().mockReturnValue('dns-validation'),
+  },
+}));
+
+jest.mock('aws-cdk-lib/aws-route53', () => ({
+  HostedZone: {
+    fromHostedZoneAttributes: jest
+      .fn()
+      .mockReturnValue({ hostedZoneId: 'mock-zone' }),
+  },
+  ARecord: jest.fn(),
+  RecordTarget: { fromAlias: jest.fn().mockReturnValue('mock-alias-target') },
+}));
+
+jest.mock('aws-cdk-lib/aws-route53-targets', () => ({
+  ApiGatewayDomain: jest.fn().mockReturnValue('mock-apigw-domain-target'),
 }));
 
 jest.mock('aws-cdk-lib/aws-cognito', () => ({
@@ -272,6 +302,118 @@ describe('ApiGatewayStack', () => {
       const mockLambda = {};
       const result = ApiGatewayStack.integration(mockLambda);
       expect(result).toEqual({ integrationId: 'mock-integration' });
+    });
+  });
+
+  describe('custom domain', () => {
+    test('does not create DomainName when customDomain is not provided', () => {
+      const { DomainName: MockDomainName } = getApiGatewayMocks();
+      (MockDomainName as jest.Mock).mockClear();
+      createStack();
+      expect(MockDomainName).not.toHaveBeenCalled();
+    });
+
+    test('creates certificate, DomainName, base path mapping and ARecord', () => {
+      const { DomainName: MockDomainName } = getApiGatewayMocks();
+      const { Certificate: MockCertificate } = jest.requireMock(
+        'aws-cdk-lib/aws-certificatemanager',
+      ) as { Certificate: jest.Mock };
+      const { ARecord: MockARecord } = jest.requireMock(
+        'aws-cdk-lib/aws-route53',
+      ) as { ARecord: jest.Mock };
+
+      (MockDomainName as jest.Mock).mockClear();
+      MockCertificate.mockClear();
+      MockARecord.mockClear();
+      mockDomainName.addBasePathMapping.mockClear();
+
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      new ApiGatewayStack(app as unknown as Construct, 'TestApiGatewayStack', {
+        ...defaultProps,
+        customDomain: 'app.example.com',
+        customDomainHostedZoneId: 'Z0123456789',
+        customDomainPrefix: 'dev-api',
+      });
+
+      expect(MockCertificate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('Certificate'),
+        expect.objectContaining({
+          domainName: '*.app.example.com',
+        }),
+      );
+      expect(MockDomainName).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('DomainName'),
+        expect.objectContaining({
+          domainName: 'dev-api.app.example.com',
+          endpointType: 'REGIONAL',
+          securityPolicy: 'TLS_1_2',
+        }),
+      );
+      expect(mockDomainName.addBasePathMapping).toHaveBeenCalled();
+      expect(MockARecord).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('ApiAliasRecord'),
+        expect.objectContaining({
+          recordName: 'dev-api.app.example.com',
+        }),
+      );
+    });
+
+    test('uses root domain when prefix is empty', () => {
+      const { DomainName: MockDomainName } = getApiGatewayMocks();
+      (MockDomainName as jest.Mock).mockClear();
+
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      new ApiGatewayStack(app as unknown as Construct, 'TestApiGatewayStack', {
+        ...defaultProps,
+        customDomain: 'app.example.com',
+        customDomainHostedZoneId: 'Z0123456789',
+        customDomainPrefix: '',
+      });
+
+      expect(MockDomainName).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          domainName: 'app.example.com',
+        }),
+      );
+    });
+
+    test('throws when customDomain is set without customDomainHostedZoneId', () => {
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      expect(
+        () =>
+          new ApiGatewayStack(
+            app as unknown as Construct,
+            'TestApiGatewayStack',
+            {
+              ...defaultProps,
+              customDomain: 'app.example.com',
+            },
+          ),
+      ).toThrow(
+        'customDomainHostedZoneId is required when customDomain is set.',
+      );
+    });
+
+    test('throws when customDomainPrefix contains dots', () => {
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      expect(
+        () =>
+          new ApiGatewayStack(
+            app as unknown as Construct,
+            'TestApiGatewayStack',
+            {
+              ...defaultProps,
+              customDomain: 'app.example.com',
+              customDomainHostedZoneId: 'Z0123456789',
+              customDomainPrefix: 'dev.api',
+            },
+          ),
+      ).toThrow('customDomainPrefix must be a single label without dots');
     });
   });
 });
