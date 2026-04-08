@@ -176,6 +176,10 @@ jobs:
             echo "::error::Missing required secrets/variables: ${missing[*]}"
             exit 1
           fi
+          if [[ -n "$CUSTOM_DOMAIN" && -z "$CUSTOM_DOMAIN_HOSTED_ZONE_ID" ]]; then
+            echo "::error::CUSTOM_DOMAIN_HOSTED_ZONE_ID is required when CUSTOM_DOMAIN is set"
+            exit 1
+          fi
           echo "✅ All required secrets and variables are set."
 
       - name: 🔐 Assume deployment role

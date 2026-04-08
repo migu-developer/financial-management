@@ -381,5 +381,39 @@ describe('ApiGatewayStack', () => {
         }),
       );
     });
+
+    test('throws when customDomain is set without customDomainHostedZoneId', () => {
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      expect(
+        () =>
+          new ApiGatewayStack(
+            app as unknown as Construct,
+            'TestApiGatewayStack',
+            {
+              ...defaultProps,
+              customDomain: 'app.example.com',
+            },
+          ),
+      ).toThrow(
+        'customDomainHostedZoneId is required when customDomain is set.',
+      );
+    });
+
+    test('throws when customDomainPrefix contains dots', () => {
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      expect(
+        () =>
+          new ApiGatewayStack(
+            app as unknown as Construct,
+            'TestApiGatewayStack',
+            {
+              ...defaultProps,
+              customDomain: 'app.example.com',
+              customDomainHostedZoneId: 'Z0123456789',
+              customDomainPrefix: 'dev.api',
+            },
+          ),
+      ).toThrow('customDomainPrefix must be a single label without dots');
+    });
   });
 });

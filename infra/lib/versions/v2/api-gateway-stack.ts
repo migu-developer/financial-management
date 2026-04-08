@@ -146,8 +146,21 @@ export class ApiGatewayStack extends BaseStack {
     );
 
     // ── Custom domain ──────────────────────────────────────────
+    if (props.customDomain && !props.customDomainHostedZoneId) {
+      throw new Error(
+        'customDomainHostedZoneId is required when customDomain is set.',
+      );
+    }
+
     if (props.customDomain && props.customDomainHostedZoneId) {
       const prefix = props.customDomainPrefix ?? '';
+
+      if (prefix.includes('.')) {
+        throw new Error(
+          'customDomainPrefix must be a single label without dots (e.g. "dev-api", not "dev.api").',
+        );
+      }
+
       const fullDomain = prefix
         ? `${prefix}.${props.customDomain}`
         : props.customDomain;
