@@ -3,7 +3,7 @@ import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import {
   createExpenseSchema,
@@ -62,6 +62,7 @@ export class LambdaExpensesStack extends BaseStack {
       },
       handler: 'handler',
       timeout: Duration.seconds(30),
+      tracing: Tracing.ACTIVE,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

@@ -52,6 +52,7 @@ jest.mock('aws-cdk-lib', () => {
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
   Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Tracing: { ACTIVE: 'Active' },
 }));
 
 jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({

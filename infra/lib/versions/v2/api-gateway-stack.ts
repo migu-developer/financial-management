@@ -68,6 +68,7 @@ export class ApiGatewayStack extends BaseStack {
       description: 'Shared REST API for financial management services',
       deployOptions: {
         stageName: stage,
+        tracingEnabled: true,
         throttlingRateLimit: 50,
         throttlingBurstLimit: 100,
         methodOptions: {

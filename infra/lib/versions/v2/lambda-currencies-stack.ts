@@ -2,7 +2,7 @@ import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { join } from 'path';
@@ -49,6 +49,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       },
       handler: 'handler',
       timeout: Duration.seconds(30),
+      tracing: Tracing.ACTIVE,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

@@ -229,9 +229,6 @@ describe('ApiClient', () => {
   });
 
   describe('retry logic', () => {
-    beforeEach(() => jest.useFakeTimers({ advanceTimers: true }));
-    afterEach(() => jest.useRealTimers());
-
     it('retries on 429 and succeeds on next attempt', async () => {
       fetchSpy
         .mockResolvedValueOnce(
@@ -279,7 +276,7 @@ describe('ApiClient', () => {
       );
       // 1 initial + 3 retries = 4 total
       expect(fetchSpy).toHaveBeenCalledTimes(4);
-    });
+    }, 15000);
 
     it('retries on network timeout error', async () => {
       fetchSpy

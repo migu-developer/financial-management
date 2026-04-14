@@ -10,7 +10,7 @@ import {
   AlarmStatusWidget,
 } from 'aws-cdk-lib/aws-cloudwatch';
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Topic } from 'aws-cdk-lib/aws-sns';
@@ -66,6 +66,7 @@ export class MonitoringStack extends BaseStack {
         },
         description:
           'Sends formatted alert emails via SES on CloudWatch alarms',
+        tracing: Tracing.ACTIVE,
         environment: {
           ALERT_EMAIL_FROM: props.alertFromEmail,
           ALERT_EMAIL_TO: props.alertEmail,
