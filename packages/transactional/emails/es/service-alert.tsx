@@ -50,6 +50,13 @@ export default function ServiceAlertEmail({
           description={description}
           timestamp={timestamp}
           dashboardUrl={dashboardUrl}
+          labels={{
+            alarm: 'Alarma',
+            service: 'Servicio',
+            time: 'Hora',
+            details: 'Detalles',
+            viewDashboard: 'Ver Dashboard',
+          }}
         />
 
         <Hr className="border-neutral-200 my-6" />

@@ -4,6 +4,7 @@ import { HttpCode } from '@packages/models/shared/utils/http-code';
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'PUT', 'DELETE', 'OPTIONS']);
 
 function isRetryable(status: number): boolean {
   return RETRYABLE_STATUS_CODES.has(status);
@@ -13,7 +14,11 @@ function isTimeoutError(error: unknown): boolean {
   if (error instanceof TypeError && error.message.includes('network')) {
     return true;
   }
-  if (error instanceof DOMException && error.name === 'TimeoutError') {
+  if (
+    typeof DOMException !== 'undefined' &&
+    error instanceof DOMException &&
+    error.name === 'TimeoutError'
+  ) {
     return true;
   }
   return false;
@@ -68,8 +73,9 @@ export class ApiClient {
     };
 
     let lastError: unknown;
+    const canRetry = IDEMPOTENT_METHODS.has(method);
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= (canRetry ? MAX_RETRIES : 0); attempt++) {
       try {
         const response = await fetch(url.toString(), fetchOptions);
 
@@ -78,7 +84,7 @@ export class ApiClient {
           return response.json() as Promise<T>;
         }
 
-        if (isRetryable(response.status) && attempt < MAX_RETRIES) {
+        if (canRetry && isRetryable(response.status) && attempt < MAX_RETRIES) {
           await delay(attempt);
           continue;
         }
@@ -93,7 +99,7 @@ export class ApiClient {
 
         if (error instanceof ExpenseError) throw error;
 
-        if (isTimeoutError(error) && attempt < MAX_RETRIES) {
+        if (canRetry && isTimeoutError(error) && attempt < MAX_RETRIES) {
           lastError = error;
           await delay(attempt);
           continue;

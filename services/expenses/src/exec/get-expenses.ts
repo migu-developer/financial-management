@@ -9,10 +9,15 @@ const event = {
   pathParameters: null,
   queryStringParameters: {
     limit: '20',
-    cursor: null,
-    expense_type_id: process.env['EXPENSE_TYPE_ID'] ?? null,
-    expense_category_id: process.env['EXPENSE_CATEGORY_ID'] ?? null,
-    name: process.env['EXPENSE_NAME'] ?? null,
+    ...(process.env['EXPENSE_TYPE_ID'] && {
+      expense_type_id: process.env['EXPENSE_TYPE_ID'],
+    }),
+    ...(process.env['EXPENSE_CATEGORY_ID'] && {
+      expense_category_id: process.env['EXPENSE_CATEGORY_ID'],
+    }),
+    ...(process.env['EXPENSE_NAME'] && {
+      name: process.env['EXPENSE_NAME'],
+    }),
   },
   multiValueQueryStringParameters: null,
   headers: {},

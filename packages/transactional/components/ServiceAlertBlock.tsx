@@ -1,5 +1,13 @@
 import { Column, Link, Row, Section, Text } from '@react-email/components';
 
+export interface ServiceAlertLabels {
+  alarm: string;
+  service: string;
+  time: string;
+  details: string;
+  viewDashboard: string;
+}
+
 export interface ServiceAlertBlockProps {
   alarmName: string;
   severity: 'CRITICAL' | 'WARNING';
@@ -7,7 +15,16 @@ export interface ServiceAlertBlockProps {
   description: string;
   timestamp: string;
   dashboardUrl: string;
+  labels?: ServiceAlertLabels;
 }
+
+const defaultLabels: ServiceAlertLabels = {
+  alarm: 'Alarm',
+  service: 'Service',
+  time: 'Time',
+  details: 'Details',
+  viewDashboard: 'View Dashboard',
+};
 
 const defaultStyle = {
   bg: 'bg-yellow-50',
@@ -34,6 +51,7 @@ export function ServiceAlertBlock({
   description,
   timestamp,
   dashboardUrl,
+  labels = defaultLabels,
 }: ServiceAlertBlockProps) {
   const style = severityStyles[severity] ?? defaultStyle;
 
@@ -52,7 +70,7 @@ export function ServiceAlertBlock({
       <Row className="mb-1">
         <Column className="w-[120px]">
           <Text className="text-neutral-500 text-sm m-0 font-medium">
-            Alarm
+            {labels.alarm}
           </Text>
         </Column>
         <Column>
@@ -65,7 +83,7 @@ export function ServiceAlertBlock({
       <Row className="mb-1">
         <Column className="w-[120px]">
           <Text className="text-neutral-500 text-sm m-0 font-medium">
-            Service
+            {labels.service}
           </Text>
         </Column>
         <Column>
@@ -75,7 +93,9 @@ export function ServiceAlertBlock({
 
       <Row className="mb-1">
         <Column className="w-[120px]">
-          <Text className="text-neutral-500 text-sm m-0 font-medium">Time</Text>
+          <Text className="text-neutral-500 text-sm m-0 font-medium">
+            {labels.time}
+          </Text>
         </Column>
         <Column>
           <Text className="text-neutral-800 text-sm m-0">{timestamp}</Text>
@@ -85,7 +105,7 @@ export function ServiceAlertBlock({
       <Row className="mb-3">
         <Column className="w-[120px]">
           <Text className="text-neutral-500 text-sm m-0 font-medium">
-            Details
+            {labels.details}
           </Text>
         </Column>
         <Column>
@@ -100,7 +120,7 @@ export function ServiceAlertBlock({
               href={dashboardUrl}
               className="text-primary-dark text-sm font-medium underline"
             >
-              View Dashboard
+              {labels.viewDashboard}
             </Link>
           </Column>
         </Row>
