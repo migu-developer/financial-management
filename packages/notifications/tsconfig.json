@@ -1,0 +1,8 @@
+{
+  "extends": "@packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": ["src", "eslint.config.ts", "jest.config.ts"]
+}
