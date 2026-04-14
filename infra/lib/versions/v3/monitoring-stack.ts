@@ -14,10 +14,7 @@ import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Topic } from 'aws-cdk-lib/aws-sns';
-import {
-  EmailSubscription,
-  LambdaSubscription,
-} from 'aws-cdk-lib/aws-sns-subscriptions';
+import { LambdaSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { importFromVersion } from '@utils/cross-version';
 import type { Construct } from 'constructs';
@@ -79,10 +76,6 @@ export class MonitoringStack extends BaseStack {
     );
 
     this.alertTopic.addSubscription(new LambdaSubscription(notificationFn));
-
-    if (props.alertEmail) {
-      this.alertTopic.addSubscription(new EmailSubscription(props.alertEmail));
-    }
 
     const snsAction = new SnsAction(this.alertTopic);
 

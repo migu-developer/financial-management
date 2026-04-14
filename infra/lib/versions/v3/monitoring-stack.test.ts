@@ -48,7 +48,6 @@ jest.mock('aws-cdk-lib/aws-sns', () => ({
 }));
 
 jest.mock('aws-cdk-lib/aws-sns-subscriptions', () => ({
-  EmailSubscription: jest.fn(),
   LambdaSubscription: jest.fn(),
 }));
 
@@ -99,7 +98,7 @@ describe('MonitoringStack', () => {
     ).not.toThrow();
   });
 
-  test('creates SNS topic with email subscription', () => {
+  test('creates SNS topic with Lambda subscription', () => {
     new MonitoringStack(
       app as unknown as Construct,
       'MonitoringStack',
@@ -110,8 +109,8 @@ describe('MonitoringStack', () => {
       Topic: jest.Mock;
     };
     expect(MockTopic).toHaveBeenCalledTimes(1);
-    // Lambda subscription + Email subscription = 2
-    expect(mockTopic.addSubscription).toHaveBeenCalledTimes(2);
+    // Only Lambda subscription (SES handles email)
+    expect(mockTopic.addSubscription).toHaveBeenCalledTimes(1);
   });
 
   test('creates API Gateway alarms (5xx, 4xx, latency)', () => {
@@ -215,18 +214,6 @@ describe('MonitoringStack', () => {
 
     // 3 API + (4 services × 2 each) + 3 Cognito triggers = 14
     expect(stack.alarms).toHaveLength(14);
-  });
-
-  test('skips email subscription when alertEmail is empty but keeps Lambda subscription', () => {
-    mockTopic.addSubscription.mockClear();
-
-    new MonitoringStack(app as unknown as Construct, 'MonitoringStack', {
-      ...defaultProps,
-      alertEmail: '',
-    });
-
-    // Only Lambda subscription, no email
-    expect(mockTopic.addSubscription).toHaveBeenCalledTimes(1);
   });
 
   test('stackName follows BaseStack convention', () => {
