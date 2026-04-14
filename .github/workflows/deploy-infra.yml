@@ -151,6 +151,8 @@ jobs:
       AMPLIFY_CUSTOM_DOMAIN_PREFIX: ${{ vars.AMPLIFY_CUSTOM_DOMAIN_PREFIX }}
       CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
       API_CUSTOM_DOMAIN_PREFIX: ${{ vars.API_CUSTOM_DOMAIN_PREFIX }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+      ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
 
     steps:
       - name: 📥 Checkout
