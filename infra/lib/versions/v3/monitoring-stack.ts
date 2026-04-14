@@ -151,6 +151,7 @@ export class MonitoringStack extends BaseStack {
       functionName: string,
       metricName: string,
       statistic = 'Sum',
+      label?: string,
     ) =>
       new Metric({
         namespace: 'AWS/Lambda',
@@ -158,6 +159,7 @@ export class MonitoringStack extends BaseStack {
         dimensionsMap: { FunctionName: functionName },
         statistic,
         period: Duration.minutes(1),
+        ...(label && { label }),
       });
 
     // ── API Gateway Alarms ─────────────────────────────────
@@ -309,23 +311,28 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    const fnNames = Object.values(lambdaFunctions);
     const fnEntries = Object.entries(lambdaFunctions);
 
     this.dashboard.addWidgets(
       new GraphWidget({
         title: 'Invocations',
-        left: fnNames.map((fn) => lambdaMetric(fn, 'Invocations')),
+        left: fnEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Invocations', 'Sum', name),
+        ),
         width: 8,
       }),
       new GraphWidget({
         title: 'Errors',
-        left: fnNames.map((fn) => lambdaMetric(fn, 'Errors')),
+        left: fnEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Errors', 'Sum', name),
+        ),
         width: 8,
       }),
       new GraphWidget({
         title: 'Duration (p90)',
-        left: fnNames.map((fn) => lambdaMetric(fn, 'Duration', 'p90')),
+        left: fnEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Duration', 'p90', name),
+        ),
         width: 8,
       }),
     );
@@ -333,13 +340,15 @@ export class MonitoringStack extends BaseStack {
     this.dashboard.addWidgets(
       new GraphWidget({
         title: 'Throttles',
-        left: fnNames.map((fn) => lambdaMetric(fn, 'Throttles')),
+        left: fnEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Throttles', 'Sum', name),
+        ),
         width: 12,
       }),
       new GraphWidget({
         title: 'Concurrent Executions',
-        left: fnEntries.map(([, fn]) =>
-          lambdaMetric(fn, 'ConcurrentExecutions', 'Maximum'),
+        left: fnEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'ConcurrentExecutions', 'Maximum', name),
         ),
         width: 12,
       }),
@@ -354,13 +363,13 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    const triggerNames = Object.values(cognitoTriggers);
+    const triggerEntries = Object.entries(cognitoTriggers);
 
     this.dashboard.addWidgets(
       new GraphWidget({
         title: 'Invocations',
-        left: triggerNames.map((fn) =>
-          lambdaMetric(fn, 'Invocations').with({
+        left: triggerEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Invocations', 'Sum', name).with({
             period: Duration.minutes(5),
           }),
         ),
@@ -368,15 +377,17 @@ export class MonitoringStack extends BaseStack {
       }),
       new GraphWidget({
         title: 'Errors',
-        left: triggerNames.map((fn) =>
-          lambdaMetric(fn, 'Errors').with({ period: Duration.minutes(5) }),
+        left: triggerEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Errors', 'Sum', name).with({
+            period: Duration.minutes(5),
+          }),
         ),
         width: 8,
       }),
       new GraphWidget({
         title: 'Duration',
-        left: triggerNames.map((fn) =>
-          lambdaMetric(fn, 'Duration', 'Average').with({
+        left: triggerEntries.map(([name, fn]) =>
+          lambdaMetric(fn, 'Duration', 'Average', name).with({
             period: Duration.minutes(5),
           }),
         ),
