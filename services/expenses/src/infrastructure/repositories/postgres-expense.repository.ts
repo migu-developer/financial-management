@@ -2,6 +2,7 @@ import type {
   Expense,
   CreateExpenseInput,
   PatchExpenseInput,
+  ExpenseFilters,
 } from '@packages/models/expenses';
 import type {
   PaginationParams,
@@ -35,51 +36,78 @@ export class PostgresExpenseRepository implements ExpenseRepository {
   async findAllByUserUid(
     uid: string,
     pagination: PaginationParams,
+    filters?: ExpenseFilters,
   ): Promise<PaginatedResult<Expense>> {
-    const params: unknown[] = [uid, pagination.limit + 1];
-    let cursorClause = '';
+    const whereClauses = ['u.uid = $1'];
+    const params: unknown[] = [uid];
+    let paramIndex = 2;
+
+    paramIndex = this.applyFilters(whereClauses, params, paramIndex, filters);
 
     if (pagination.cursor) {
       const { created_at, id } = decodeCursor(pagination.cursor);
-      cursorClause = 'AND (e.created_at, e.id) < ($3, $4)';
+      whereClauses.push(
+        `(e.created_at, e.id) < ($${paramIndex++}, $${paramIndex++})`,
+      );
       params.push(created_at, id);
     }
+
+    params.push(pagination.limit + 1);
 
     const rows = await this.dbService.queryReadOnly<Expense>(
       `SELECT ${EXPENSE_COLUMNS}
        FROM financial_management.expenses e
        JOIN financial_management.users u ON e.user_id = u.id
-       WHERE u.uid = $1 ${cursorClause}
+       WHERE ${whereClauses.join(' AND ')}
        ORDER BY e.created_at DESC, e.id DESC
-       LIMIT $2`,
+       LIMIT $${paramIndex}`,
       params,
     );
 
     const result = buildPaginatedResult(rows, pagination.limit);
 
     if (!pagination.cursor) {
-      const countRows = await this.dbService.queryReadOnly<{ count: string }>(
-        `SELECT COUNT(*) as count
-         FROM financial_management.expenses e
-         JOIN financial_management.users u ON e.user_id = u.id
-         WHERE u.uid = $1`,
-        [uid],
-      );
-      result.total_count = parseInt(countRows[0]?.count ?? '0', 10);
+      result.total_count = await this.countByUserUid(uid, filters);
     }
 
     return result;
   }
 
-  async countByUserUid(uid: string): Promise<number> {
+  async countByUserUid(uid: string, filters?: ExpenseFilters): Promise<number> {
+    const whereClauses = ['u.uid = $1'];
+    const params: unknown[] = [uid];
+    this.applyFilters(whereClauses, params, 2, filters);
+
     const rows = await this.dbService.queryReadOnly<{ count: string }>(
       `SELECT COUNT(*) as count
        FROM financial_management.expenses e
        JOIN financial_management.users u ON e.user_id = u.id
-       WHERE u.uid = $1`,
-      [uid],
+       WHERE ${whereClauses.join(' AND ')}`,
+      params,
     );
     return parseInt(rows[0]?.count ?? '0', 10);
+  }
+
+  private applyFilters(
+    whereClauses: string[],
+    params: unknown[],
+    startIndex: number,
+    filters?: ExpenseFilters,
+  ): number {
+    let paramIndex = startIndex;
+    if (filters?.expense_type_id) {
+      whereClauses.push(`e.expense_type_id = $${paramIndex++}`);
+      params.push(filters.expense_type_id);
+    }
+    if (filters?.expense_category_id) {
+      whereClauses.push(`e.expense_category_id = $${paramIndex++}`);
+      params.push(filters.expense_category_id);
+    }
+    if (filters?.name) {
+      whereClauses.push(`e.name ILIKE '%' || $${paramIndex++} || '%'`);
+      params.push(filters.name);
+    }
+    return paramIndex;
   }
 
   async findByIdAndUserUid(id: string, uid: string): Promise<Expense | null> {

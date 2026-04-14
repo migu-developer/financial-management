@@ -139,6 +139,61 @@ describe('ExpensesService', () => {
     expect(body.total_count).toBe(1);
   });
 
+  it('executeGET passes filter query params to the repository', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ count: '1' }]),
+      end: jest.fn(),
+    };
+    const app = makeApp(
+      {
+        queryStringParameters: {
+          expense_type_id: 'type-1',
+          expense_category_id: 'cat-1',
+          name: 'groceries',
+        },
+      },
+      dbService,
+    );
+    const response = await new ExpensesService(app).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+
+    const sql = (dbService.queryReadOnly as jest.Mock).mock
+      .calls[0][0] as string;
+    expect(sql).toContain('expense_type_id');
+    expect(sql).toContain('expense_category_id');
+    expect(sql).toContain('ILIKE');
+
+    const params = (dbService.queryReadOnly as jest.Mock).mock
+      .calls[0][1] as unknown[];
+    expect(params).toContain('type-1');
+    expect(params).toContain('cat-1');
+    expect(params).toContain('groceries');
+  });
+
+  it('executeGET works without filters', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ count: '1' }]),
+      end: jest.fn(),
+    };
+    const response = await new ExpensesService(
+      makeApp({}, dbService),
+    ).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+
+    const sql = (dbService.queryReadOnly as jest.Mock).mock
+      .calls[0][0] as string;
+    expect(sql).not.toContain('e.expense_type_id =');
+    expect(sql).not.toContain('ILIKE');
+  });
+
   it('executeGET propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn(),

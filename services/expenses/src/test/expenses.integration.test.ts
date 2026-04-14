@@ -24,7 +24,12 @@ let repo: PostgresExpenseRepository;
 let userA: TestUser;
 let userB: TestUser;
 let currency: TestCurrency;
+let incomeType: TestExpenseType;
 let outcomeType: TestExpenseType;
+let foodCategory: TestExpenseCategory;
+let transportCategory: TestExpenseCategory;
+
+// Keep backward-compatible aliases used by existing tests
 let category: TestExpenseCategory;
 
 beforeAll(async () => {
@@ -34,8 +39,13 @@ beforeAll(async () => {
 
   const catalogs = await seedAllCatalogs(dbService);
   currency = catalogs.currencies[0]!;
+  incomeType = catalogs.expenseTypes.find((t) => t.name === 'income')!;
   outcomeType = catalogs.expenseTypes.find((t) => t.name === 'outcome')!;
-  category = catalogs.expenseCategories[0]!;
+  foodCategory = catalogs.expenseCategories.find((c) => c.name === 'Food')!;
+  transportCategory = catalogs.expenseCategories.find(
+    (c) => c.name === 'Transport',
+  )!;
+  category = foodCategory;
 });
 
 afterAll(async () => {
@@ -424,6 +434,174 @@ describe('PostgresExpenseRepository — integration', () => {
           userA.uid,
         ),
       ).rejects.toThrow();
+    });
+  });
+
+  describe('filters', () => {
+    async function seedFilterData() {
+      const fixture = new ExpenseFixture(dbService, userA.id);
+      await fixture.insert({
+        name: 'Salary',
+        value: 5000000,
+        currency_id: currency.id,
+        expense_type_id: incomeType.id,
+      });
+      await fixture.insert({
+        name: 'Groceries',
+        value: 150000,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+        expense_category_id: foodCategory.id,
+      });
+      await fixture.insert({
+        name: 'Bus ticket',
+        value: 3000,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+        expense_category_id: transportCategory.id,
+      });
+      await fixture.insert({
+        name: 'Grocery delivery',
+        value: 8000,
+        currency_id: currency.id,
+        expense_type_id: outcomeType.id,
+        expense_category_id: foodCategory.id,
+      });
+    }
+
+    it('filters by expense_type_id', async () => {
+      await seedFilterData();
+
+      const incomeResult = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        { expense_type_id: incomeType.id },
+      );
+      expect(incomeResult.data).toHaveLength(1);
+      expect(incomeResult.data[0]!.name).toBe('Salary');
+
+      const outcomeResult = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        { expense_type_id: outcomeType.id },
+      );
+      expect(outcomeResult.data).toHaveLength(3);
+    });
+
+    it('filters by expense_category_id', async () => {
+      await seedFilterData();
+
+      const result = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        { expense_category_id: transportCategory.id },
+      );
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]!.name).toBe('Bus ticket');
+    });
+
+    it('filters by name (ILIKE partial match, case-insensitive)', async () => {
+      await seedFilterData();
+
+      const result = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        { name: 'grocer' },
+      );
+      expect(result.data).toHaveLength(2);
+      const names = result.data.map((e) => e.name);
+      expect(names).toContain('Groceries');
+      expect(names).toContain('Grocery delivery');
+    });
+
+    it('combines multiple filters with AND', async () => {
+      await seedFilterData();
+
+      const result = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        {
+          expense_type_id: outcomeType.id,
+          expense_category_id: foodCategory.id,
+        },
+      );
+      expect(result.data).toHaveLength(2);
+      result.data.forEach((e) => {
+        expect(e.expense_type_id).toBe(outcomeType.id);
+        expect(e.expense_category_id).toBe(foodCategory.id);
+      });
+    });
+
+    it('combines all three filters', async () => {
+      await seedFilterData();
+
+      const result = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        {
+          expense_type_id: outcomeType.id,
+          expense_category_id: foodCategory.id,
+          name: 'delivery',
+        },
+      );
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]!.name).toBe('Grocery delivery');
+    });
+
+    it('returns empty when no expenses match filters', async () => {
+      await seedFilterData();
+
+      const result = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 20 },
+        { name: 'nonexistent' },
+      );
+      expect(result.data).toEqual([]);
+      expect(result.has_more).toBe(false);
+      expect(result.total_count).toBe(0);
+    });
+
+    it('pagination works with active filters', async () => {
+      await seedFilterData();
+
+      const page1 = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 2 },
+        { expense_type_id: outcomeType.id },
+      );
+      expect(page1.data).toHaveLength(2);
+      expect(page1.has_more).toBe(true);
+      expect(page1.total_count).toBe(3);
+
+      const page2 = await repo.findAllByUserUid(
+        userA.uid,
+        { limit: 2, cursor: page1.next_cursor! },
+        { expense_type_id: outcomeType.id },
+      );
+      expect(page2.data).toHaveLength(1);
+      expect(page2.has_more).toBe(false);
+    });
+
+    it('countByUserUid respects filters', async () => {
+      await seedFilterData();
+
+      expect(await repo.countByUserUid(userA.uid)).toBe(4);
+      expect(
+        await repo.countByUserUid(userA.uid, {
+          expense_type_id: incomeType.id,
+        }),
+      ).toBe(1);
+      expect(
+        await repo.countByUserUid(userA.uid, {
+          expense_type_id: outcomeType.id,
+        }),
+      ).toBe(3);
+      expect(
+        await repo.countByUserUid(userA.uid, {
+          expense_category_id: foodCategory.id,
+        }),
+      ).toBe(2);
+      expect(await repo.countByUserUid(userA.uid, { name: 'grocer' })).toBe(2);
     });
   });
 });

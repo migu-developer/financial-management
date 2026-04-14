@@ -1,4 +1,4 @@
-import type { Expense } from '@packages/models/expenses';
+import type { Expense, ExpenseFilters } from '@packages/models/expenses';
 import type {
   PaginationParams,
   PaginatedResult,
@@ -11,7 +11,8 @@ export class GetExpensesByUserUseCase {
   async execute(
     uid: string,
     pagination: PaginationParams,
+    filters?: ExpenseFilters,
   ): Promise<PaginatedResult<Expense>> {
-    return this.repository.findAllByUserUid(uid, pagination);
+    return this.repository.findAllByUserUid(uid, pagination, filters);
   }
 }

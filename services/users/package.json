@@ -8,7 +8,8 @@
     "lint:fix": "eslint . --fix",
     "test": "jest",
     "test:integration": "jest --config src/test/jest.config.ts --runInBand",
-    "execute": "for f in src/exec/*.ts; do tsx \"$f\"; done"
+    "execute": "for f in src/exec/*.ts; do tsx \"$f\"; done",
+    "run:file": "tsx"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
