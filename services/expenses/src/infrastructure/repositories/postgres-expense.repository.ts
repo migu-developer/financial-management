@@ -12,12 +12,15 @@ import {
   decodeCursor,
   buildPaginatedResult,
 } from '@packages/models/shared/pagination';
+import { Tracer } from '@aws-lambda-powertools/tracer';
 import type { ExpenseRepository } from '@services/expenses/domain/repositories/expense.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import {
   DataNotDefinedError,
   ModuleNotFoundError,
 } from '@packages/models/shared/utils/errors';
+
+const tracer = new Tracer({ serviceName: 'expenses-repository' });
 
 const EXPENSE_COLUMNS = `
   e.id, e.user_id, e.name, e.value, e.currency_id,
@@ -33,6 +36,7 @@ const USER_SUBQUERY = `(SELECT u.id FROM financial_management.users u WHERE u.ui
 export class PostgresExpenseRepository implements ExpenseRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:findAll' })
   async findAllByUserUid(
     uid: string,
     pagination: PaginationParams,
@@ -73,6 +77,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return result;
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:count' })
   async countByUserUid(uid: string, filters?: ExpenseFilters): Promise<number> {
     const whereClauses = ['u.uid = $1'];
     const params: unknown[] = [uid];
@@ -110,6 +115,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return paramIndex;
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:findById' })
   async findByIdAndUserUid(id: string, uid: string): Promise<Expense | null> {
     const rows = await this.dbService.queryReadOnly<Expense>(
       `SELECT ${EXPENSE_COLUMNS}
@@ -121,6 +127,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0] ?? null;
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:create' })
   async create(
     input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
@@ -147,6 +154,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:update' })
   async update(
     id: string,
     input: Omit<CreateExpenseInput, 'user_id'>,
@@ -174,6 +182,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:patch' })
   async patch(
     id: string,
     input: PatchExpenseInput,
@@ -223,6 +232,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
+  @tracer.captureMethod({ subSegmentName: 'Expense:delete' })
   async deleteByIdAndUserUid(id: string, uid: string): Promise<void> {
     const rows = await this.dbService.query<{ id: string }>(
       `DELETE FROM financial_management.expenses
