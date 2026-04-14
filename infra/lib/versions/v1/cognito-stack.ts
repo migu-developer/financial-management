@@ -1,4 +1,4 @@
-import { Fn, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
+import { Duration, Fn, RemovalPolicy, SecretValue } from 'aws-cdk-lib';
 import {
   AccountRecovery,
   Mfa,
@@ -128,6 +128,7 @@ export class CognitoStack extends BaseStack {
         nodeModules: ['aws-xray-sdk-core'],
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
+      timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
       environment: {
         ...(assetsStack?.bucket && {
@@ -159,6 +160,7 @@ export class CognitoStack extends BaseStack {
       },
       description:
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
+      timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
       environment: {
         DATABASE_URL: props.databaseUrl,
@@ -196,6 +198,7 @@ export class CognitoStack extends BaseStack {
       },
       description:
         'Cognito PreSignUp — links social providers to existing native accounts before signup',
+      timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
     });
 
