@@ -3,6 +3,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { DEFAULT_VERSIONS, VERSION_STACKS } from '@config/versions';
 import { DEPLOY_VERSIONS } from '@versions/deploy-config';
 import { getAppConfig } from '@config/entry-config';
+import { BaseStack } from '@core/base-stack';
 import type { StackDeps } from '@utils/types';
 
 const app = new App();
@@ -27,5 +28,7 @@ for (const { version, factories } of versions) {
     stackMap.set(name, stack);
   }
 }
+
+BaseStack.resolveDependencies(stackMap);
 
 app.synth();
