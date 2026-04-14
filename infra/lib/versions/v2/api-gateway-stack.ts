@@ -71,47 +71,47 @@ export class ApiGatewayStack extends BaseStack {
         throttlingRateLimit: 50,
         throttlingBurstLimit: 100,
         methodOptions: {
-          '~1expenses/GET': {
+          '/expenses/GET': {
             throttlingRateLimit: 30,
             throttlingBurstLimit: 50,
           },
-          '~1expenses/POST': {
+          '/expenses/POST': {
             throttlingRateLimit: 10,
             throttlingBurstLimit: 20,
           },
-          '~1expenses~1{id}/PUT': {
+          '/expenses/{id}/PUT': {
             throttlingRateLimit: 10,
             throttlingBurstLimit: 20,
           },
-          '~1expenses~1{id}/PATCH': {
+          '/expenses/{id}/PATCH': {
             throttlingRateLimit: 10,
             throttlingBurstLimit: 20,
           },
-          '~1expenses~1{id}/DELETE': {
+          '/expenses/{id}/DELETE': {
             throttlingRateLimit: 5,
             throttlingBurstLimit: 10,
           },
-          '~1expenses~1types/GET': {
+          '/expenses/types/GET': {
             throttlingRateLimit: 20,
             throttlingBurstLimit: 40,
           },
-          '~1expenses~1categories/GET': {
+          '/expenses/categories/GET': {
             throttlingRateLimit: 20,
             throttlingBurstLimit: 40,
           },
-          '~1currencies/GET': {
+          '/currencies/GET': {
             throttlingRateLimit: 20,
             throttlingBurstLimit: 40,
           },
-          '~1documents/GET': {
+          '/documents/GET': {
             throttlingRateLimit: 15,
             throttlingBurstLimit: 30,
           },
-          '~1users/GET': {
+          '/users/GET': {
             throttlingRateLimit: 10,
             throttlingBurstLimit: 20,
           },
-          '~1users~1{id}/PATCH': {
+          '/users/{id}/PATCH': {
             throttlingRateLimit: 10,
             throttlingBurstLimit: 20,
           },
