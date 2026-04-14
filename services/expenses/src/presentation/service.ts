@@ -17,6 +17,7 @@ import { PostgresExpenseTypeRepository } from '@services/expenses/infrastructure
 import { PostgresExpenseCategoryRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-category.repository';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { parsePaginationParams } from '@packages/models/shared/pagination';
+import { parseExpenseFilters } from '@packages/models/expenses';
 
 export class ExpensesService extends Service {
   constructor(public readonly app: Application) {
@@ -30,9 +31,14 @@ export class ExpensesService extends Service {
     );
     const qs = this.app.event.queryStringParameters;
     const pagination = parsePaginationParams(qs?.['limit'], qs?.['cursor']);
+    const filters = parseExpenseFilters(qs);
     const repository = new PostgresExpenseRepository(this.app.dbService);
     const useCase = new GetExpensesByUserUseCase(repository);
-    const result = await useCase.execute(this.app.user.uid, pagination);
+    const result = await useCase.execute(
+      this.app.user.uid,
+      pagination,
+      filters,
+    );
     return new Response(JSON.stringify({ success: true, ...result }), {
       status: HttpCode.SUCCESS,
     });

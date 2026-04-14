@@ -1,6 +1,7 @@
 import type { NamedStackFactory } from '@utils/types';
 import { v1Stacks } from '@versions/v1';
 import { v2Stacks } from '@versions/v2';
+import { v3Stacks } from '@versions/v3';
 
 /**
  * Definition of which stacks belong to each version.
@@ -10,6 +11,7 @@ import { v2Stacks } from '@versions/v2';
 export const VERSION_STACKS: Record<string, NamedStackFactory[]> = {
   v1: v1Stacks,
   v2: v2Stacks,
+  v3: v3Stacks,
 };
 
 /**

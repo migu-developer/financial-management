@@ -1,4 +1,5 @@
 import { Logger } from '@aws-lambda-powertools/logger';
+import { Tracer } from '@aws-lambda-powertools/tracer';
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { PostgresDatabaseService } from '@services/shared/infrastructure/services/DatabaseServiceImp';
 import { PostgresUserRepository } from '@services/users/infrastructure/repositories/postgres-user.repository';
@@ -7,11 +8,17 @@ import { TRIGGER_HANDLERS } from '@user-sync/infrastructure/adapters/trigger-han
 import type { CognitoUserSyncEvent } from './types';
 
 const logger = new Logger({ serviceName: 'cognito-user-sync' });
-const cognitoClient = new CognitoIdentityProviderClient({});
+const tracer = new Tracer({ serviceName: 'cognito-user-sync' });
+const cognitoClient = tracer.captureAWSv3Client(
+  new CognitoIdentityProviderClient({}),
+);
 
 export async function handler(
   event: CognitoUserSyncEvent,
 ): Promise<CognitoUserSyncEvent> {
+  tracer.annotateColdStart();
+  tracer.putAnnotation('triggerSource', event.triggerSource);
+
   const dbService = new PostgresDatabaseService();
 
   try {

@@ -38,6 +38,7 @@ jest.mock('aws-cdk-lib', () => {
     RemovalPolicy: { RETAIN: 'Retain', DESTROY: 'Destroy' },
     SecretValue: { unsafePlainText: jest.fn().mockReturnValue('mock-secret') },
     Runtime: { NODEJS_22_X: 'nodejs22.x' },
+    Tracing: { ACTIVE: 'Active' },
   };
 });
 
@@ -143,7 +144,7 @@ const defaultProps: CognitoStackProps = {
   sesReplyTo: 'support@example.com',
   snsRegion: 'us-east-1',
   removalProtect: false,
-  cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
+  emailsPrefix: 'dummy-emails-prefix',
   snsMonthlySpendLimit: '1',
   smsBlockedCountries: ['US'],
   databaseUrl: 'postgresql://localhost:5432/test',
@@ -177,7 +178,7 @@ describe('CognitoStack', () => {
     expect(stack.identityPoolId).toBe('mock-identity-id');
   });
 
-  test('calls exportForCrossVersion five times with correct keys and Auth stack name', () => {
+  test('calls exportForCrossVersion eight times with correct keys and Auth stack name', () => {
     const app = { node: { tryGetContext: jest.fn(), children: [] } };
     new CognitoStack(
       app as unknown as Construct,
@@ -185,7 +186,7 @@ describe('CognitoStack', () => {
       defaultProps,
     );
 
-    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(5);
+    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(8);
 
     expect(mockExportForCrossVersion).toHaveBeenCalledWith(
       expect.anything(),

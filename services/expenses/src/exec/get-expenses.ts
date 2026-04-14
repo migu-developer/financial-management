@@ -7,7 +7,18 @@ const event = {
   path: '/expenses',
   resource: '/expenses',
   pathParameters: null,
-  queryStringParameters: null,
+  queryStringParameters: {
+    limit: '20',
+    ...(process.env['EXPENSE_TYPE_ID'] && {
+      expense_type_id: process.env['EXPENSE_TYPE_ID'],
+    }),
+    ...(process.env['EXPENSE_CATEGORY_ID'] && {
+      expense_category_id: process.env['EXPENSE_CATEGORY_ID'],
+    }),
+    ...(process.env['EXPENSE_NAME'] && {
+      name: process.env['EXPENSE_NAME'],
+    }),
+  },
   multiValueQueryStringParameters: null,
   headers: {},
   multiValueHeaders: {},

@@ -1,7 +1,7 @@
 import { CfnOutput, Fn } from 'aws-cdk-lib';
 import { CfnApp, CfnBranch, CfnDomain } from 'aws-cdk-lib/aws-amplify';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
-import { importFromVersion } from '@utils/cross-version';
+import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import type { Construct } from 'constructs';
 import { StackDeps } from '@utils/types';
 import { ActiveStack } from './stacks';
@@ -199,5 +199,13 @@ export class AmplifyHostingStack extends BaseStack {
       value: this.amplifyApp.attrArn,
       description: 'ARN of the Amplify app',
     });
+
+    exportForCrossVersion(
+      this,
+      'AppId',
+      this.amplifyApp.attrAppId,
+      version,
+      'AmplifyHosting',
+    );
   }
 }

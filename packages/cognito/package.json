@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
+    "@aws-lambda-powertools/tracer": "catalog:",
     "@aws-sdk/client-cognito-identity-provider": "catalog:",
     "@aws-sdk/client-s3": "catalog:",
     "@packages/models": "workspace:*",

@@ -13,7 +13,7 @@ describe('infra entry', () => {
       );
       expect(result.versions.length).toBeGreaterThan(0);
       for (const v of result.versions) {
-        expect(['v1', 'v2']).toContain(v.version);
+        expect(['v1', 'v2', 'v3']).toContain(v.version);
         expect(Array.isArray(v.factories)).toBe(true);
       }
     });

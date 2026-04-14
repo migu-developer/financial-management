@@ -3,6 +3,7 @@ import { ApiGatewayStack } from './api-gateway-stack';
 import { importFromVersion } from '@utils/cross-version';
 
 jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
   importFromVersion: jest.fn(
     (_scope: unknown, _v: string, _stack: string, key: string) =>
       `imported-${key}`,
@@ -148,7 +149,11 @@ describe('ApiGatewayStack', () => {
       string,
       unknown
     >;
-    expect(apiProps.deployOptions).toEqual({ stageName: 'dev' });
+    const deployOpts = apiProps.deployOptions as Record<string, unknown>;
+    expect(deployOpts.stageName).toBe('dev');
+    expect(deployOpts.throttlingRateLimit).toBe(50);
+    expect(deployOpts.throttlingBurstLimit).toBe(100);
+    expect(deployOpts.methodOptions).toBeDefined();
     const cors = apiProps.defaultCorsPreflightOptions as Record<
       string,
       unknown

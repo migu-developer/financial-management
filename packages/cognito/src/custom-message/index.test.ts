@@ -1,3 +1,10 @@
+jest.mock('@aws-lambda-powertools/tracer', () => ({
+  Tracer: jest.fn(() => ({
+    annotateColdStart: jest.fn(),
+    captureAWSv3Client: jest.fn((client: unknown) => client),
+  })),
+}));
+
 import { handler } from './index';
 import type {
   CustomMessageTriggerEvent,
@@ -108,6 +115,7 @@ describe('handler', () => {
     const out = await handler(event);
     expect(mockResolveLocale).toHaveBeenCalledWith('en');
     expect(mockGetEmailHtmlFromS3).toHaveBeenCalledWith(
+      expect.anything(),
       'en',
       'account-verification',
     );

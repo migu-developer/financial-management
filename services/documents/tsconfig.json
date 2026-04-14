@@ -1,6 +1,7 @@
 {
   "extends": "@packages/config/tsconfig.base.json",
   "compilerOptions": {
+    "experimentalDecorators": true,
     "outDir": "dist",
     "rootDir": ".",
     "baseUrl": ".",
@@ -13,7 +14,6 @@
     "exactOptionalPropertyTypes": true,
 
     "removeComments": true,
-    "importHelpers": true,
     "paths": {
       "@services/documents/*": ["./src/*"],
       "@packages/models/*": ["node_modules/@packages/models/src/*"],

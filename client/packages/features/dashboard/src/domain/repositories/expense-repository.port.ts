@@ -2,6 +2,7 @@ import type {
   Expense,
   CreateExpenseInput,
   PatchExpenseInput,
+  ExpenseFilters,
   Currency,
   ExpenseType,
   ExpenseCategory,
@@ -13,6 +14,7 @@ export interface ExpenseRepositoryPort {
     limit?: number,
     cursor?: string,
     signal?: AbortSignal,
+    filters?: ExpenseFilters,
   ): Promise<PaginatedResult<Expense>>;
 
   createExpense(input: Omit<CreateExpenseInput, 'user_id'>): Promise<Expense>;

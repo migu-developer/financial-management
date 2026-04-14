@@ -21,7 +21,7 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
     const result = await runUploadEmailsScript({
       config: {
         ASSETS_BUCKET_PREFIX: 'migudev-fm',
-        COGNITO_EMAILS_PREFIX: 'cognito/emails',
+        EMAILS_PREFIX: 'cognito/emails',
       },
       deps: baseDeps,
     });
@@ -38,7 +38,7 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
       config: {
         ASSETS_BUCKET_PREFIX: '',
         AWS_REGION: 'us-east-1',
-        COGNITO_EMAILS_PREFIX: 'cognito/emails',
+        EMAILS_PREFIX: 'cognito/emails',
       },
       deps: baseDeps,
     });
@@ -50,12 +50,12 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
     }
   });
 
-  it('returns exitCode 1 when COGNITO_EMAILS_PREFIX is missing', async () => {
+  it('returns exitCode 1 when EMAILS_PREFIX is missing', async () => {
     const result = await runUploadEmailsScript({
       config: {
         ASSETS_BUCKET_PREFIX: 'migudev-fm',
         AWS_REGION: 'us-east-1',
-        COGNITO_EMAILS_PREFIX: '',
+        EMAILS_PREFIX: '',
       },
       deps: baseDeps,
     });
@@ -63,11 +63,11 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.exitCode).toBe(1);
-      expect(result.message).toContain('COGNITO_EMAILS_PREFIX');
+      expect(result.message).toContain('EMAILS_PREFIX');
     }
   });
 
-  it('returns exitCode 1 when COGNITO_EMAILS_PREFIX is undefined', async () => {
+  it('returns exitCode 1 when EMAILS_PREFIX is undefined', async () => {
     const result = await runUploadEmailsScript({
       config: {
         ASSETS_BUCKET_PREFIX: 'migudev-fm',
@@ -79,7 +79,7 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.exitCode).toBe(1);
-      expect(result.message).toContain('COGNITO_EMAILS_PREFIX');
+      expect(result.message).toContain('EMAILS_PREFIX');
     }
   });
 
@@ -88,7 +88,7 @@ describe('runUploadEmailsScript validation (exit 1)', () => {
       config: {
         ASSETS_BUCKET_PREFIX: 'migudev-fm',
         AWS_REGION: 'us-east-1',
-        COGNITO_EMAILS_PREFIX: 'cognito/emails',
+        EMAILS_PREFIX: 'cognito/emails',
       },
       deps: {
         ...baseDeps,

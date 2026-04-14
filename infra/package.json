@@ -30,6 +30,7 @@
   "dependencies": {
     "@packages/cognito": "workspace:*",
     "@packages/models": "workspace:*",
+    "@packages/notifications": "workspace:*",
     "@services/currencies": "workspace:*",
     "@services/documents": "workspace:*",
     "@services/expenses": "workspace:*",

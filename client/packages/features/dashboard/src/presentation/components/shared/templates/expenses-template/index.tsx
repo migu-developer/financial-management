@@ -1,7 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import type { Expense, CreateExpenseInput } from '@packages/models/expenses';
-import { Button, ConfirmDialog } from '@features/ui/components';
+import type {
+  Expense,
+  CreateExpenseInput,
+  ExpenseFilters,
+} from '@packages/models/expenses';
+import {
+  Button,
+  ConfirmDialog,
+  FilterBar,
+  FilterChip,
+} from '@features/ui/components';
 import { useTranslation } from '@packages/i18n';
 import { useExpenses } from '@features/dashboard/presentation/providers/expense-provider';
 import { ExpenseList } from '@features/dashboard/presentation/components/web/organisms/expense-list';
@@ -15,13 +24,16 @@ export function ExpensesTemplate() {
     totalCount,
     hasMore,
     initialLoading,
+    filtering,
     loadingMore,
     error,
+    filters,
     currencies,
     expenseTypes,
     expenseCategories,
     catalogsLoaded,
     clearError,
+    setFilters,
     loadMore,
     createExpense,
     updateExpense,
@@ -32,6 +44,45 @@ export function ExpensesTemplate() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleSearchChange = useCallback(
+    (name: string) => {
+      const next: ExpenseFilters = { ...filters };
+      if (name) {
+        next.name = name;
+      } else {
+        delete next.name;
+      }
+      setFilters(next);
+    },
+    [filters, setFilters],
+  );
+
+  const handleTypeToggle = useCallback(
+    (typeId: string) => {
+      const next: ExpenseFilters = { ...filters };
+      if (filters.expense_type_id === typeId) {
+        delete next.expense_type_id;
+      } else {
+        next.expense_type_id = typeId;
+      }
+      setFilters(next);
+    },
+    [filters, setFilters],
+  );
+
+  const handleCategoryToggle = useCallback(
+    (categoryId: string) => {
+      const next: ExpenseFilters = { ...filters };
+      if (filters.expense_category_id === categoryId) {
+        delete next.expense_category_id;
+      } else {
+        next.expense_category_id = categoryId;
+      }
+      setFilters(next);
+    },
+    [filters, setFilters],
+  );
 
   const handleCreate = useCallback(() => {
     setEditingExpense(null);
@@ -90,6 +141,37 @@ export function ExpensesTemplate() {
             onPress={handleCreate}
           />
         </View>
+      )}
+
+      {!initialLoading && catalogsLoaded && (
+        <FilterBar
+          searchProps={{
+            placeholder: t('expenses.filters.searchPlaceholder'),
+            value: filters.name ?? '',
+            onChangeText: handleSearchChange,
+            disabled: filtering,
+          }}
+        >
+          {expenseTypes.map((et) => (
+            <FilterChip
+              key={et.id}
+              label={et.name}
+              selected={filters.expense_type_id === et.id}
+              disabled={filtering}
+              onPress={() => handleTypeToggle(et.id)}
+            />
+          ))}
+          <View className="w-px bg-slate-200 dark:bg-slate-700 mx-1 self-stretch" />
+          {expenseCategories.map((ec) => (
+            <FilterChip
+              key={ec.id}
+              label={ec.name}
+              selected={filters.expense_category_id === ec.id}
+              disabled={filtering}
+              onPress={() => handleCategoryToggle(ec.id)}
+            />
+          ))}
+        </FilterBar>
       )}
 
       <ExpenseList

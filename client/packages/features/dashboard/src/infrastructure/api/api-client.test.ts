@@ -227,4 +227,91 @@ describe('ApiClient', () => {
       });
     });
   });
+
+  describe('retry logic', () => {
+    it('retries on 429 and succeeds on next attempt', async () => {
+      fetchSpy
+        .mockResolvedValueOnce(
+          createMockResponse({
+            ok: false,
+            status: 429,
+            json: jest.fn().mockResolvedValue({ message: 'Too Many Requests' }),
+          }),
+        )
+        .mockResolvedValueOnce(createMockResponse());
+
+      const result = await client.get('/expenses');
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ data: 'ok' });
+    });
+
+    it('retries on 502/503/504', async () => {
+      fetchSpy
+        .mockResolvedValueOnce(
+          createMockResponse({
+            ok: false,
+            status: 502,
+            json: jest.fn().mockResolvedValue({}),
+          }),
+        )
+        .mockResolvedValueOnce(createMockResponse());
+
+      const result = await client.get('/expenses');
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ data: 'ok' });
+    });
+
+    it('throws after exhausting all retries on 429', async () => {
+      const errorResponse = createMockResponse({
+        ok: false,
+        status: 429,
+        json: jest.fn().mockResolvedValue({ message: 'Too Many Requests' }),
+      });
+      fetchSpy.mockResolvedValue(errorResponse);
+
+      await expect(client.get('/expenses')).rejects.toThrow(
+        'Too Many Requests',
+      );
+      // 1 initial + 3 retries = 4 total
+      expect(fetchSpy).toHaveBeenCalledTimes(4);
+    }, 15000);
+
+    it('retries on network timeout error', async () => {
+      fetchSpy
+        .mockRejectedValueOnce(new TypeError('network request failed'))
+        .mockResolvedValueOnce(createMockResponse());
+
+      const result = await client.get('/expenses');
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ data: 'ok' });
+    });
+
+    it('does not retry on 400 Bad Request', async () => {
+      fetchSpy.mockResolvedValue(
+        createMockResponse({
+          ok: false,
+          status: 400,
+          json: jest.fn().mockResolvedValue({ message: 'Bad Request' }),
+        }),
+      );
+
+      await expect(client.get('/expenses')).rejects.toThrow('Bad Request');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry when signal is aborted', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      fetchSpy.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+
+      await expect(
+        client.get('/expenses', undefined, controller.signal),
+      ).rejects.toThrow();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -10,6 +10,7 @@ import React, {
 import type {
   Expense,
   CreateExpenseInput,
+  ExpenseFilters,
   Currency,
   ExpenseType,
   ExpenseCategory,
@@ -46,13 +47,16 @@ export interface ExpenseContextValue {
   totalCount: number | null;
   hasMore: boolean;
   initialLoading: boolean;
+  filtering: boolean;
   loadingMore: boolean;
   error: string | null;
+  filters: ExpenseFilters;
   currencies: Currency[];
   expenseTypes: ExpenseType[];
   expenseCategories: ExpenseCategory[];
   catalogsLoaded: boolean;
   clearError: () => void;
+  setFilters: (filters: ExpenseFilters) => void;
   loadExpenses: () => Promise<void>;
   loadMore: () => Promise<void>;
   createExpense: (input: Omit<CreateExpenseInput, 'user_id'>) => Promise<void>;
@@ -88,6 +92,7 @@ export function ExpenseProvider({
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,8 +103,11 @@ export function ExpenseProvider({
   );
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
 
+  const [filters, setFiltersState] = useState<ExpenseFilters>({});
+
   const expensesAbortRef = useRef<AbortController | null>(null);
   const catalogsAbortRef = useRef<AbortController | null>(null);
+  const filtersRef = useRef<ExpenseFilters>({});
   const mountedRef = useRef(true);
 
   const repository = useMemo(() => {
@@ -109,42 +117,60 @@ export function ExpenseProvider({
 
   const clearError = useCallback(() => setError(null), []);
 
-  const loadExpenses = useCallback(async () => {
-    expensesAbortRef.current?.abort();
-    const controller = new AbortController();
-    expensesAbortRef.current = controller;
+  const loadExpenses = useCallback(
+    async (isFiltering = false) => {
+      expensesAbortRef.current?.abort();
+      const controller = new AbortController();
+      expensesAbortRef.current = controller;
 
-    setInitialLoading(true);
-    setError(null);
-    try {
-      const listUseCase = new ListExpensesUseCase(repository);
-      const result = await listUseCase.execute(
-        20,
-        undefined,
-        controller.signal,
-      );
-      if (controller.signal.aborted || !mountedRef.current) return;
-      setExpenses(result.data);
-      setNextCursor(result.next_cursor);
-      setHasMore(result.has_more);
-      if (result.total_count !== undefined) setTotalCount(result.total_count);
-    } catch (err) {
-      if (controller.signal.aborted || !mountedRef.current) return;
-      setError(
-        err instanceof Error ? err.message : t('expenses.errors.loadExpenses'),
-      );
-    } finally {
-      if (!controller.signal.aborted && mountedRef.current)
-        setInitialLoading(false);
-    }
-  }, [repository]);
+      const activeFilters = filtersRef.current;
+      if (isFiltering) {
+        setFiltering(true);
+      } else {
+        setInitialLoading(true);
+      }
+      setError(null);
+      try {
+        const listUseCase = new ListExpensesUseCase(repository);
+        const result = await listUseCase.execute(
+          20,
+          undefined,
+          controller.signal,
+          activeFilters,
+        );
+        if (controller.signal.aborted || !mountedRef.current) return;
+        setExpenses(result.data);
+        setNextCursor(result.next_cursor);
+        setHasMore(result.has_more);
+        if (result.total_count !== undefined) setTotalCount(result.total_count);
+      } catch (err) {
+        if (controller.signal.aborted || !mountedRef.current) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('expenses.errors.loadExpenses'),
+        );
+      } finally {
+        if (!controller.signal.aborted && mountedRef.current) {
+          setInitialLoading(false);
+          setFiltering(false);
+        }
+      }
+    },
+    [repository],
+  );
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
       const listUseCase = new ListExpensesUseCase(repository);
-      const result = await listUseCase.execute(20, nextCursor);
+      const result = await listUseCase.execute(
+        20,
+        nextCursor,
+        undefined,
+        filtersRef.current,
+      );
       if (!mountedRef.current) return;
       setExpenses((prev) => [...prev, ...result.data]);
       setNextCursor(result.next_cursor);
@@ -158,6 +184,15 @@ export function ExpenseProvider({
       if (mountedRef.current) setLoadingMore(false);
     }
   }, [nextCursor, loadingMore, repository]);
+
+  const setFilters = useCallback(
+    (newFilters: ExpenseFilters) => {
+      filtersRef.current = newFilters;
+      setFiltersState(newFilters);
+      void loadExpenses(true);
+    },
+    [loadExpenses],
+  );
 
   const loadCatalogs = useCallback(async () => {
     catalogsAbortRef.current?.abort();
@@ -251,13 +286,16 @@ export function ExpenseProvider({
       totalCount,
       hasMore,
       initialLoading,
+      filtering,
       loadingMore,
       error,
+      filters,
       currencies,
       expenseTypes,
       expenseCategories,
       catalogsLoaded,
       clearError,
+      setFilters,
       loadExpenses,
       loadMore,
       createExpense,
@@ -269,13 +307,16 @@ export function ExpenseProvider({
       totalCount,
       hasMore,
       initialLoading,
+      filtering,
       loadingMore,
       error,
+      filters,
       currencies,
       expenseTypes,
       expenseCategories,
       catalogsLoaded,
       clearError,
+      setFilters,
       loadExpenses,
       loadMore,
       createExpense,

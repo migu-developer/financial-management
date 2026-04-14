@@ -1,4 +1,6 @@
 import { Logger } from '@aws-lambda-powertools/logger';
+import { Tracer } from '@aws-lambda-powertools/tracer';
+import { S3Client } from '@aws-sdk/client-s3';
 import type { CustomMessageTriggerEvent } from './types';
 
 import {
@@ -15,14 +17,16 @@ interface LambdaContext {
   [key: string]: unknown;
 }
 
-const logger = new Logger({
-  serviceName: 'cognito-custom-message',
-});
+const logger = new Logger({ serviceName: 'cognito-custom-message' });
+const tracer = new Tracer({ serviceName: 'cognito-custom-message' });
+const s3Client = tracer.captureAWSv3Client(new S3Client({}));
 
 export async function handler(
   event: CustomMessageTriggerEvent,
   context?: LambdaContext,
 ): Promise<CustomMessageTriggerEvent> {
+  tracer.annotateColdStart();
+
   if (context)
     logger.addContext(
       context as unknown as Parameters<Logger['addContext']>[0],
@@ -48,7 +52,7 @@ export async function handler(
   const templateName = TRIGGER_TO_TEMPLATE[event.triggerSource];
   logger.debug('Fetching email template from S3', { locale, templateName });
 
-  const htmlFromS3 = await getEmailHtmlFromS3(locale, templateName);
+  const htmlFromS3 = await getEmailHtmlFromS3(s3Client, locale, templateName);
 
   if (!htmlFromS3) {
     logger.error('Email template not found in S3', { locale, templateName });

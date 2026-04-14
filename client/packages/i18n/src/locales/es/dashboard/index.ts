@@ -68,6 +68,9 @@ export const dashboard = {
       loadCatalogs: 'Error al cargar catalogos',
       authExpired: 'Token de autenticacion expirado o no disponible',
     },
+    filters: {
+      searchPlaceholder: 'Buscar por nombre...',
+    },
     modal: {
       closeAccessibility: 'Cerrar dialogo',
     },

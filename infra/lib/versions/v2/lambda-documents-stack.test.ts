@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { LambdaDocumentsStack } from './lambda-documents-stack';
 
 jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
   importFromVersion: jest.fn(
     (_scope: unknown, _v: string, _stack: string, key: string) =>
       `imported-${key}`,
@@ -51,6 +52,7 @@ jest.mock('aws-cdk-lib', () => {
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
   Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Tracing: { ACTIVE: 'Active' },
 }));
 
 jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({

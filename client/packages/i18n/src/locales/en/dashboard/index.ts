@@ -68,6 +68,9 @@ export const dashboard = {
       loadCatalogs: 'Failed to load catalogs',
       authExpired: 'Authentication token expired or missing',
     },
+    filters: {
+      searchPlaceholder: 'Search by name...',
+    },
     modal: {
       closeAccessibility: 'Close dialog',
     },

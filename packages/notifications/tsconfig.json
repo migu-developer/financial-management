@@ -1,0 +1,13 @@
+{
+  "extends": "@packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@notifications/domain/types": ["./src/domain/types.ts"]
+    }
+  },
+  "include": ["src", "eslint.config.ts", "jest.config.ts"]
+}

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "catalog:",
+    "@aws-lambda-powertools/tracer": "catalog:",
     "@packages/models": "workspace:*",
     "pg": "catalog:"
   },

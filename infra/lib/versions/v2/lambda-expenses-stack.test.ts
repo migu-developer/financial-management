@@ -1,6 +1,10 @@
 import { Construct } from 'constructs';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
 
+jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
+}));
+
 jest.mock('./api-gateway-stack', () => ({
   ApiGatewayStack: {
     integration: jest.fn().mockReturnValue({ integrationId: 'mock' }),
@@ -67,6 +71,7 @@ jest.mock('aws-cdk-lib', () => {
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
   Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Tracing: { ACTIVE: 'Active' },
 }));
 
 jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({

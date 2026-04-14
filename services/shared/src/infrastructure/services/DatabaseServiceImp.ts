@@ -1,6 +1,9 @@
 import { Pool } from 'pg';
+import { Tracer } from '@aws-lambda-powertools/tracer';
 import { DatabaseError } from '@packages/models/shared/utils/errors/database';
 import { DatabaseService } from '@services/shared/domain/services/database';
+
+const tracer = new Tracer({ serviceName: 'database' });
 
 export class PostgresDatabaseService extends DatabaseService {
   private writePool: Pool | null = null;
@@ -35,6 +38,7 @@ export class PostgresDatabaseService extends DatabaseService {
     return this.readPool;
   }
 
+  @tracer.captureMethod({ subSegmentName: 'DB:query:write' })
   async query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
     const connectionString = process.env['DATABASE_URL'];
     if (!connectionString) {
@@ -44,6 +48,7 @@ export class PostgresDatabaseService extends DatabaseService {
     return result.rows as T[];
   }
 
+  @tracer.captureMethod({ subSegmentName: 'DB:query:read' })
   async queryReadOnly<T = unknown>(
     sql: string,
     params?: unknown[],

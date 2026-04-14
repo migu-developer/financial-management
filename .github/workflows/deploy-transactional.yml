@@ -21,7 +21,7 @@
 #   Required variables:
 #     AWS_REGION               — AWS region of the target bucket (e.g. us-east-1)
 #     ASSETS_BUCKET_PREFIX     — Bucket name prefix (e.g. migudev-fm)
-#     COGNITO_EMAILS_PREFIX    — S3 key prefix for emails (e.g. cognito/emails)
+#     EMAILS_PREFIX    — S3 key prefix for emails (e.g. cognito/emails)
 #     ASSETS_URL               — Base URL for static assets used in email templates
 #     APPLICATION_URL          — App URL used in email links
 
@@ -104,7 +104,7 @@ jobs:
       DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
       AWS_REGION: ${{ vars.AWS_REGION }}
       ASSETS_BUCKET_PREFIX: ${{ vars.ASSETS_BUCKET_PREFIX }}
-      COGNITO_EMAILS_PREFIX: ${{ vars.COGNITO_EMAILS_PREFIX }}
+      EMAILS_PREFIX: ${{ vars.EMAILS_PREFIX }}
       ASSETS_URL: ${{ vars.ASSETS_URL }}
       APPLICATION_URL: ${{ vars.APPLICATION_URL }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
@@ -127,7 +127,7 @@ jobs:
           [[ -z "$DEPLOY_ROLE_ARN" ]]       && missing+=("DEPLOY_ROLE_ARN (secret)")
           [[ -z "$AWS_REGION" ]]            && missing+=("AWS_REGION (var)")
           [[ -z "$ASSETS_BUCKET_PREFIX" ]]  && missing+=("ASSETS_BUCKET_PREFIX (var)")
-          [[ -z "$COGNITO_EMAILS_PREFIX" ]] && missing+=("COGNITO_EMAILS_PREFIX (var)")
+          [[ -z "$EMAILS_PREFIX" ]] && missing+=("EMAILS_PREFIX (var)")
           if [[ ${#missing[@]} -gt 0 ]]; then
             echo "::error::Missing required secrets/variables: ${missing[*]}"
             exit 1
@@ -177,5 +177,5 @@ jobs:
             echo "| Release | $RELEASE |"
             echo "| Region | \`$AWS_REGION\` |"
             echo "| Bucket | \`$BUCKET\` |"
-            echo "| Prefix | \`$COGNITO_EMAILS_PREFIX\` |"
+            echo "| Prefix | \`$EMAILS_PREFIX\` |"
           } >> "$GITHUB_STEP_SUMMARY"

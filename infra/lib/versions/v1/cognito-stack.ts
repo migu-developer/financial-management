@@ -16,7 +16,7 @@ import {
   OidcAttributeRequestMethod,
 } from 'aws-cdk-lib/aws-cognito';
 import { CfnIdentityPool } from 'aws-cdk-lib/aws-cognito';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -80,7 +80,7 @@ export interface CognitoStackProps extends BaseStackProps {
   readonly smsBlockedCountries: string[];
   // Protection
   readonly removalProtect: boolean;
-  readonly cognitoEmailsPrefix: string;
+  readonly emailsPrefix: string;
   // Database (for user sync trigger)
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
@@ -127,10 +127,11 @@ export class CognitoStack extends BaseStack {
         minify: true,
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
+      tracing: Tracing.ACTIVE,
       environment: {
         ...(assetsStack?.bucket && {
           ASSETS_BUCKET_NAME: assetsStack.bucket.bucketName,
-          COGNITO_EMAILS_PREFIX: props.cognitoEmailsPrefix,
+          EMAILS_PREFIX: props.emailsPrefix,
         }),
       },
     });
@@ -156,6 +157,7 @@ export class CognitoStack extends BaseStack {
       },
       description:
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
+      tracing: Tracing.ACTIVE,
       environment: {
         DATABASE_URL: props.databaseUrl,
         DATABASE_READONLY_URL: props.databaseReadonlyUrl,
@@ -191,6 +193,7 @@ export class CognitoStack extends BaseStack {
       },
       description:
         'Cognito PreSignUp — links social providers to existing native accounts before signup',
+      tracing: Tracing.ACTIVE,
     });
 
     preSignUpFn.addToRolePolicy(
@@ -541,6 +544,28 @@ export class CognitoStack extends BaseStack {
       this,
       'CognitoDomain',
       cognitoDomainFqdn,
+      version,
+      'Auth',
+    );
+
+    exportForCrossVersion(
+      this,
+      'PreSignUpFnName',
+      preSignUpFn.functionName,
+      version,
+      'Auth',
+    );
+    exportForCrossVersion(
+      this,
+      'CustomMessageFnName',
+      customMessageFn.functionName,
+      version,
+      'Auth',
+    );
+    exportForCrossVersion(
+      this,
+      'UserSyncFnName',
+      userSyncFn.functionName,
       version,
       'Auth',
     );

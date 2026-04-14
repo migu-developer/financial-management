@@ -1,6 +1,35 @@
 import { ExpenseError } from '@features/dashboard/domain/errors/expense-errors';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 500;
+const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'PUT', 'DELETE', 'OPTIONS']);
+
+function isRetryable(status: number): boolean {
+  return RETRYABLE_STATUS_CODES.has(status);
+}
+
+function isTimeoutError(error: unknown): boolean {
+  if (error instanceof TypeError && error.message.includes('network')) {
+    return true;
+  }
+  if (
+    typeof DOMException !== 'undefined' &&
+    error instanceof DOMException &&
+    error.name === 'TimeoutError'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function delay(attempt: number): Promise<void> {
+  const backoff = BASE_DELAY_MS * Math.pow(2, attempt);
+  const jitter = Math.random() * backoff * 0.5;
+  return new Promise((resolve) => setTimeout(resolve, backoff + jitter));
+}
+
 export class ApiClient {
   constructor(
     private readonly baseUrl: string,
@@ -35,23 +64,52 @@ export class ApiClient {
       );
     }
 
-    const response = await fetch(url.toString(), {
+    const requestHeaders = await this.headers();
+    const fetchOptions: RequestInit = {
       method,
-      headers: await this.headers(),
+      headers: requestHeaders,
       ...(body !== undefined && { body: JSON.stringify(body) }),
       ...(signal && { signal }),
-    });
+    };
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      const message =
-        (errorBody as { message?: string })?.message ??
-        `Request failed with status ${response.status}`;
-      throw new ExpenseError(message, response.status);
+    let lastError: unknown;
+    const canRetry = IDEMPOTENT_METHODS.has(method);
+
+    for (let attempt = 0; attempt <= (canRetry ? MAX_RETRIES : 0); attempt++) {
+      try {
+        const response = await fetch(url.toString(), fetchOptions);
+
+        if (response.ok) {
+          if (response.status === 204) return undefined as T;
+          return response.json() as Promise<T>;
+        }
+
+        if (canRetry && isRetryable(response.status) && attempt < MAX_RETRIES) {
+          await delay(attempt);
+          continue;
+        }
+
+        const errorBody = await response.json().catch(() => null);
+        const message =
+          (errorBody as { message?: string })?.message ??
+          `Request failed with status ${response.status}`;
+        throw new ExpenseError(message, response.status);
+      } catch (error) {
+        if (signal?.aborted) throw error;
+
+        if (error instanceof ExpenseError) throw error;
+
+        if (canRetry && isTimeoutError(error) && attempt < MAX_RETRIES) {
+          lastError = error;
+          await delay(attempt);
+          continue;
+        }
+
+        throw error;
+      }
     }
 
-    if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
+    throw lastError;
   }
 
   async get<T>(
