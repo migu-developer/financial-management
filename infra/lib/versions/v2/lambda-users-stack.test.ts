@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { LambdaUsersStack } from './lambda-users-stack';
 
 jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
   importFromVersion: jest.fn(
     (_scope: unknown, _v: string, _stack: string, key: string) =>
       `imported-${key}`,

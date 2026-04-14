@@ -1,5 +1,5 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
-import { importFromVersion } from '@utils/cross-version';
+import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { CfnOutput, Duration } from 'aws-cdk-lib';
 import {
@@ -66,7 +66,57 @@ export class ApiGatewayStack extends BaseStack {
     this.api = new RestApi(this, `${stackName}-Api`, {
       restApiName: `${stackName}-Api`,
       description: 'Shared REST API for financial management services',
-      deployOptions: { stageName: stage },
+      deployOptions: {
+        stageName: stage,
+        throttlingRateLimit: 50,
+        throttlingBurstLimit: 100,
+        methodOptions: {
+          '~1expenses/GET': {
+            throttlingRateLimit: 30,
+            throttlingBurstLimit: 50,
+          },
+          '~1expenses/POST': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+          '~1expenses~1{id}/PUT': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+          '~1expenses~1{id}/PATCH': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+          '~1expenses~1{id}/DELETE': {
+            throttlingRateLimit: 5,
+            throttlingBurstLimit: 10,
+          },
+          '~1expenses~1types/GET': {
+            throttlingRateLimit: 20,
+            throttlingBurstLimit: 40,
+          },
+          '~1expenses~1categories/GET': {
+            throttlingRateLimit: 20,
+            throttlingBurstLimit: 40,
+          },
+          '~1currencies/GET': {
+            throttlingRateLimit: 20,
+            throttlingBurstLimit: 40,
+          },
+          '~1documents/GET': {
+            throttlingRateLimit: 15,
+            throttlingBurstLimit: 30,
+          },
+          '~1users/GET': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+          '~1users~1{id}/PATCH': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+        },
+      },
       endpointTypes: [EndpointType.REGIONAL],
       defaultCorsPreflightOptions: {
         allowOrigins: allowedOrigins,
@@ -211,6 +261,14 @@ export class ApiGatewayStack extends BaseStack {
       value: this.api.url,
       description: 'URL of the shared API Gateway',
     });
+
+    exportForCrossVersion(
+      this,
+      'ApiName',
+      `${stackName}-Api`,
+      version,
+      'ApiGateway',
+    );
   }
 
   /**

@@ -177,7 +177,7 @@ describe('CognitoStack', () => {
     expect(stack.identityPoolId).toBe('mock-identity-id');
   });
 
-  test('calls exportForCrossVersion five times with correct keys and Auth stack name', () => {
+  test('calls exportForCrossVersion eight times with correct keys and Auth stack name', () => {
     const app = { node: { tryGetContext: jest.fn(), children: [] } };
     new CognitoStack(
       app as unknown as Construct,
@@ -185,7 +185,7 @@ describe('CognitoStack', () => {
       defaultProps,
     );
 
-    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(5);
+    expect(mockExportForCrossVersion).toHaveBeenCalledTimes(8);
 
     expect(mockExportForCrossVersion).toHaveBeenCalledWith(
       expect.anything(),

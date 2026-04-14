@@ -544,5 +544,27 @@ export class CognitoStack extends BaseStack {
       version,
       'Auth',
     );
+
+    exportForCrossVersion(
+      this,
+      'PreSignUpFnName',
+      preSignUpFn.functionName,
+      version,
+      'Auth',
+    );
+    exportForCrossVersion(
+      this,
+      'CustomMessageFnName',
+      customMessageFn.functionName,
+      version,
+      'Auth',
+    );
+    exportForCrossVersion(
+      this,
+      'UserSyncFnName',
+      userSyncFn.functionName,
+      version,
+      'Auth',
+    );
   }
 }

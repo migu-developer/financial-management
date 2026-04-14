@@ -1,6 +1,10 @@
 import { Construct } from 'constructs';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
 
+jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
+}));
+
 jest.mock('./api-gateway-stack', () => ({
   ApiGatewayStack: {
     integration: jest.fn().mockReturnValue({ integrationId: 'mock' }),

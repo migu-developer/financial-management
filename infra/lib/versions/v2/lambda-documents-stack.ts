@@ -1,4 +1,5 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
+import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
@@ -60,5 +61,13 @@ export class LambdaDocumentsStack extends BaseStack {
     const integration = ApiGatewayStack.integration(lambda);
     const documentsResource = gateway.api.root.addResource('documents');
     documentsResource.addMethod('GET', integration, gateway.authOnly());
+
+    exportForCrossVersion(
+      this,
+      'FunctionName',
+      lambda.functionName,
+      version,
+      'LambdaDocuments',
+    );
   }
 }

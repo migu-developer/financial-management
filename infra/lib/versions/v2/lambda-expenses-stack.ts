@@ -1,4 +1,5 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
+import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
@@ -117,5 +118,13 @@ export class LambdaExpensesStack extends BaseStack {
 
     const categoriesResource = expensesResource.addResource('categories');
     categoriesResource.addMethod('GET', integration, gateway.authOnly());
+
+    exportForCrossVersion(
+      this,
+      'FunctionName',
+      lambda.functionName,
+      version,
+      'LambdaExpenses',
+    );
   }
 }

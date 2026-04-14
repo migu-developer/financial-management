@@ -6,4 +6,4 @@
  *   pnpm cdk deploy --all
  *   pnpm cdk synth
  */
-export const DEPLOY_VERSIONS: string[] = ['v1', 'v2'];
+export const DEPLOY_VERSIONS: string[] = ['v1', 'v2', 'v3'];

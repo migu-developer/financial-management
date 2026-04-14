@@ -4,6 +4,7 @@ import { importFromVersion } from '@utils/cross-version';
 import { CfnApp, CfnBranch, CfnDomain } from 'aws-cdk-lib/aws-amplify';
 
 jest.mock('@utils/cross-version', () => ({
+  exportForCrossVersion: jest.fn(),
   importFromVersion: jest.fn(
     (_scope: unknown, _v: string, _stack: string, key: string) =>
       `imported-${key}`,

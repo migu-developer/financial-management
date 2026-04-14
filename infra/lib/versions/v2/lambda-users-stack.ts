@@ -1,4 +1,5 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
+import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
@@ -94,6 +95,14 @@ export class LambdaUsersStack extends BaseStack {
       'PATCH',
       integration,
       gateway.authWithBodyAndParams(patchModel),
+    );
+
+    exportForCrossVersion(
+      this,
+      'FunctionName',
+      lambda.functionName,
+      version,
+      'LambdaUsers',
     );
   }
 }
