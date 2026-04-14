@@ -161,14 +161,14 @@ describe('ExpensesService', () => {
     const response = await new ExpensesService(app).executeGET();
     expect(response.status).toBe(HttpCode.SUCCESS);
 
-    const sql = (dbService.queryReadOnly as jest.Mock).mock
-      .calls[0][0] as string;
+    const calls = (dbService.queryReadOnly as jest.Mock).mock
+      .calls as unknown[][];
+    const sql = calls[0]![0] as string;
     expect(sql).toContain('expense_type_id');
     expect(sql).toContain('expense_category_id');
     expect(sql).toContain('ILIKE');
 
-    const params = (dbService.queryReadOnly as jest.Mock).mock
-      .calls[0][1] as unknown[];
+    const params = calls[0]![1] as unknown[];
     expect(params).toContain('type-1');
     expect(params).toContain('cat-1');
     expect(params).toContain('groceries');
@@ -188,8 +188,9 @@ describe('ExpensesService', () => {
     ).executeGET();
     expect(response.status).toBe(HttpCode.SUCCESS);
 
-    const sql = (dbService.queryReadOnly as jest.Mock).mock
-      .calls[0][0] as string;
+    const calls = (dbService.queryReadOnly as jest.Mock).mock
+      .calls as unknown[][];
+    const sql = calls[0]![0] as string;
     expect(sql).not.toContain('e.expense_type_id =');
     expect(sql).not.toContain('ILIKE');
   });
