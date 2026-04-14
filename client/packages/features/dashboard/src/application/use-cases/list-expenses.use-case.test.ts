@@ -54,6 +54,7 @@ describe('ListExpensesUseCase', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
     expect(result).toEqual(mockPaginatedResult);
   });
@@ -65,6 +66,7 @@ describe('ListExpensesUseCase', () => {
 
     expect(repository.listExpenses).toHaveBeenCalledWith(
       10,
+      undefined,
       undefined,
       undefined,
     );
@@ -79,6 +81,21 @@ describe('ListExpensesUseCase', () => {
       20,
       'cursor-abc',
       undefined,
+      undefined,
+    );
+  });
+
+  it('passes filters to repository', async () => {
+    repository.listExpenses.mockResolvedValue(mockPaginatedResult);
+    const filters = { expense_type_id: 'type-1', name: 'groceries' };
+
+    await useCase.execute(20, undefined, undefined, filters);
+
+    expect(repository.listExpenses).toHaveBeenCalledWith(
+      20,
+      undefined,
+      undefined,
+      filters,
     );
   });
 

@@ -2,6 +2,7 @@ import type {
   Expense,
   CreateExpenseInput,
   PatchExpenseInput,
+  ExpenseFilters,
   Currency,
   ExpenseType,
   ExpenseCategory,
@@ -25,9 +26,15 @@ export class ExpenseApiRepository implements ExpenseRepositoryPort {
     limit = 20,
     cursor?: string,
     signal?: AbortSignal,
+    filters?: ExpenseFilters,
   ): Promise<PaginatedResult<Expense>> {
     const params: Record<string, string> = { limit: String(limit) };
     if (cursor) params['cursor'] = cursor;
+    if (filters?.expense_type_id)
+      params['expense_type_id'] = filters.expense_type_id;
+    if (filters?.expense_category_id)
+      params['expense_category_id'] = filters.expense_category_id;
+    if (filters?.name) params['name'] = filters.name;
 
     const response = await this.api.get<ApiResponse<Expense[]>>(
       '/expenses',

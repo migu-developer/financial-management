@@ -9,6 +9,7 @@ import type {
 import { LoadingSpinner, EmptyState } from '@features/ui/components';
 import { ExpenseCard } from '@features/dashboard/presentation/components/shared/molecules/expense-card';
 import { ExpenseCardSkeleton } from '@features/dashboard/presentation/components/shared/molecules/expense-card-skeleton';
+import { FilterBarSkeleton } from '@features/dashboard/presentation/components/shared/molecules/filter-bar-skeleton';
 
 const SKELETON_COUNT = 5;
 
@@ -44,6 +45,7 @@ export function ExpenseList({
   if (loading && expenses.length === 0) {
     return (
       <View className="flex-1" style={{ paddingBottom: 24 }}>
+        <FilterBarSkeleton />
         {Array.from({ length: SKELETON_COUNT }, (_, i) => (
           <ExpenseCardSkeleton key={i} />
         ))}
