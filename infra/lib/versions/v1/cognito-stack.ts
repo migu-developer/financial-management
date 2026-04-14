@@ -80,7 +80,7 @@ export interface CognitoStackProps extends BaseStackProps {
   readonly smsBlockedCountries: string[];
   // Protection
   readonly removalProtect: boolean;
-  readonly cognitoEmailsPrefix: string;
+  readonly emailsPrefix: string;
   // Database (for user sync trigger)
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
@@ -130,7 +130,7 @@ export class CognitoStack extends BaseStack {
       environment: {
         ...(assetsStack?.bucket && {
           ASSETS_BUCKET_NAME: assetsStack.bucket.bucketName,
-          COGNITO_EMAILS_PREFIX: props.cognitoEmailsPrefix,
+          EMAILS_PREFIX: props.emailsPrefix,
         }),
       },
     });

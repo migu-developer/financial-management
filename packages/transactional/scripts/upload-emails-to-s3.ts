@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 /**
  * Uploads dist/{locale}/*.html to S3 at prefix cognito/emails/{locale}/{name}.html.
- * Requires: ASSETS_BUCKET_PREFIX, AWS_REGION, COGNITO_EMAILS_PREFIX.
+ * Requires: ASSETS_BUCKET_PREFIX, AWS_REGION, EMAILS_PREFIX.
  * Usage: pnpm email:upload
  */
 import fs from 'node:fs';
@@ -20,7 +20,7 @@ import { uploadEmailsToS3 } from './lib/upload-emails-s3';
 export interface UploadScriptConfig {
   ASSETS_BUCKET_PREFIX?: string;
   AWS_REGION?: string;
-  COGNITO_EMAILS_PREFIX?: string;
+  EMAILS_PREFIX?: string;
 }
 
 export interface UploadScriptDeps {
@@ -55,7 +55,7 @@ export async function runUploadEmailsScript(options: {
   const bucket = [cfg.ASSETS_BUCKET_PREFIX, region].every(Boolean)
     ? `${cfg.ASSETS_BUCKET_PREFIX}-${region}-assets`
     : '';
-  const prefix = cfg.COGNITO_EMAILS_PREFIX ?? '';
+  const prefix = cfg.EMAILS_PREFIX ?? '';
   const distPath = dep.path.join(dep.cwd, 'dist');
 
   if (!region) {
@@ -76,7 +76,7 @@ export async function runUploadEmailsScript(options: {
     return {
       ok: false,
       exitCode: 1,
-      message: 'Set COGNITO_EMAILS_PREFIX (e.g. cognito/emails).',
+      message: 'Set EMAILS_PREFIX (e.g. cognito/emails).',
     };
   }
   if (!dep.fs.existsSync(distPath)) {
@@ -113,7 +113,7 @@ async function main() {
     config: {
       ASSETS_BUCKET_PREFIX: config.ASSETS_BUCKET_PREFIX,
       AWS_REGION: config.AWS_REGION,
-      COGNITO_EMAILS_PREFIX: config.COGNITO_EMAILS_PREFIX,
+      EMAILS_PREFIX: config.EMAILS_PREFIX,
     },
     deps: {
       fs,

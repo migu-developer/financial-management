@@ -42,6 +42,13 @@ export class MonitoringStack extends BaseStack {
     });
 
     // ── Notification Lambda ──────────────────────────────
+    const assetsBucketName = importFromVersion(
+      this,
+      'v1',
+      'Assets',
+      'AssetsBucketName',
+    );
+
     const notificationFn = new NodejsFunction(
       this,
       `${stackName}-NotificationFn`,
@@ -62,7 +69,9 @@ export class MonitoringStack extends BaseStack {
         environment: {
           ALERT_EMAIL_FROM: props.alertFromEmail,
           ALERT_EMAIL_TO: props.alertEmail,
-          DASHBOARD_URL: '',
+          DASHBOARD_URL: `https://console.aws.amazon.com/cloudwatch/home#dashboards:name=${stackName}-Dashboard`,
+          ASSETS_BUCKET_NAME: assetsBucketName,
+          EMAILS_PREFIX: process.env.EMAILS_PREFIX ?? 'emails',
         },
         timeout: Duration.seconds(10),
       },
@@ -72,6 +81,13 @@ export class MonitoringStack extends BaseStack {
       new PolicyStatement({
         actions: ['ses:SendEmail'],
         resources: ['*'],
+      }),
+    );
+
+    notificationFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: [`arn:aws:s3:::${assetsBucketName}/*`],
       }),
     );
 

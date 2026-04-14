@@ -26,14 +26,14 @@ export function getS3Key(
 
 /**
  * Fetches the email HTML for the given locale and template from S3.
- * Uses ASSETS_BUCKET_NAME and COGNITO_EMAILS_PREFIX from env.
+ * Uses ASSETS_BUCKET_NAME and EMAILS_PREFIX from env.
  */
 export async function getEmailHtmlFromS3(
   locale: string,
   templateName: string,
 ): Promise<string | null> {
   const bucketName = process.env.ASSETS_BUCKET_NAME;
-  const prefix = process.env.COGNITO_EMAILS_PREFIX;
+  const prefix = process.env.EMAILS_PREFIX;
   if (!bucketName || !prefix) return null;
   const client = new S3Client({});
   const key = getS3Key(locale, templateName, prefix);

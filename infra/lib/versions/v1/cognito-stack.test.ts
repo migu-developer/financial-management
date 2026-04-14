@@ -143,7 +143,7 @@ const defaultProps: CognitoStackProps = {
   sesReplyTo: 'support@example.com',
   snsRegion: 'us-east-1',
   removalProtect: false,
-  cognitoEmailsPrefix: 'dummy-cognito-emails-prefix',
+  emailsPrefix: 'dummy-emails-prefix',
   snsMonthlySpendLimit: '1',
   smsBlockedCountries: ['US'],
   databaseUrl: 'postgresql://localhost:5432/test',

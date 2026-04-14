@@ -1,6 +1,14 @@
 import { Heading, Hr, Section, Text } from '@react-email/components';
 import { EmailLayout } from '@components/EmailLayout';
 import { ServiceAlertBlock } from '@components/ServiceAlertBlock';
+import {
+  ALERT_ALARM_NAME,
+  ALERT_SEVERITY,
+  ALERT_SERVICE,
+  ALERT_DESCRIPTION,
+  ALERT_TIMESTAMP,
+  ALERT_DASHBOARD_URL,
+} from '@utils/alert-constants';
 import { footerCopy } from './footer-copy';
 
 export interface ServiceAlertEmailProps {
@@ -13,12 +21,12 @@ export interface ServiceAlertEmailProps {
 }
 
 export default function ServiceAlertEmail({
-  alarmName = 'API-5xx-Errors',
-  severity = 'CRITICAL',
-  service = 'API Gateway',
-  description = 'Umbral superado: 8 puntos de datos superaron el umbral (5.0)',
-  timestamp = new Date().toISOString(),
-  dashboardUrl = '#',
+  alarmName = ALERT_ALARM_NAME,
+  severity = ALERT_SEVERITY as 'CRITICAL' | 'WARNING',
+  service = ALERT_SERVICE,
+  description = ALERT_DESCRIPTION,
+  timestamp = ALERT_TIMESTAMP,
+  dashboardUrl = ALERT_DASHBOARD_URL,
 }: ServiceAlertEmailProps) {
   return (
     <EmailLayout
