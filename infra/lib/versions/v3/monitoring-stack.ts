@@ -63,6 +63,7 @@ export class MonitoringStack extends BaseStack {
           format: OutputFormat.ESM,
           sourceMap: true,
           minify: true,
+          nodeModules: ['aws-xray-sdk-core'],
         },
         description:
           'Sends formatted alert emails via SES on CloudWatch alarms',

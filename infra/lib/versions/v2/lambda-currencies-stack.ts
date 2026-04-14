@@ -44,6 +44,7 @@ export class LambdaCurrenciesStack extends BaseStack {
         format: OutputFormat.ESM,
         sourceMap: true,
         minify: true,
+        nodeModules: ['aws-xray-sdk-core'],
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
