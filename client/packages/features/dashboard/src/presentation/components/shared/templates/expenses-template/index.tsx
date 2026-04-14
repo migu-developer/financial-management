@@ -71,6 +71,19 @@ export function ExpensesTemplate() {
     [filters, setFilters],
   );
 
+  const handleCategoryToggle = useCallback(
+    (categoryId: string) => {
+      const next: ExpenseFilters = { ...filters };
+      if (filters.expense_category_id === categoryId) {
+        delete next.expense_category_id;
+      } else {
+        next.expense_category_id = categoryId;
+      }
+      setFilters(next);
+    },
+    [filters, setFilters],
+  );
+
   const handleCreate = useCallback(() => {
     setEditingExpense(null);
     setModalVisible(true);
@@ -146,6 +159,16 @@ export function ExpensesTemplate() {
               selected={filters.expense_type_id === et.id}
               disabled={filtering}
               onPress={() => handleTypeToggle(et.id)}
+            />
+          ))}
+          <View className="w-px bg-slate-200 dark:bg-slate-700 mx-1 self-stretch" />
+          {expenseCategories.map((ec) => (
+            <FilterChip
+              key={ec.id}
+              label={ec.name}
+              selected={filters.expense_category_id === ec.id}
+              disabled={filtering}
+              onPress={() => handleCategoryToggle(ec.id)}
             />
           ))}
         </FilterBar>
