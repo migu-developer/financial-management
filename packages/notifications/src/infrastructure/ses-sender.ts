@@ -1,14 +1,16 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import type { AlertPayload } from '../domain/types';
-
-const ses = new SESClient({});
-const s3 = new S3Client({});
+import type { SESClient } from '@aws-sdk/client-ses';
+import { SendEmailCommand } from '@aws-sdk/client-ses';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import type { AlertPayload } from '@notifications/domain/types';
 
 const TEMPLATE_NAME = 'service-alert';
 const DEFAULT_LOCALE = 'en';
 
-async function getTemplateFromS3(locale: string): Promise<string | null> {
+async function getTemplateFromS3(
+  s3: S3Client,
+  locale: string,
+): Promise<string | null> {
   const bucketName = process.env['ASSETS_BUCKET_NAME'];
   const prefix = process.env['EMAILS_PREFIX'];
   if (!bucketName || !prefix) return null;
@@ -39,8 +41,9 @@ export async function sendAlertEmail(
   payload: AlertPayload,
   fromEmail: string,
   toEmail: string,
+  clients: { ses: SESClient; s3: S3Client },
 ): Promise<void> {
-  const html = await getTemplateFromS3(DEFAULT_LOCALE);
+  const html = await getTemplateFromS3(clients.s3, DEFAULT_LOCALE);
   if (!html) {
     throw new Error(
       `Alert email template not found in S3. Ensure templates are uploaded (pnpm email:export && pnpm email:upload).`,
@@ -50,7 +53,7 @@ export async function sendAlertEmail(
   const body = replacePlaceholders(html, payload);
   const subject = `[${payload.severity}] ${payload.alarmName} — ${payload.service}`;
 
-  await ses.send(
+  await clients.ses.send(
     new SendEmailCommand({
       Source: fromEmail,
       Destination: { ToAddresses: [toEmail] },

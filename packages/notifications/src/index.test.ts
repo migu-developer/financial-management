@@ -1,8 +1,16 @@
-import { handler } from './index';
+jest.mock('@aws-lambda-powertools/tracer', () => ({
+  Tracer: jest.fn().mockImplementation(() => ({
+    annotateColdStart: jest.fn(),
+    putAnnotation: jest.fn(),
+    captureAWSv3Client: jest.fn((client: unknown) => client),
+  })),
+}));
 
 jest.mock('./infrastructure/ses-sender', () => ({
   sendAlertEmail: jest.fn().mockResolvedValue(undefined),
 }));
+
+import { handler } from './index';
 
 const makeSNSEvent = (message: string) => ({
   Records: [
@@ -47,6 +55,10 @@ describe('notification handler', () => {
       }),
       expect.any(String),
       expect.any(String),
+      expect.objectContaining({
+        ses: expect.anything(),
+        s3: expect.anything(),
+      }),
     );
   });
 

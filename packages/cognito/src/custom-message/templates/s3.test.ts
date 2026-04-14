@@ -1,7 +1,12 @@
 import { getS3Key, TRIGGER_TO_TEMPLATE, getEmailHtmlFromS3 } from './s3';
 import type { CustomMessageTriggerSource } from '@custom-message/types';
+import type { S3Client } from '@aws-sdk/client-s3';
 
 const originalEnv = process.env;
+
+const mockS3Client = {
+  send: jest.fn().mockRejectedValue(new Error('mock')),
+} as unknown as S3Client;
 
 beforeEach(() => {
   process.env = { ...originalEnv };
@@ -67,19 +72,32 @@ describe('TRIGGER_TO_TEMPLATE', () => {
 describe('getEmailHtmlFromS3', () => {
   it('returns null when ASSETS_BUCKET_NAME is not set', async () => {
     delete process.env.ASSETS_BUCKET_NAME;
-    const result = await getEmailHtmlFromS3('en', 'account-verification');
+    const result = await getEmailHtmlFromS3(
+      mockS3Client,
+      'en',
+      'account-verification',
+    );
     expect(result).toBeNull();
   });
 
   it('returns null when ASSETS_BUCKET_NAME is empty string', async () => {
     process.env.ASSETS_BUCKET_NAME = '';
-    const result = await getEmailHtmlFromS3('en', 'account-verification');
+    const result = await getEmailHtmlFromS3(
+      mockS3Client,
+      'en',
+      'account-verification',
+    );
     expect(result).toBeNull();
   });
 
-  it('attempts S3 when bucket is set (will fail or return null without real bucket)', async () => {
+  it('returns null when S3 call fails', async () => {
     process.env.ASSETS_BUCKET_NAME = 'test-bucket';
-    const result = await getEmailHtmlFromS3('en', 'account-verification');
-    expect(result === null || typeof result === 'string').toBe(true);
+    process.env.EMAILS_PREFIX = 'emails';
+    const result = await getEmailHtmlFromS3(
+      mockS3Client,
+      'en',
+      'account-verification',
+    );
+    expect(result).toBeNull();
   });
 });

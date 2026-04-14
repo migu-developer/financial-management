@@ -1,4 +1,5 @@
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { CustomMessageTriggerSource } from '@custom-message/types';
 
 /**
@@ -27,18 +28,19 @@ export function getS3Key(
 /**
  * Fetches the email HTML for the given locale and template from S3.
  * Uses ASSETS_BUCKET_NAME and EMAILS_PREFIX from env.
+ * Receives a traced S3Client from the handler.
  */
 export async function getEmailHtmlFromS3(
+  s3Client: S3Client,
   locale: string,
   templateName: string,
 ): Promise<string | null> {
   const bucketName = process.env.ASSETS_BUCKET_NAME;
   const prefix = process.env.EMAILS_PREFIX;
   if (!bucketName || !prefix) return null;
-  const client = new S3Client({});
   const key = getS3Key(locale, templateName, prefix);
   try {
-    const response = await client.send(
+    const response = await s3Client.send(
       new GetObjectCommand({ Bucket: bucketName, Key: key }),
     );
     const body = response.Body;
