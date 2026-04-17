@@ -97,6 +97,7 @@ export class MonitoringStack extends BaseStack {
           DASHBOARD_URL: `https://console.aws.amazon.com/cloudwatch/home#dashboards:name=${stackName}-Dashboard`,
           ASSETS_BUCKET_NAME: assetsBucketName,
           EMAILS_PREFIX: process.env.EMAILS_PREFIX ?? 'emails',
+          SES_CONFIGURATION_SET_NAME: `${stackName}-ses-events`,
         },
         timeout: Duration.seconds(10),
       },
@@ -491,11 +492,21 @@ export class MonitoringStack extends BaseStack {
     this.alertTopic.addToResourcePolicy(
       new PolicyStatement({
         actions: ['sns:Publish'],
-        principals: [
-          new ServicePrincipal('ses.amazonaws.com'),
-          new ServicePrincipal('events.amazonaws.com'),
-        ],
+        principals: [new ServicePrincipal('ses.amazonaws.com')],
         resources: [this.alertTopic.topicArn],
+        conditions: {
+          StringEquals: { 'AWS:SourceAccount': this.account },
+        },
+      }),
+    );
+    this.alertTopic.addToResourcePolicy(
+      new PolicyStatement({
+        actions: ['sns:Publish'],
+        principals: [new ServicePrincipal('events.amazonaws.com')],
+        resources: [this.alertTopic.topicArn],
+        conditions: {
+          StringEquals: { 'AWS:SourceAccount': this.account },
+        },
       }),
     );
 
@@ -531,9 +542,10 @@ export class MonitoringStack extends BaseStack {
     );
 
     // ── EventBridge Rule: Amplify Build Failures ──────────
-    new Rule(this, `${stackName}-AmplifyBuildFailRule`, {
-      ruleName: `${stackName}-Amplify-Build-Fail`,
-      description: 'Captures Amplify build failures and sends alerts',
+    new Rule(this, `${stackName}-AmplifyBuildRule`, {
+      ruleName: `${stackName}-Amplify-Build-Status`,
+      description:
+        'Captures Amplify build status changes (started, failed, succeed) and sends alerts',
       eventPattern: {
         source: ['aws.amplify'],
         detailType: ['Amplify Deployment Status Change'],

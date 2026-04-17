@@ -131,4 +131,115 @@ describe('parseAlarmMessage', () => {
     );
     expect(result.service).toBe('AWS/CustomNamespace');
   });
+
+  it('parses Amplify FAILED build event as CRITICAL', () => {
+    const event = JSON.stringify({
+      source: 'aws.amplify',
+      'detail-type': 'Amplify Deployment Status Change',
+      time: '2026-04-17T12:00:00Z',
+      detail: {
+        appId: 'd1nzvcjpfquip1',
+        branchName: 'main',
+        jobId: '42',
+        jobStatus: 'FAILED',
+      },
+    });
+    const result = parseAlarmMessage(event, 'https://dashboard.example.com');
+    expect(result.severity).toBe('CRITICAL');
+    expect(result.alarmName).toBe('Amplify Build FAILED');
+    expect(result.service).toBe('Amplify Hosting');
+    expect(result.description).toContain('branch "main"');
+    expect(result.description).toContain('42');
+  });
+
+  it('parses Amplify SUCCEED build event as INFO', () => {
+    const event = JSON.stringify({
+      source: 'aws.amplify',
+      'detail-type': 'Amplify Deployment Status Change',
+      time: '2026-04-17T12:05:00Z',
+      detail: {
+        appId: 'd1nzvcjpfquip1',
+        branchName: 'main',
+        jobId: '42',
+        jobStatus: 'SUCCEED',
+      },
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('INFO');
+    expect(result.alarmName).toBe('Amplify Build SUCCEED');
+  });
+
+  it('parses Amplify STARTED build event as INFO', () => {
+    const event = JSON.stringify({
+      source: 'aws.amplify',
+      'detail-type': 'Amplify Deployment Status Change',
+      time: '2026-04-17T12:00:00Z',
+      detail: {
+        appId: 'd1nzvcjpfquip1',
+        branchName: 'main',
+        jobId: '42',
+        jobStatus: 'STARTED',
+      },
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('INFO');
+  });
+
+  it('parses SES Bounce event as WARNING', () => {
+    const event = JSON.stringify({
+      eventType: 'Bounce',
+      mail: {
+        timestamp: '2026-04-17T12:00:00Z',
+        source: 'noreply@migudev.com',
+        destination: ['user@example.com'],
+        messageId: 'msg-123',
+      },
+      bounce: {
+        bounceType: 'Permanent',
+        bounceSubType: 'General',
+        bouncedRecipients: [{ emailAddress: 'user@example.com' }],
+      },
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('WARNING');
+    expect(result.alarmName).toBe('SES Bounce');
+    expect(result.service).toBe('SES Email');
+    expect(result.description).toContain('Permanent/General');
+    expect(result.description).toContain('user@example.com');
+  });
+
+  it('parses SES Complaint event as WARNING', () => {
+    const event = JSON.stringify({
+      eventType: 'Complaint',
+      mail: {
+        timestamp: '2026-04-17T12:00:00Z',
+        source: 'noreply@migudev.com',
+        destination: ['user@example.com'],
+        messageId: 'msg-456',
+      },
+      complaint: {
+        complainedRecipients: [{ emailAddress: 'user@example.com' }],
+        complaintFeedbackType: 'abuse',
+      },
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('WARNING');
+    expect(result.alarmName).toBe('SES Complaint');
+    expect(result.description).toContain('abuse');
+  });
+
+  it('parses SES Delivery event as INFO', () => {
+    const event = JSON.stringify({
+      eventType: 'Delivery',
+      mail: {
+        timestamp: '2026-04-17T12:00:00Z',
+        source: 'noreply@migudev.com',
+        destination: ['user@example.com'],
+        messageId: 'msg-789',
+      },
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('INFO');
+    expect(result.alarmName).toBe('SES Delivery');
+  });
 });

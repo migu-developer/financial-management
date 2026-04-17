@@ -53,10 +53,13 @@ export async function sendAlertEmail(
   const body = replacePlaceholders(html, payload);
   const subject = `[${payload.severity}] ${payload.alarmName} — ${payload.service}`;
 
+  const configSetName = process.env['SES_CONFIGURATION_SET_NAME'];
+
   await clients.ses.send(
     new SendEmailCommand({
       Source: fromEmail,
       Destination: { ToAddresses: [toEmail] },
+      ...(configSetName && { ConfigurationSetName: configSetName }),
       Message: {
         Subject: { Data: subject, Charset: 'UTF-8' },
         Body: {

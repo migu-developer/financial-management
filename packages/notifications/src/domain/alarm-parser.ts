@@ -38,21 +38,33 @@ function resolveService(alarm: CloudWatchAlarmMessage): string {
   return base;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function isAmplifyBuildEvent(parsed: unknown): parsed is AmplifyBuildEvent {
+  if (!isRecord(parsed)) return false;
+  const detail = parsed.detail;
   return (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'source' in parsed &&
-    (parsed as AmplifyBuildEvent).source === 'aws.amplify'
+    parsed.source === 'aws.amplify' &&
+    typeof parsed['detail-type'] === 'string' &&
+    typeof parsed.time === 'string' &&
+    isRecord(detail) &&
+    typeof detail.appId === 'string' &&
+    typeof detail.branchName === 'string' &&
+    typeof detail.jobId === 'string' &&
+    typeof detail.jobStatus === 'string'
   );
 }
 
 function isSesEvent(parsed: unknown): parsed is SesEventMessage {
+  if (!isRecord(parsed)) return false;
+  const mail = parsed.mail;
   return (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'eventType' in parsed &&
-    'mail' in parsed
+    typeof parsed.eventType === 'string' &&
+    isRecord(mail) &&
+    typeof mail.messageId === 'string' &&
+    Array.isArray(mail.destination)
   );
 }
 
