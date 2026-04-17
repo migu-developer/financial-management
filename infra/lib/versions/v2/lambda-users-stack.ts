@@ -5,7 +5,7 @@ import { Duration } from 'aws-cdk-lib';
 import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import {
   createUserSchema,
   patchUserSchema,
@@ -47,8 +47,14 @@ export class LambdaUsersStack extends BaseStack {
     const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
+    const fnName = `fm-${stage}-users`;
+    const logGroup = new LogGroup(this, `${stackName}-UsersLogGroup`, {
+      logGroupName: `/aws/lambda/${fnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+    });
+
     const lambda = new NodejsFunction(this, `${stackName}-UsersFn`, {
-      functionName: `fm-${stage}-users`,
+      functionName: fnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -65,7 +71,7 @@ export class LambdaUsersStack extends BaseStack {
       handler: 'handler',
       timeout: Duration.seconds(30),
       tracing: Tracing.ACTIVE,
-      logRetention: RetentionDays.THREE_MONTHS,
+      logGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

@@ -15,7 +15,7 @@ import { Rule, EventPattern } from 'aws-cdk-lib/aws-events';
 import { SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import {
   CfnConfigurationSet,
@@ -59,11 +59,21 @@ export class MonitoringStack extends BaseStack {
       'AssetsBucketName',
     );
 
+    const notificationFnName = `fm-${props.stage}-notifications`;
+    const notificationLogGroup = new LogGroup(
+      this,
+      `${stackName}-NotificationLogGroup`,
+      {
+        logGroupName: `/aws/lambda/${notificationFnName}`,
+        retention: RetentionDays.THREE_MONTHS,
+      },
+    );
+
     const notificationFn = new NodejsFunction(
       this,
       `${stackName}-NotificationFn`,
       {
-        functionName: `fm-${props.stage}-notifications`,
+        functionName: notificationFnName,
         runtime: Runtime.NODEJS_22_X,
         entry: join(
           __dirname,
@@ -79,7 +89,7 @@ export class MonitoringStack extends BaseStack {
         description:
           'Sends formatted alert emails via SES on CloudWatch alarms',
         tracing: Tracing.ACTIVE,
-        logRetention: RetentionDays.THREE_MONTHS,
+        logGroup: notificationLogGroup,
         environment: {
           ALERT_EMAIL_FROM: props.alertFromEmail,
           ALERT_EMAIL_TO: props.alertEmail,

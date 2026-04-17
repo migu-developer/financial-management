@@ -64,7 +64,7 @@ jest.mock('aws-cdk-lib/aws-logs', () => ({
     logGroupArn:
       'arn:aws:logs:us-east-1:123456789012:log-group:/aws/sns/sms/v1',
   })),
-  RetentionDays: { ONE_MONTH: 30 },
+  RetentionDays: { ONE_MONTH: 30, THREE_MONTHS: 90 },
 }));
 
 jest.mock('aws-cdk-lib/custom-resources', () => ({

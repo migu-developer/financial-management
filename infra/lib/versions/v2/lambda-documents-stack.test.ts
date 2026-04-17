@@ -60,6 +60,11 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
   OutputFormat: { ESM: 'ESM' },
 }));
 
+jest.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: jest.fn(),
+  RetentionDays: { THREE_MONTHS: 90 },
+}));
+
 jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   LambdaIntegration: jest.fn().mockImplementation(() => ({
     integrationId: 'mock-integration',

@@ -4,7 +4,7 @@ import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
@@ -37,8 +37,14 @@ export class LambdaCurrenciesStack extends BaseStack {
     const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
+    const fnName = `fm-${stage}-currencies`;
+    const logGroup = new LogGroup(this, `${stackName}-CurrenciesLogGroup`, {
+      logGroupName: `/aws/lambda/${fnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+    });
+
     const lambda = new NodejsFunction(this, `${stackName}-CurrenciesFn`, {
-      functionName: `fm-${stage}-currencies`,
+      functionName: fnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -55,7 +61,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       handler: 'handler',
       timeout: Duration.seconds(30),
       tracing: Tracing.ACTIVE,
-      logRetention: RetentionDays.THREE_MONTHS,
+      logGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

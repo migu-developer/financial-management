@@ -65,6 +65,7 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
 }));
 
 jest.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: jest.fn(),
   RetentionDays: { THREE_MONTHS: 90 },
 }));
 
