@@ -516,7 +516,7 @@ export class MonitoringStack extends BaseStack {
         detailType: ['Amplify Deployment Status Change'],
         detail: {
           appId: [amplifyAppId],
-          jobStatus: ['FAILED'],
+          jobStatus: ['FAILED', 'SUCCEED'],
         },
       } as EventPattern,
       targets: [new SnsTopic(this.alertTopic)],
