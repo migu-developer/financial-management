@@ -28,13 +28,15 @@ async function getTemplateFromS3(
 }
 
 function replacePlaceholders(html: string, payload: AlertPayload): string {
+  const stage = process.env['STAGE']?.toUpperCase() ?? '';
   return html
     .replaceAll('{{alarmName}}', payload.alarmName)
     .replaceAll('{{severity}}', payload.severity)
     .replaceAll('{{service}}', payload.service)
     .replaceAll('{{description}}', payload.description)
     .replaceAll('{{timestamp}}', payload.timestamp)
-    .replaceAll('{{dashboardUrl}}', payload.dashboardUrl);
+    .replaceAll('{{dashboardUrl}}', payload.dashboardUrl)
+    .replaceAll('{{stage}}', stage);
 }
 
 export async function sendAlertEmail(
@@ -51,7 +53,9 @@ export async function sendAlertEmail(
   }
 
   const body = replacePlaceholders(html, payload);
-  const subject = `[${payload.severity}] ${payload.alarmName} — ${payload.service}`;
+  const stage = process.env['STAGE']?.toUpperCase() ?? '';
+  const stageTag = stage ? `[${stage}] ` : '';
+  const subject = `${stageTag}[${payload.severity}] ${payload.alarmName} — ${payload.service}`;
 
   const configSetName = process.env['SES_CONFIGURATION_SET_NAME'];
 

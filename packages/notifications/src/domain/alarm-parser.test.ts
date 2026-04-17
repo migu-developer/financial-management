@@ -1,5 +1,9 @@
 import { parseAlarmMessage } from './alarm-parser';
 
+beforeAll(() => {
+  process.env['STAGE'] = 'dev';
+});
+
 const makeAlarmJson = (overrides: Record<string, unknown> = {}) =>
   JSON.stringify({
     AlarmName: 'Api-5xx-Errors',
@@ -150,6 +154,7 @@ describe('parseAlarmMessage', () => {
     expect(result.service).toBe('Amplify Hosting');
     expect(result.description).toContain('branch "main"');
     expect(result.description).toContain('42');
+    expect(result.description).toContain('[DEV]');
   });
 
   it('parses Amplify SUCCEED build event as INFO', () => {

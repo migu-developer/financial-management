@@ -1,4 +1,5 @@
 import ServiceAlertEmail from './service-alert';
+import { ALERT_STAGE } from '@utils/alert-constants';
 
 describe('ServiceAlertEmail (EN)', () => {
   it('exports a function component', () => {
@@ -9,5 +10,14 @@ describe('ServiceAlertEmail (EN)', () => {
     expect(ServiceAlertEmail.PreviewProps).toBeDefined();
     expect(ServiceAlertEmail.PreviewProps.alarmName).toBe('API-5xx-Errors');
     expect(ServiceAlertEmail.PreviewProps.severity).toBe('CRITICAL');
+  });
+
+  it('accepts stage prop with default placeholder', () => {
+    expect(ALERT_STAGE).toBe('{{stage}}');
+  });
+
+  it('accepts explicit stage value', () => {
+    const el = ServiceAlertEmail({ stage: 'DEV' });
+    expect(el).toBeDefined();
   });
 });

@@ -73,11 +73,12 @@ function parseAmplifyEvent(
   dashboardUrl: string,
 ): AlertPayload {
   const { appId, branchName, jobId, jobStatus } = event.detail;
+  const stage = process.env['STAGE']?.toUpperCase() ?? '';
   return {
     alarmName: `Amplify Build ${jobStatus}`,
     severity: jobStatus === 'FAILED' ? 'CRITICAL' : 'INFO',
     service: 'Amplify Hosting',
-    description: `Build ${jobId} on branch "${branchName}" (app: ${appId}) status: ${jobStatus}`,
+    description: `[${stage}] Build ${jobId} on branch "${branchName}" (app: ${appId}) status: ${jobStatus}`,
     timestamp: event.time,
     dashboardUrl,
   };

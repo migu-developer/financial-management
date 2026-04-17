@@ -94,10 +94,10 @@ export class MonitoringStack extends BaseStack {
         environment: {
           ALERT_EMAIL_FROM: props.alertFromEmail,
           ALERT_EMAIL_TO: props.alertEmail,
+          STAGE: props.stage,
           DASHBOARD_URL: `https://console.aws.amazon.com/cloudwatch/home#dashboards:name=${stackName}-Dashboard`,
           ASSETS_BUCKET_NAME: assetsBucketName,
           EMAILS_PREFIX: process.env.EMAILS_PREFIX ?? 'emails',
-          SES_CONFIGURATION_SET_NAME: `${stackName}-ses-events`,
         },
         timeout: Duration.seconds(10),
       },
@@ -527,13 +527,7 @@ export class MonitoringStack extends BaseStack {
         eventDestination: {
           name: `${stackName}-ses-to-sns`,
           enabled: true,
-          matchingEventTypes: [
-            'bounce',
-            'complaint',
-            'reject',
-            'delivery',
-            'deliveryDelay',
-          ],
+          matchingEventTypes: ['bounce', 'complaint', 'reject'],
           snsDestination: {
             topicArn: this.alertTopic.topicArn,
           },

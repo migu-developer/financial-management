@@ -8,6 +8,7 @@ import {
   ALERT_DESCRIPTION,
   ALERT_TIMESTAMP,
   ALERT_DASHBOARD_URL,
+  ALERT_STAGE,
 } from '@utils/alert-constants';
 import { footerCopy } from './footer-copy';
 
@@ -18,6 +19,7 @@ export interface ServiceAlertEmailProps {
   description?: string;
   timestamp?: string;
   dashboardUrl?: string;
+  stage?: string;
 }
 
 export default function ServiceAlertEmail({
@@ -27,10 +29,11 @@ export default function ServiceAlertEmail({
   description = ALERT_DESCRIPTION,
   timestamp = ALERT_TIMESTAMP,
   dashboardUrl = ALERT_DASHBOARD_URL,
+  stage = ALERT_STAGE,
 }: ServiceAlertEmailProps) {
   return (
     <EmailLayout
-      preview={`Alerta de servicio — ${severity}: ${alarmName}`}
+      preview={`[${stage}] Alerta de servicio — ${severity}: ${alarmName}`}
       footer={footerCopy}
     >
       <Section className="py-8 px-8">

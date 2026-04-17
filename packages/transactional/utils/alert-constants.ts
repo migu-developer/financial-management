@@ -8,3 +8,4 @@ export const ALERT_SERVICE = '{{service}}';
 export const ALERT_DESCRIPTION = '{{description}}';
 export const ALERT_TIMESTAMP = '{{timestamp}}';
 export const ALERT_DASHBOARD_URL = '{{dashboardUrl}}';
+export const ALERT_STAGE = '{{stage}}';
