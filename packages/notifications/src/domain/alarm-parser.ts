@@ -1,5 +1,6 @@
 import type {
   AlertPayload,
+  AlertSeverity,
   AmplifyBuildEvent,
   CloudWatchAlarmMessage,
 } from './types';
