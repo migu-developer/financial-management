@@ -14,6 +14,37 @@ export interface CloudWatchAlarmMessage {
   };
 }
 
+export interface AmplifyBuildEvent {
+  source: 'aws.amplify';
+  'detail-type': 'Amplify Deployment Status Change';
+  detail: {
+    appId: string;
+    branchName: string;
+    jobId: string;
+    jobStatus: 'FAILED' | 'SUCCEED' | 'STARTED';
+  };
+  time: string;
+}
+
+export interface SesEventMessage {
+  eventType: 'Bounce' | 'Complaint' | 'Reject' | 'Delivery' | 'DeliveryDelay';
+  mail: {
+    timestamp: string;
+    source: string;
+    destination: string[];
+    messageId: string;
+  };
+  bounce?: {
+    bounceType: string;
+    bounceSubType: string;
+    bouncedRecipients: Array<{ emailAddress: string }>;
+  };
+  complaint?: {
+    complainedRecipients: Array<{ emailAddress: string }>;
+    complaintFeedbackType?: string;
+  };
+}
+
 export interface SNSEvent {
   Records: Array<{
     Sns: {
@@ -24,7 +55,7 @@ export interface SNSEvent {
   }>;
 }
 
-export type AlertSeverity = 'CRITICAL' | 'WARNING';
+export type AlertSeverity = 'CRITICAL' | 'WARNING' | 'INFO';
 
 export interface AlertPayload {
   alarmName: string;

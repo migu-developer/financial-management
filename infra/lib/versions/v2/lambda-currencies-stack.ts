@@ -4,6 +4,7 @@ import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
@@ -14,6 +15,7 @@ export interface LambdaCurrenciesStackProps extends BaseStackProps {
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
   readonly allowedOrigins: string[];
+  readonly stage: string;
 }
 
 export class LambdaCurrenciesStack extends BaseStack {
@@ -28,6 +30,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       databaseReadonlyUrl,
       allowedOrigins,
       deps,
+      stage,
     } = props;
     super(scope, id, { version, stackName, description });
 
@@ -35,6 +38,7 @@ export class LambdaCurrenciesStack extends BaseStack {
 
     // ── Lambda Function ─────────────────────────────────────
     const lambda = new NodejsFunction(this, `${stackName}-CurrenciesFn`, {
+      functionName: `fm-${stage}-currencies`,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -51,6 +55,7 @@ export class LambdaCurrenciesStack extends BaseStack {
       handler: 'handler',
       timeout: Duration.seconds(30),
       tracing: Tracing.ACTIVE,
+      logRetention: RetentionDays.THREE_MONTHS,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

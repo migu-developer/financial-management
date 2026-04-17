@@ -81,6 +81,8 @@ export interface CognitoStackProps extends BaseStackProps {
   // Protection
   readonly removalProtect: boolean;
   readonly emailsPrefix: string;
+  // Stage (for friendly function names)
+  readonly stage: string;
   // Database (for user sync trigger)
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
@@ -115,6 +117,7 @@ export class CognitoStack extends BaseStack {
       | undefined;
 
     const customMessageFn = new NodejsFunction(this, 'CustomMessageFn', {
+      functionName: `fm-${props.stage}-custom-message`,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -130,6 +133,7 @@ export class CognitoStack extends BaseStack {
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logRetention: RetentionDays.THREE_MONTHS,
       environment: {
         ...(assetsStack?.bucket && {
           ASSETS_BUCKET_NAME: assetsStack.bucket.bucketName,
@@ -144,6 +148,7 @@ export class CognitoStack extends BaseStack {
 
     // ── User Sync Lambda Trigger ─────────────────────
     const userSyncFn = new NodejsFunction(this, 'UserSyncFn', {
+      functionName: `fm-${props.stage}-user-sync`,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -162,6 +167,7 @@ export class CognitoStack extends BaseStack {
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logRetention: RetentionDays.THREE_MONTHS,
       environment: {
         DATABASE_URL: props.databaseUrl,
         DATABASE_READONLY_URL: props.databaseReadonlyUrl,
@@ -184,6 +190,7 @@ export class CognitoStack extends BaseStack {
 
     // ── Pre-Signup Lambda Trigger (social account linking) ──
     const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
+      functionName: `fm-${props.stage}-pre-signup`,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -200,6 +207,7 @@ export class CognitoStack extends BaseStack {
         'Cognito PreSignUp — links social providers to existing native accounts before signup',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logRetention: RetentionDays.THREE_MONTHS,
     });
 
     preSignUpFn.addToRolePolicy(

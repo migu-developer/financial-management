@@ -18,6 +18,7 @@ const createMonitoringStack: NamedStackFactory = {
           'CloudWatch dashboard, alarms, and SNS notifications for all services',
         alertEmail: process.env.ALERT_EMAIL_TO ?? '',
         alertFromEmail: process.env.ALERT_EMAIL_FROM ?? '',
+        stage: process.env.STAGE ?? 'dev',
         dependsOn: [
           V2Stack.API_GATEWAY,
           V2Stack.LAMBDA_EXPENSES,

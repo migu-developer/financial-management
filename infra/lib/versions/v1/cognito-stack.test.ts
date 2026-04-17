@@ -147,6 +147,7 @@ const defaultProps: CognitoStackProps = {
   removalProtect: false,
   emailsPrefix: 'dummy-emails-prefix',
   snsMonthlySpendLimit: '1',
+  stage: 'dev',
   smsBlockedCountries: ['US'],
   databaseUrl: 'postgresql://localhost:5432/test',
   databaseReadonlyUrl: 'postgresql://localhost:5432/test',

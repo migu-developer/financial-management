@@ -73,6 +73,7 @@ const defaultProps = {
   databaseUrl: 'postgresql://localhost:5432/test',
   databaseReadonlyUrl: 'postgresql://localhost:5432/test',
   allowedOrigins: ['https://dev-financial-management.migudev.com'],
+  stage: 'dev',
   deps: mockDeps,
 };
 
