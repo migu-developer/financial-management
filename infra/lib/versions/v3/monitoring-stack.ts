@@ -420,6 +420,34 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
+    // ── Cognito Logs Insights section ──────────────────────
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Cognito Trigger Errors (Logs Insights)',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    const triggerLogGroups = Object.entries(cognitoTriggers).map(
+      ([, fnName]) => `/aws/lambda/${fnName}`,
+    );
+
+    this.dashboard.addWidgets(
+      new LogQueryWidget({
+        title: 'Recent Cognito Trigger Errors',
+        logGroupNames: triggerLogGroups,
+        queryLines: [
+          'fields @timestamp, @message',
+          'filter level = "ERROR" or @message like /ERROR/',
+          'sort @timestamp desc',
+          'limit 20',
+        ],
+        width: 24,
+        height: 6,
+      }),
+    );
+
     // Amplify section
     this.dashboard.addWidgets(
       new TextWidget({
@@ -456,34 +484,6 @@ export class MonitoringStack extends BaseStack {
           amplifyMetric('Latency', 'p90'),
         ],
         width: 8,
-      }),
-    );
-
-    // ── Cognito Logs Insights section ──────────────────────
-    this.dashboard.addWidgets(
-      new TextWidget({
-        markdown: '## Cognito Trigger Errors (Logs Insights)',
-        width: 24,
-        height: 1,
-      }),
-    );
-
-    const triggerLogGroups = Object.entries(cognitoTriggers).map(
-      ([, fnName]) => `/aws/lambda/${fnName}`,
-    );
-
-    this.dashboard.addWidgets(
-      new LogQueryWidget({
-        title: 'Recent Cognito Trigger Errors',
-        logGroupNames: triggerLogGroups,
-        queryLines: [
-          'fields @timestamp, @message',
-          'filter level = "ERROR" or @message like /ERROR/',
-          'sort @timestamp desc',
-          'limit 20',
-        ],
-        width: 24,
-        height: 6,
       }),
     );
 
@@ -539,7 +539,7 @@ export class MonitoringStack extends BaseStack {
         detailType: ['Amplify Deployment Status Change'],
         detail: {
           appId: [amplifyAppId],
-          jobStatus: ['FAILED', 'SUCCEED'],
+          jobStatus: ['STARTED', 'FAILED', 'SUCCEED'],
         },
       } as EventPattern,
       targets: [new SnsTopic(this.alertTopic)],
