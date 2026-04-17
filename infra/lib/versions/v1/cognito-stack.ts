@@ -81,6 +81,8 @@ export interface CognitoStackProps extends BaseStackProps {
   // Protection
   readonly removalProtect: boolean;
   readonly emailsPrefix: string;
+  // Stage (for friendly function names)
+  readonly stage: string;
   // Database (for user sync trigger)
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
@@ -114,7 +116,15 @@ export class CognitoStack extends BaseStack {
       | AssetsBucketStack
       | undefined;
 
+    const customMessageFnName = `fm-${props.stage}-custom-message`;
+    const customMessageLogGroup = new LogGroup(this, 'CustomMessageLogGroup', {
+      logGroupName: `/aws/lambda/${customMessageFnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+      removalPolicy,
+    });
+
     const customMessageFn = new NodejsFunction(this, 'CustomMessageFn', {
+      functionName: customMessageFnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -126,10 +136,12 @@ export class CognitoStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logGroup: customMessageLogGroup,
       environment: {
         ...(assetsStack?.bucket && {
           ASSETS_BUCKET_NAME: assetsStack.bucket.bucketName,
@@ -143,7 +155,15 @@ export class CognitoStack extends BaseStack {
     }
 
     // ── User Sync Lambda Trigger ─────────────────────
+    const userSyncFnName = `fm-${props.stage}-user-sync`;
+    const userSyncLogGroup = new LogGroup(this, 'UserSyncLogGroup', {
+      logGroupName: `/aws/lambda/${userSyncFnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+      removalPolicy,
+    });
+
     const userSyncFn = new NodejsFunction(this, 'UserSyncFn', {
+      functionName: userSyncFnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -157,11 +177,13 @@ export class CognitoStack extends BaseStack {
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description:
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logGroup: userSyncLogGroup,
       environment: {
         DATABASE_URL: props.databaseUrl,
         DATABASE_READONLY_URL: props.databaseReadonlyUrl,
@@ -183,7 +205,15 @@ export class CognitoStack extends BaseStack {
     );
 
     // ── Pre-Signup Lambda Trigger (social account linking) ──
+    const preSignUpFnName = `fm-${props.stage}-pre-signup`;
+    const preSignUpLogGroup = new LogGroup(this, 'PreSignUpLogGroup', {
+      logGroupName: `/aws/lambda/${preSignUpFnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+      removalPolicy,
+    });
+
     const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
+      functionName: preSignUpFnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -195,11 +225,13 @@ export class CognitoStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description:
         'Cognito PreSignUp — links social providers to existing native accounts before signup',
       timeout: Duration.seconds(10),
       tracing: Tracing.ACTIVE,
+      logGroup: preSignUpLogGroup,
     });
 
     preSignUpFn.addToRolePolicy(

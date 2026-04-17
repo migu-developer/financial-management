@@ -79,6 +79,11 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
   OutputFormat: { ESM: 'ESM' },
 }));
 
+jest.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: jest.fn(),
+  RetentionDays: { THREE_MONTHS: 90 },
+}));
+
 jest.mock('aws-cdk-lib/aws-apigateway', () => ({
   LambdaIntegration: jest.fn().mockImplementation(() => ({
     integrationId: 'mock-integration',
@@ -98,6 +103,7 @@ const defaultProps = {
   databaseUrl: 'postgresql://localhost:5432/test',
   databaseReadonlyUrl: 'postgresql://localhost:5432/test',
   allowedOrigins: ['https://dev-financial-management.migudev.com'],
+  stage: 'dev',
   deps: mockDeps,
 };
 

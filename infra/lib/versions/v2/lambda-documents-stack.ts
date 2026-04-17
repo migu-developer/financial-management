@@ -4,6 +4,7 @@ import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { join } from 'path';
 import { ApiGatewayStack } from './api-gateway-stack';
@@ -14,6 +15,7 @@ export interface LambdaDocumentsStackProps extends BaseStackProps {
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
   readonly allowedOrigins: string[];
+  readonly stage: string;
 }
 
 export class LambdaDocumentsStack extends BaseStack {
@@ -28,13 +30,21 @@ export class LambdaDocumentsStack extends BaseStack {
       databaseReadonlyUrl,
       allowedOrigins,
       deps,
+      stage,
     } = props;
     super(scope, id, { version, stackName, description });
 
     const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
+    const fnName = `fm-${stage}-documents`;
+    const logGroup = new LogGroup(this, `${stackName}-DocumentsLogGroup`, {
+      logGroupName: `/aws/lambda/${fnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+    });
+
     const lambda = new NodejsFunction(this, `${stackName}-DocumentsFn`, {
+      functionName: fnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -45,12 +55,14 @@ export class LambdaDocumentsStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
       handler: 'handler',
       timeout: Duration.seconds(30),
       tracing: Tracing.ACTIVE,
+      logGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

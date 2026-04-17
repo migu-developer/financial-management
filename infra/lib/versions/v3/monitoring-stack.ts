@@ -4,15 +4,23 @@ import {
   ComparisonOperator,
   Dashboard,
   GraphWidget,
+  LogQueryWidget,
   Metric,
   TextWidget,
   TreatMissingData,
   AlarmStatusWidget,
 } from 'aws-cdk-lib/aws-cloudwatch';
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
+import { Rule, EventPattern } from 'aws-cdk-lib/aws-events';
+import { SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import {
+  CfnConfigurationSet,
+  CfnConfigurationSetEventDestination,
+} from 'aws-cdk-lib/aws-ses';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { LambdaSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
@@ -25,6 +33,8 @@ export interface MonitoringStackProps extends BaseStackProps {
   readonly alertEmail: string;
   /** Email address used as sender (must be verified in SES). */
   readonly alertFromEmail: string;
+  /** Stage name for friendly function naming (e.g. 'dev', 'prod'). */
+  readonly stage: string;
 }
 
 export class MonitoringStack extends BaseStack {
@@ -49,10 +59,21 @@ export class MonitoringStack extends BaseStack {
       'AssetsBucketName',
     );
 
+    const notificationFnName = `fm-${props.stage}-notifications`;
+    const notificationLogGroup = new LogGroup(
+      this,
+      `${stackName}-NotificationLogGroup`,
+      {
+        logGroupName: `/aws/lambda/${notificationFnName}`,
+        retention: RetentionDays.THREE_MONTHS,
+      },
+    );
+
     const notificationFn = new NodejsFunction(
       this,
       `${stackName}-NotificationFn`,
       {
+        functionName: notificationFnName,
         runtime: Runtime.NODEJS_22_X,
         entry: join(
           __dirname,
@@ -64,16 +85,19 @@ export class MonitoringStack extends BaseStack {
           sourceMap: true,
           minify: true,
           nodeModules: ['aws-xray-sdk-core'],
+          environment: { npm_config_trust_policy: 'lenient' },
         },
         description:
           'Sends formatted alert emails via SES on CloudWatch alarms',
         tracing: Tracing.ACTIVE,
+        logGroup: notificationLogGroup,
         environment: {
           ALERT_EMAIL_FROM: props.alertFromEmail,
           ALERT_EMAIL_TO: props.alertEmail,
           DASHBOARD_URL: `https://console.aws.amazon.com/cloudwatch/home#dashboards:name=${stackName}-Dashboard`,
           ASSETS_BUCKET_NAME: assetsBucketName,
           EMAILS_PREFIX: process.env.EMAILS_PREFIX ?? 'emails',
+          SES_CONFIGURATION_SET_NAME: `${stackName}-ses-events`,
         },
         timeout: Duration.seconds(10),
       },
@@ -397,6 +421,34 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
+    // ── Cognito Logs Insights section ──────────────────────
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Cognito Trigger Errors (Logs Insights)',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    const triggerLogGroups = Object.entries(cognitoTriggers).map(
+      ([, fnName]) => `/aws/lambda/${fnName}`,
+    );
+
+    this.dashboard.addWidgets(
+      new LogQueryWidget({
+        title: 'Recent Cognito Trigger Errors',
+        logGroupNames: triggerLogGroups,
+        queryLines: [
+          'fields @timestamp, @message',
+          'filter level = "ERROR" or @message like /ERROR/',
+          'sort @timestamp desc',
+          'limit 20',
+        ],
+        width: 24,
+        height: 6,
+      }),
+    );
+
     // Amplify section
     this.dashboard.addWidgets(
       new TextWidget({
@@ -435,6 +487,75 @@ export class MonitoringStack extends BaseStack {
         width: 8,
       }),
     );
+
+    // ── SNS Topic Policy (allow SES + EventBridge to publish) ──
+    this.alertTopic.addToResourcePolicy(
+      new PolicyStatement({
+        actions: ['sns:Publish'],
+        principals: [new ServicePrincipal('ses.amazonaws.com')],
+        resources: [this.alertTopic.topicArn],
+        conditions: {
+          StringEquals: { 'AWS:SourceAccount': this.account },
+        },
+      }),
+    );
+    this.alertTopic.addToResourcePolicy(
+      new PolicyStatement({
+        actions: ['sns:Publish'],
+        principals: [new ServicePrincipal('events.amazonaws.com')],
+        resources: [this.alertTopic.topicArn],
+        conditions: {
+          StringEquals: { 'AWS:SourceAccount': this.account },
+        },
+      }),
+    );
+
+    // ── SES Configuration Set (bounce/complaint tracking) ──
+    const sesConfigSet = new CfnConfigurationSet(
+      this,
+      `${stackName}-SesConfigSet`,
+      {
+        name: `${stackName}-ses-events`,
+      },
+    );
+
+    new CfnConfigurationSetEventDestination(
+      this,
+      `${stackName}-SesEventDestination`,
+      {
+        configurationSetName: sesConfigSet.ref,
+        eventDestination: {
+          name: `${stackName}-ses-to-sns`,
+          enabled: true,
+          matchingEventTypes: [
+            'bounce',
+            'complaint',
+            'reject',
+            'delivery',
+            'deliveryDelay',
+          ],
+          snsDestination: {
+            topicArn: this.alertTopic.topicArn,
+          },
+        },
+      },
+    );
+
+    // ── EventBridge Rule: Amplify Build Failures ──────────
+    new Rule(this, `${stackName}-AmplifyBuildRule`, {
+      ruleName: `${stackName}-Amplify-Build-Status`,
+      description:
+        'Captures Amplify build status changes (started, failed, succeed) and sends alerts',
+      eventPattern: {
+        source: ['aws.amplify'],
+        detailType: ['Amplify Deployment Status Change'],
+        detail: {
+          appId: [amplifyAppId],
+          jobStatus: ['STARTED', 'FAILED', 'SUCCEED'],
+        },
+      } as EventPattern,
+      targets: [new SnsTopic(this.alertTopic)],
+    });
 
     // Alarms overview
     this.dashboard.addWidgets(

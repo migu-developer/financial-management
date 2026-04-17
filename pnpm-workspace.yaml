@@ -93,6 +93,7 @@ minimumReleaseAge: 1440
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - react-native-worklets
+  - semver
 blockExoticSubdeps: true
 strictDepBuilds: true
 verifyStoreIntegrity: true

@@ -5,6 +5,7 @@ import { Duration } from 'aws-cdk-lib';
 import type { JsonSchema } from 'aws-cdk-lib/aws-apigateway';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import {
   createUserSchema,
   patchUserSchema,
@@ -19,6 +20,7 @@ export interface LambdaUsersStackProps extends BaseStackProps {
   readonly databaseUrl: string;
   readonly databaseReadonlyUrl: string;
   readonly allowedOrigins: string[];
+  readonly stage: string;
 }
 
 export class LambdaUsersStack extends BaseStack {
@@ -38,13 +40,21 @@ export class LambdaUsersStack extends BaseStack {
       databaseReadonlyUrl,
       allowedOrigins,
       deps,
+      stage,
     } = props;
     super(scope, id, { version, stackName, description });
 
     const gateway = deps?.getStack(ActiveStack.API_GATEWAY) as ApiGatewayStack;
 
     // ── Lambda Function ─────────────────────────────────────
+    const fnName = `fm-${stage}-users`;
+    const logGroup = new LogGroup(this, `${stackName}-UsersLogGroup`, {
+      logGroupName: `/aws/lambda/${fnName}`,
+      retention: RetentionDays.THREE_MONTHS,
+    });
+
     const lambda = new NodejsFunction(this, `${stackName}-UsersFn`, {
+      functionName: fnName,
       runtime: Runtime.NODEJS_22_X,
       entry: join(
         __dirname,
@@ -55,12 +65,14 @@ export class LambdaUsersStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },
       handler: 'handler',
       timeout: Duration.seconds(30),
       tracing: Tracing.ACTIVE,
+      logGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         DATABASE_READONLY_URL: databaseReadonlyUrl,

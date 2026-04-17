@@ -5,6 +5,7 @@ const mockAlarm = { addAlarmAction: jest.fn() };
 const mockDashboard = { addWidgets: jest.fn() };
 const mockTopic = {
   addSubscription: jest.fn(),
+  addToResourcePolicy: jest.fn(),
   topicArn: 'arn:aws:sns:us-east-1:123:topic',
 };
 
@@ -31,6 +32,7 @@ jest.mock('aws-cdk-lib/aws-cloudwatch', () => ({
   ComparisonOperator: { GREATER_THAN_THRESHOLD: 'GREATER_THAN_THRESHOLD' },
   Dashboard: jest.fn().mockImplementation(() => mockDashboard),
   GraphWidget: jest.fn(),
+  LogQueryWidget: jest.fn(),
   Metric: jest.fn().mockImplementation(() => ({
     with: jest.fn().mockReturnThis(),
   })),
@@ -63,8 +65,28 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
   OutputFormat: { ESM: 'esm' },
 }));
 
+jest.mock('aws-cdk-lib/aws-logs', () => ({
+  LogGroup: jest.fn(),
+  RetentionDays: { THREE_MONTHS: 90 },
+}));
+
 jest.mock('aws-cdk-lib/aws-iam', () => ({
   PolicyStatement: jest.fn(),
+  ServicePrincipal: jest.fn(),
+}));
+
+jest.mock('aws-cdk-lib/aws-ses', () => ({
+  CfnConfigurationSet: jest.fn(),
+  CfnConfigurationSetEventDestination: jest.fn(),
+}));
+
+jest.mock('aws-cdk-lib/aws-events', () => ({
+  Rule: jest.fn(),
+  EventPattern: jest.fn(),
+}));
+
+jest.mock('aws-cdk-lib/aws-events-targets', () => ({
+  SnsTopic: jest.fn(),
 }));
 
 jest.mock('@utils/cross-version', () => ({
@@ -83,6 +105,7 @@ const defaultProps = {
   alertEmail: 'alerts@example.com',
   alertFromEmail: 'noreply@example.com',
   dashboardUrl: 'https://console.aws.amazon.com/cloudwatch',
+  stage: 'dev',
 };
 
 describe('MonitoringStack', () => {

@@ -76,6 +76,7 @@ const createLambdaExpensesStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? 'dev',
       },
     ),
 };
@@ -96,6 +97,7 @@ const createLambdaDocumentsStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? 'dev',
       },
     ),
 };
@@ -116,6 +118,7 @@ const createLambdaCurrenciesStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? 'dev',
       },
     ),
 };
@@ -136,6 +139,7 @@ const createLambdaUsersStack: NamedStackFactory = {
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
           .split(',')
           .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? 'dev',
       },
     ),
 };

@@ -64,6 +64,7 @@ const createAuthStack: NamedStackFactory = {
         emailsPrefix: process.env.EMAILS_PREFIX ?? '',
         databaseUrl: process.env.DATABASE_URL ?? '',
         databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
+        stage: process.env.STAGE ?? 'dev',
       },
     ),
 };
