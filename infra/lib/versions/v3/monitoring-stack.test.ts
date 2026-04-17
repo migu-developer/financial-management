@@ -75,11 +75,6 @@ jest.mock('aws-cdk-lib/aws-iam', () => ({
   ServicePrincipal: jest.fn(),
 }));
 
-jest.mock('aws-cdk-lib/aws-ses', () => ({
-  CfnConfigurationSet: jest.fn(),
-  CfnConfigurationSetEventDestination: jest.fn(),
-}));
-
 jest.mock('aws-cdk-lib/aws-events', () => ({
   Rule: jest.fn(),
   EventPattern: jest.fn(),

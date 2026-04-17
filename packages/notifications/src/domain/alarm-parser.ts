@@ -1,9 +1,7 @@
 import type {
   AlertPayload,
-  AlertSeverity,
   AmplifyBuildEvent,
   CloudWatchAlarmMessage,
-  SesEventMessage,
 } from './types';
 
 const NAMESPACE_TO_SERVICE: Record<string, string> = {
@@ -57,17 +55,6 @@ function isAmplifyBuildEvent(parsed: unknown): parsed is AmplifyBuildEvent {
   );
 }
 
-function isSesEvent(parsed: unknown): parsed is SesEventMessage {
-  if (!isRecord(parsed)) return false;
-  const mail = parsed.mail;
-  return (
-    typeof parsed.eventType === 'string' &&
-    isRecord(mail) &&
-    typeof mail.messageId === 'string' &&
-    Array.isArray(mail.destination)
-  );
-}
-
 function parseAmplifyEvent(
   event: AmplifyBuildEvent,
   dashboardUrl: string,
@@ -84,38 +71,6 @@ function parseAmplifyEvent(
   };
 }
 
-function parseSesEvent(
-  event: SesEventMessage,
-  dashboardUrl: string,
-): AlertPayload {
-  const { eventType, mail } = event;
-  const severity: AlertSeverity =
-    eventType === 'Bounce' || eventType === 'Complaint' ? 'WARNING' : 'INFO';
-
-  let description = `SES ${eventType} for message ${mail.messageId} to ${mail.destination.join(', ')}`;
-  if (event.bounce) {
-    const recipients = event.bounce.bouncedRecipients
-      .map((r) => r.emailAddress)
-      .join(', ');
-    description = `${event.bounce.bounceType}/${event.bounce.bounceSubType} bounce for: ${recipients}`;
-  }
-  if (event.complaint) {
-    const recipients = event.complaint.complainedRecipients
-      .map((r) => r.emailAddress)
-      .join(', ');
-    description = `Complaint (${event.complaint.complaintFeedbackType ?? 'unknown'}) from: ${recipients}`;
-  }
-
-  return {
-    alarmName: `SES ${eventType}`,
-    severity,
-    service: 'SES Email',
-    description,
-    timestamp: mail.timestamp,
-    dashboardUrl,
-  };
-}
-
 export function parseAlarmMessage(
   raw: string,
   dashboardUrl: string,
@@ -124,10 +79,6 @@ export function parseAlarmMessage(
 
   if (isAmplifyBuildEvent(parsed)) {
     return parseAmplifyEvent(parsed, dashboardUrl);
-  }
-
-  if (isSesEvent(parsed)) {
-    return parseSesEvent(parsed, dashboardUrl);
   }
 
   const alarm = parsed as CloudWatchAlarmMessage;

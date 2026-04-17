@@ -17,10 +17,6 @@ import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import {
-  CfnConfigurationSet,
-  CfnConfigurationSetEventDestination,
-} from 'aws-cdk-lib/aws-ses';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { LambdaSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
@@ -488,17 +484,7 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    // ── SNS Topic Policy (allow SES + EventBridge to publish) ──
-    this.alertTopic.addToResourcePolicy(
-      new PolicyStatement({
-        actions: ['sns:Publish'],
-        principals: [new ServicePrincipal('ses.amazonaws.com')],
-        resources: [this.alertTopic.topicArn],
-        conditions: {
-          StringEquals: { 'AWS:SourceAccount': this.account },
-        },
-      }),
-    );
+    // ── SNS Topic Policy (allow EventBridge to publish) ──
     this.alertTopic.addToResourcePolicy(
       new PolicyStatement({
         actions: ['sns:Publish'],
@@ -510,32 +496,7 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    // ── SES Configuration Set (bounce/complaint tracking) ──
-    const sesConfigSet = new CfnConfigurationSet(
-      this,
-      `${stackName}-SesConfigSet`,
-      {
-        name: `${stackName}-ses-events`,
-      },
-    );
-
-    new CfnConfigurationSetEventDestination(
-      this,
-      `${stackName}-SesEventDestination`,
-      {
-        configurationSetName: sesConfigSet.ref,
-        eventDestination: {
-          name: `${stackName}-ses-to-sns`,
-          enabled: true,
-          matchingEventTypes: ['bounce', 'complaint', 'reject'],
-          snsDestination: {
-            topicArn: this.alertTopic.topicArn,
-          },
-        },
-      },
-    );
-
-    // ── EventBridge Rule: Amplify Build Failures ──────────
+    // ── EventBridge Rule: Amplify Build Status ──────────
     new Rule(this, `${stackName}-AmplifyBuildRule`, {
       ruleName: `${stackName}-Amplify-Build-Status`,
       description:

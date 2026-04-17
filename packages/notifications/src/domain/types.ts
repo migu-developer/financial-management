@@ -26,25 +26,6 @@ export interface AmplifyBuildEvent {
   time: string;
 }
 
-export interface SesEventMessage {
-  eventType: 'Bounce' | 'Complaint' | 'Reject' | 'Delivery' | 'DeliveryDelay';
-  mail: {
-    timestamp: string;
-    source: string;
-    destination: string[];
-    messageId: string;
-  };
-  bounce?: {
-    bounceType: string;
-    bounceSubType: string;
-    bouncedRecipients: Array<{ emailAddress: string }>;
-  };
-  complaint?: {
-    complainedRecipients: Array<{ emailAddress: string }>;
-    complaintFeedbackType?: string;
-  };
-}
-
 export interface SNSEvent {
   Records: Array<{
     Sns: {
