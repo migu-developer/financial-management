@@ -5,6 +5,7 @@ const mockAlarm = { addAlarmAction: jest.fn() };
 const mockDashboard = { addWidgets: jest.fn() };
 const mockTopic = {
   addSubscription: jest.fn(),
+  addToResourcePolicy: jest.fn(),
   topicArn: 'arn:aws:sns:us-east-1:123:topic',
 };
 
@@ -71,6 +72,7 @@ jest.mock('aws-cdk-lib/aws-logs', () => ({
 
 jest.mock('aws-cdk-lib/aws-iam', () => ({
   PolicyStatement: jest.fn(),
+  ServicePrincipal: jest.fn(),
 }));
 
 jest.mock('aws-cdk-lib/aws-ses', () => ({

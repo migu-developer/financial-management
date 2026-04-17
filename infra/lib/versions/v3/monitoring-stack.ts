@@ -16,7 +16,7 @@ import { SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import {
   CfnConfigurationSet,
   CfnConfigurationSetEventDestination,
@@ -85,6 +85,7 @@ export class MonitoringStack extends BaseStack {
           sourceMap: true,
           minify: true,
           nodeModules: ['aws-xray-sdk-core'],
+          environment: { npm_config_trust_policy: 'lenient' },
         },
         description:
           'Sends formatted alert emails via SES on CloudWatch alarms',
@@ -483,6 +484,18 @@ export class MonitoringStack extends BaseStack {
         ],
         width: 24,
         height: 6,
+      }),
+    );
+
+    // ── SNS Topic Policy (allow SES + EventBridge to publish) ──
+    this.alertTopic.addToResourcePolicy(
+      new PolicyStatement({
+        actions: ['sns:Publish'],
+        principals: [
+          new ServicePrincipal('ses.amazonaws.com'),
+          new ServicePrincipal('events.amazonaws.com'),
+        ],
+        resources: [this.alertTopic.topicArn],
       }),
     );
 

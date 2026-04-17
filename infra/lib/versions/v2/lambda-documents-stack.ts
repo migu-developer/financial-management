@@ -55,6 +55,7 @@ export class LambdaDocumentsStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
       },

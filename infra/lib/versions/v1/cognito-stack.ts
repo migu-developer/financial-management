@@ -136,6 +136,7 @@ export class CognitoStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description: 'Cognito CustomMessage trigger for multi-language email/SMS',
       timeout: Duration.seconds(10),
@@ -176,6 +177,7 @@ export class CognitoStack extends BaseStack {
         banner:
           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description:
         'Cognito PostConfirmation/PostAuthentication trigger — syncs users to DB',
@@ -223,6 +225,7 @@ export class CognitoStack extends BaseStack {
         sourceMap: true,
         minify: true,
         nodeModules: ['aws-xray-sdk-core'],
+        environment: { npm_config_trust_policy: 'lenient' },
       },
       description:
         'Cognito PreSignUp — links social providers to existing native accounts before signup',
