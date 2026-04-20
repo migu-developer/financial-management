@@ -1,50 +1,124 @@
-# Welcome to your Expo app 👋
+# @client/main
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo-based React Native application that serves as the shell for the Financial Management product. It wires together feature packages (`@features/auth`, `@features/dashboard`, `@features/landing`, `@features/ui`) via file-based routing and provides the top-level provider tree.
 
-## Get started
+## Platform support
 
-1. Install dependencies
+| Platform | Output                                       |
+| -------- | -------------------------------------------- |
+| iOS      | Native (Expo, New Architecture enabled)      |
+| Android  | Native (Expo, edge-to-edge, adaptive icon)   |
+| Web      | Static export (`expo export --platform web`) |
 
-   ```bash
-   npm install
-   ```
+## Expo configuration (app.config.ts)
 
-2. Start the app
+- **Bundle ID / Package**: `com.migudev.{dev|prod}.financialmanagement.app` (switches on `APP_VARIANT`)
+- **App name**: "Financial Management" (production) / "Financial Management (Development)"
+- **Orientation**: Portrait
+- **User interface style**: Automatic (light/dark)
+- **New Architecture**: Enabled
+- **Experiments**: Typed routes, React Compiler
+- **Plugins**: `expo-router`, `expo-secure-store`, `expo-web-browser`, `expo-splash-screen`
+- **EAS Updates**: OTA updates via `https://u.expo.dev/<projectId>`
 
-   ```bash
-   npx expo start
-   ```
+## Navigation structure (app/)
 
-In the output, you'll find options to open the app in a
+Routes use Expo Router file-based routing with a `Stack` navigator at the root.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+```
+app/
+  _layout.tsx                   Root layout (PreferencesProvider > AuthProvider > Stack)
+  index.tsx                     Entry redirect: web -> /landing, mobile -> /auth/login
+  landing.tsx                   Marketing landing page
+  privacy.tsx                   Privacy policy
+  terms.tsx                     Terms of service
+  contact.tsx                   Contact page
+  +not-found.tsx                404 fallback
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+  auth/
+    _layout.tsx                 Auth stack layout
+    index.tsx                   Auth entry
+    login/index.tsx             Sign-in screen
+    register/index.tsx          Sign-up screen
+    register/confirm/index.tsx  Email confirmation OTP
+    forgot-password/index.tsx   Forgot password
+    forgot-password/confirm/    Confirm reset code + new password
+    new-password/index.tsx      Force new password challenge
+    mfa/index.tsx               MFA verification
+    mfa/setup/index.tsx         TOTP setup (QR code)
+    callback/index.tsx          OAuth redirect handler
 
-## Get a fresh project
+  dashboard/
+    _layout.tsx                 Dashboard layout (tabs)
+    index.tsx                   Dashboard entry
+    home/index.tsx              Home / overview
+    expenses/index.tsx          Expense management
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+  providers/
+    preferences-provider.tsx    Theme + language persistence
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Environment variables
 
-## Learn more
+| Variable                           | Description                                                           |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `APP_VARIANT`                      | `development` or unset (production). Controls bundle ID and app name. |
+| `EXPO_PUBLIC_ASSETS_URL`           | Base URL for static assets (images, logos)                            |
+| `EXPO_PUBLIC_COGNITO_USER_POOL_ID` | AWS Cognito User Pool ID                                              |
+| `EXPO_PUBLIC_COGNITO_CLIENT_ID`    | AWS Cognito App Client ID                                             |
+| `EXPO_PUBLIC_COGNITO_DOMAIN`       | Cognito hosted UI domain                                              |
+| `EXPO_PUBLIC_API_BASE_URL`         | Backend API base URL                                                  |
 
-To learn more about developing your project with Expo, look at the following resources:
+## Provider hierarchy
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+PreferencesProvider          (theme + language, NativeWind color scheme)
+  AuthProvider               (Cognito session, auto-refresh timer)
+    Stack Navigator          (file-based routes)
+```
 
-## Join the community
+## Dependencies
 
-Join our community of developers creating universal apps.
+### Internal (workspace)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+| Package               | Purpose                                        |
+| --------------------- | ---------------------------------------------- |
+| `@features/auth`      | Authentication screens and Cognito integration |
+| `@features/dashboard` | Dashboard screens, expense CRUD                |
+| `@features/landing`   | Marketing and legal pages                      |
+| `@features/ui`        | Design system components and tokens            |
+| `@packages/i18n`      | Internationalization (en/es)                   |
+| `@packages/utils`     | Platform detection, preferences, cache         |
+| `@packages/models`    | Shared domain models                           |
+| `@packages/config`    | Shared ESLint/TS config                        |
+
+### External (key)
+
+expo, expo-router, nativewind, react-native-reanimated, react-native-gesture-handler, react-native-safe-area-context, react-native-screens
+
+## Scripts
+
+| Script      | Command                                 | Description                 |
+| ----------- | --------------------------------------- | --------------------------- |
+| `start`     | `expo start`                            | Start Expo dev server       |
+| `dev`       | `pnpm start`                            | Alias for start             |
+| `ios`       | `expo start --ios`                      | Start on iOS simulator      |
+| `android`   | `expo start --android`                  | Start on Android emulator   |
+| `web`       | `expo start --web`                      | Start for web               |
+| `build`     | `expo export --platform web` + font fix | Production web build        |
+| `lint`      | `eslint .`                              | Run ESLint                  |
+| `lint:fix`  | `eslint . --fix`                        | Auto-fix lint errors        |
+| `typecheck` | `tsc --noEmit`                          | Type-check without emitting |
+| `test`      | `jest`                                  | Run unit tests              |
+
+## Testing
+
+Tests live in `client/main/tests/` and `client/main/scripts/` (for script tests). Run with:
+
+```bash
+pnpm test
+```
+
+- **Runner**: Jest v29 with ts-jest
+- **Environment**: Node
+- **Mocks**: Expo modules, react-native, NativeWind, AsyncStorage, and Cognito SDK are mocked in `tests/__mocks__/`
