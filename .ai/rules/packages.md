@@ -75,8 +75,10 @@ pnpm supabase:reset
 ## Constraints
 
 - NEVER add runtime dependencies to `@packages/config` -- it is dev-only.
-- NEVER import from `services/` inside packages -- packages are shared
-  libraries, services depend on packages (not the reverse).
+- Do NOT import from `services/` inside packages by default -- packages are
+  shared libraries, services depend on packages (not the reverse).
+  Exception: `@packages/cognito` may import `@services/shared` and
+  `@services/users` for the user-sync trigger flow.
 - ALWAYS use `catalog:` version specifiers for dependencies defined in the
   pnpm workspace catalog.
 - Keep packages small and focused on a single responsibility.

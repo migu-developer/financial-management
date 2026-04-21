@@ -46,7 +46,7 @@ pnpm migrations:create-migration         # Create new migration
 ### Email Templates (@packages/transactional)
 
 - React Email components with `@react-email/tailwind`.
-- Export/upload workflow: `email:build` then `email:upload`.
+- Export/upload workflow: `email:export` then `email:upload`.
 
 ### Testing
 
@@ -58,7 +58,8 @@ pnpm migrations:create-migration         # Create new migration
 ## Constraints
 
 - NEVER add runtime deps to `@packages/config` (dev-only).
-- NEVER import from `services/` inside packages (wrong direction).
+- Do NOT import from `services/` inside packages by default (wrong direction).
+  Exception: `@packages/cognito` may import `@services/shared` and `@services/users`.
 - ALWAYS use `catalog:` version specifiers.
 - Keep packages small and single-purpose.
 - Export only what consumers need.

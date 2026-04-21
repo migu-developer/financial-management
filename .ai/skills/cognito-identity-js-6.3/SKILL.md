@@ -63,27 +63,43 @@ const poolData = {
 const userPool = new CognitoUserPool(poolData);
 ```
 
-### Custom Storage adapter for expo-secure-store
+### Custom Storage adapter (in-memory cache + AsyncStorage)
+
+The Cognito SDK calls getItem/setItem **synchronously**, but AsyncStorage is
+async. This project bridges the gap with an in-memory cache hydrated at startup:
 
 ```typescript
-import * as SecureStore from 'expo-secure-store';
-import type { ICognitoStorage } from 'amazon-cognito-identity-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const secureStorage: ICognitoStorage = {
+export class CognitoStorageAdapter implements Storage {
+  private cache = new Map<string, string>();
+
+  // MUST be called and awaited before creating CognitoUserPool
+  async hydrate(): Promise<void> {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const cognitoKeys = allKeys.filter((k) =>
+      k.startsWith('CognitoIdentityServiceProvider.'),
+    );
+    const pairs = await AsyncStorage.multiGet(cognitoKeys);
+    for (const [key, value] of pairs) {
+      if (value !== null) this.cache.set(key, value);
+    }
+  }
+
   getItem(key: string): string | null {
-    // Note: SecureStore.getItem is synchronous in recent versions
-    return SecureStore.getItem(key);
-  },
+    return this.cache.get(key) ?? null; // sync read from cache
+  }
+
   setItem(key: string, value: string): void {
-    SecureStore.setItem(key, value);
-  },
+    this.cache.set(key, value); // sync write to cache
+    void AsyncStorage.setItem(key, value).catch(() => {}); // async persist
+  }
+
   removeItem(key: string): void {
-    SecureStore.deleteItemAsync(key);
-  },
-  clear(): void {
-    // Not needed for Cognito, but required by interface
-  },
-};
+    this.cache.delete(key);
+    void AsyncStorage.removeItem(key).catch(() => {});
+  }
+}
 ```
 
 ### Sign-in wrapped as Promise
