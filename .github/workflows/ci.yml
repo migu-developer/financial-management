@@ -44,3 +44,6 @@ jobs:
 
       - name: 🧪 Test
         run: pnpm test
+
+      - name: 🤖 AI docs test
+        run: pnpm ai:test
