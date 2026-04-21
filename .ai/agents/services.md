@@ -21,7 +21,7 @@ pnpm --filter @services/<name> typecheck  # Type-check one service
 
 ```
 src/
-  domain/entities/          # Pure models, no framework deps
+  domain/entities/          # Optional: only for read-only catalogs (documents, currencies)
   domain/repositories/      # Interfaces (ports)
   application/use-cases/    # Single execute() method
   presentation/             # HTTP layer (controller, service, router)

@@ -12,7 +12,7 @@ Each service follows a strict four-layer architecture:
 ```
 services/<name>/src/
   domain/
-    entities/         # Pure domain models (no framework deps)
+    entities/         # Optional: only for read-only catalogs (documents, currencies)
     repositories/     # Repository interfaces (ports)
   application/
     use-cases/        # Single-responsibility use cases

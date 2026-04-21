@@ -66,6 +66,6 @@ pnpm migrations:create-migration         # Create new migration
 ## Dependencies
 
 - `react-email: ^5.2.10` (transactional package)
-- `pg: ^8.20.0` (migrations, models)
+- `pg: ^8.20.0` (migrations)
 - `amazon-cognito-identity-js: ^6.3.16` (cognito triggers)
 - `@aws-sdk/client-s3`, `@aws-sdk/client-ses` (email/cognito infra)

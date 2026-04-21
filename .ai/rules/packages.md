@@ -28,7 +28,7 @@ features/dashboard, i18n, utils).
 - Uses `tsx` for TypeScript execution.
 - Follow semantic versioning for migration naming.
 
-## Notifications (@packages/transactional)
+## Email Templates (@packages/transactional)
 
 - React Email components for transactional emails.
 - Commands: `pnpm email:dev`, `pnpm email:build`, `pnpm email:export`,

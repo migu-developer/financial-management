@@ -118,6 +118,7 @@ skill_table_for_scope() {
     local name="" skill_scope="" auto_invoke="" description=""
     local in_frontmatter=false
     local in_metadata=false
+    local in_desc_block=false
 
     while IFS= read -r line; do
       if [[ "$line" == "---" ]]; then
@@ -132,11 +133,24 @@ skill_table_for_scope() {
         # Detect metadata: block (indented keys below it)
         if [[ "$line" == "metadata:" ]]; then
           in_metadata=true
+          in_desc_block=false
           continue
         fi
         # Non-indented line exits metadata block
         if $in_metadata && [[ "$line" != "  "* && "$line" != "" ]]; then
           in_metadata=false
+        fi
+        # Capture first line of description block scalar
+        if $in_desc_block; then
+          if [[ "$line" == "  "* && -z "$description" ]]; then
+            description="$(echo "$line" | xargs)"
+          fi
+          # Any non-indented line ends the block
+          if [[ "$line" != "  "* && "$line" != "" ]]; then
+            in_desc_block=false
+          else
+            continue
+          fi
         fi
         # Parse top-level keys
         case "$line" in
@@ -144,8 +158,11 @@ skill_table_for_scope() {
           description:*)
             local desc_val
             desc_val="$(echo "${line#description:}" | xargs)"
-            # Skip YAML block scalar indicator
-            [[ "$desc_val" != "|" && "$desc_val" != ">" ]] && description="$desc_val"
+            if [[ "$desc_val" == "|" || "$desc_val" == ">" ]]; then
+              in_desc_block=true
+            else
+              description="$desc_val"
+            fi
             ;;
         esac
         # Parse indented metadata keys (scope, auto_invoke) and top-level fallback
