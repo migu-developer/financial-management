@@ -30,7 +30,9 @@
     "migrations:rollback": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts rollback",
     "migrations:status": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts status",
     "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration",
-    "migrations:export": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts export"
+    "migrations:export": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts export",
+    "ai:setup": "bash .ai/setup.sh --all",
+    "ai:test": "bash .ai/setup.test.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
