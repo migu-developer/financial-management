@@ -117,6 +117,7 @@ skill_table_for_scope() {
   while IFS= read -r -d '' skill_file; do
     local name="" skill_scope="" auto_invoke="" description=""
     local in_frontmatter=false
+    local in_metadata=false
 
     while IFS= read -r line; do
       if [[ "$line" == "---" ]]; then
@@ -128,18 +129,56 @@ skill_table_for_scope() {
         fi
       fi
       if $in_frontmatter; then
+        # Detect metadata: block (indented keys below it)
+        if [[ "$line" == "metadata:" ]]; then
+          in_metadata=true
+          continue
+        fi
+        # Non-indented line exits metadata block
+        if $in_metadata && [[ "$line" != "  "* && "$line" != "" ]]; then
+          in_metadata=false
+        fi
+        # Parse top-level keys
         case "$line" in
           name:*)        name="$(echo "${line#name:}" | xargs)" ;;
-          scope:*)       skill_scope="$(echo "${line#scope:}" | xargs)" ;;
-          auto_invoke:*) auto_invoke="$(echo "${line#auto_invoke:}" | xargs)" ;;
-          description:*) description="$(echo "${line#description:}" | xargs)" ;;
+          description:*)
+            local desc_val
+            desc_val="$(echo "${line#description:}" | xargs)"
+            # Skip YAML block scalar indicator
+            [[ "$desc_val" != "|" && "$desc_val" != ">" ]] && description="$desc_val"
+            ;;
         esac
+        # Parse indented metadata keys (scope, auto_invoke) and top-level fallback
+        if $in_metadata; then
+          local trimmed
+          trimmed="$(echo "$line" | sed 's/^[[:space:]]*//')"
+          case "$trimmed" in
+            scope:*)       skill_scope="$(echo "${trimmed#scope:}" | xargs | tr -d '[]')" ;;
+            auto_invoke:*) auto_invoke="$(echo "${trimmed#auto_invoke:}" | xargs | tr -d "'\"")" ;;
+          esac
+        else
+          case "$line" in
+            scope:*)       skill_scope="$(echo "${line#scope:}" | xargs | tr -d '[]')" ;;
+            auto_invoke:*) auto_invoke="$(echo "${line#auto_invoke:}" | xargs | tr -d "'\"")" ;;
+          esac
+        fi
       fi
     done < "$skill_file"
 
-    if [[ "$skill_scope" == "$scope" ]] || [[ "$skill_scope" == "root" && "$scope" == "root" ]]; then
+    # Match scope: supports comma-separated scopes (e.g., "services, packages")
+    local matched=false
+    IFS=', ' read -ra scopes <<< "$skill_scope"
+    for s in "${scopes[@]}"; do
+      s="$(echo "$s" | xargs)"
+      if [[ "$s" == "$scope" ]]; then
+        matched=true
+        break
+      fi
+    done
+
+    if $matched; then
       local relative_path="${skill_file#"$ROOT"/}"
-      rows="${rows}| ${name:-unknown} | ${auto_invoke:-false} | ${description:-} | \`${relative_path}\` |
+      rows="${rows}| ${name:-unknown} | ${auto_invoke:-N/A} | ${description:-} | \`${relative_path}\` |
 "
     fi
   done < <(find "$SKILLS_DIR" -name "SKILL.md" -not -path "*/_example/*" -print0 2>/dev/null)

@@ -110,13 +110,13 @@ CORS header injection utility.
 
 ## Environment Variables
 
-| Variable                | Required | Description                                      |
-| ----------------------- | -------- | ------------------------------------------------ |
-| `DATABASE_URL`          | Yes      | PostgreSQL connection string (write pool)        |
-| `DATABASE_READONLY_URL` | Yes      | PostgreSQL connection string (read replica pool) |
-| `ALLOWED_ORIGINS`       | Yes      | Comma-separated list of allowed CORS origins     |
-| `ALLOWED_METHODS`       | No       | Comma-separated list of allowed HTTP methods     |
-| `PROJECT_PREFIX`        | No       | Service name prefix for logger (default: `app`)  |
+| Variable                | Required | Description                                                         |
+| ----------------------- | -------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`          | Yes      | PostgreSQL connection string (write pool)                           |
+| `DATABASE_READONLY_URL` | Yes      | PostgreSQL connection string (read replica pool)                    |
+| `ALLOWED_ORIGINS`       | Yes      | Comma-separated list of allowed CORS origins                        |
+| `ALLOWED_METHODS`       | No       | Comma-separated list of allowed HTTP methods (recommended for CORS) |
+| `PROJECT_PREFIX`        | No       | Service name prefix for logger (default: `app`)                     |
 
 ## Scripts
 

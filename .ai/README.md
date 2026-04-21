@@ -80,15 +80,20 @@ After editing, run `bash .ai/setup.sh --all` to redistribute.
 
 ## Adding Skills
 
-Create a `SKILL.md` file under `.ai/skills/` (or a subdirectory). Include
-YAML frontmatter with at least:
+Create a directory under `.ai/skills/{name}/` with a `SKILL.md` file. See
+`.ai/skills/_example/SKILL.md` for the full template. Include YAML frontmatter
+with at least:
 
 ```yaml
 ---
 name: my-skill
-scope: services # one of: root, services, client, infra, packages
-auto_invoke: true # or false
-description: Short summary of what the skill does
+description: |
+  Short summary of what the skill does.
+  TRIGGER when: conditions that activate this skill.
+metadata:
+  version: '1.0.0'
+  scope: [services] # one of: root, services, client, infra, packages
+  auto_invoke: 'When doing X'
 ---
 ```
 
