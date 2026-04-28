@@ -24,8 +24,8 @@ Lambda: fm-{stage}-notifications
   |     |-- Amplify event: extracts appId, branch, jobId, jobStatus
   |
   |-- sendAlertEmail()
-  |     |-- Loads HTML template from S3: {locale}/service-alert.html
-  |     |-- Replaces placeholders: {{alarm_name}}, {{severity}}, {{service}}, etc.
+  |     |-- Loads HTML template from S3: {EMAILS_PREFIX}/{locale}/service-alert.html
+  |     |-- Replaces placeholders: {{alarmName}}, {{severity}}, {{service}}, {{description}}, {{timestamp}}, {{dashboardUrl}}, {{stage}}
   |     |-- Sends via SES (from ALERT_EMAIL_FROM to ALERT_EMAIL_TO)
   |
   v
@@ -171,7 +171,7 @@ Example log entry:
   "xray_trace_id": "1-abc-def",
   "alarmName": "fm-dev-expenses-errors",
   "severity": "CRITICAL",
-  "service": "Lambda (fm-dev-expenses)"
+  "resolvedService": "Lambda (fm-dev-expenses)"
 }
 ```
 
