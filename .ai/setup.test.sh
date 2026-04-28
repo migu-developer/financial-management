@@ -1,380 +1,333 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-# ── .ai/setup.test.sh ──────────────────────────────────────────────────────
-# Automated tests for setup.sh.
-# Creates a temporary copy of the repo structure, runs setup.sh with each
-# flag, and verifies the expected output files.
-# ─────────────────────────────────────────────────────────────────────────────
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BOLD='\033[1m'
-RESET='\033[0m'
-
+RED='\033[0;31m'; GREEN='\033[0;32m'; BOLD='\033[1m'; RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_SH="$SCRIPT_DIR/setup.sh"
+PASS=0; FAIL=0; TOTAL=0
 
-PASS_COUNT=0
-FAIL_COUNT=0
-TOTAL_COUNT=0
-
-# ── Helpers ─────────────────────────────────────────────────────────────────
-
-pass() {
-  PASS_COUNT=$((PASS_COUNT + 1))
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  printf "  ${GREEN}PASS${RESET}  %s\n" "$1"
-}
-
-fail() {
-  FAIL_COUNT=$((FAIL_COUNT + 1))
-  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-  printf "  ${RED}FAIL${RESET}  %s\n" "$1"
-}
-
-assert_file_exists() {
-  local path="$1"
-  local label="${2:-$path}"
-  if [[ -f "$path" ]]; then
-    pass "$label exists"
-  else
-    fail "$label does not exist: $path"
-  fi
-}
-
-assert_file_not_empty() {
-  local path="$1"
-  local label="${2:-$path}"
-  if [[ -s "$path" ]]; then
-    pass "$label is not empty"
-  else
-    fail "$label is empty or missing: $path"
-  fi
-}
-
-assert_symlink_exists() {
-  local path="$1"
-  local label="${2:-$path}"
-  if [[ -L "$path" ]]; then
-    pass "$label is a symlink"
-  else
-    fail "$label is not a symlink: $path"
-  fi
-}
-
-assert_symlink_target() {
-  local link="$1"
-  local expected_target="$2"
-  local label="${3:-$link}"
-  if [[ -L "$link" ]]; then
-    local actual
-    actual="$(readlink "$link")"
-    if [[ "$actual" == "$expected_target" ]]; then
-      pass "$label points to correct target"
-    else
-      fail "$label points to $actual (expected $expected_target)"
-    fi
-  else
-    fail "$label is not a symlink"
-  fi
-}
-
-assert_file_contains() {
-  local path="$1"
-  local pattern="$2"
-  local label="${3:-$path contains '$pattern'}"
-  if [[ -f "$path" ]] && grep -q "$pattern" "$path"; then
-    pass "$label"
-  else
-    fail "$label"
-  fi
-}
-
-# ── Setup temp directory ────────────────────────────────────────────────────
+pass() { PASS=$((PASS+1)); TOTAL=$((TOTAL+1)); printf "  ${GREEN}PASS${RESET}  %s\n" "$1"; }
+fail() { FAIL=$((FAIL+1)); TOTAL=$((TOTAL+1)); printf "  ${RED}FAIL${RESET}  %s\n" "$1"; }
+assert_exists()   { [[ -f "$1" ]] && pass "${2:-$1} exists" || fail "${2:-$1} missing"; }
+assert_not_empty() { [[ -s "$1" ]] && pass "${2:-$1} not empty" || fail "${2:-$1} empty"; }
+assert_symlink()  { [[ -L "$1" ]] && pass "${2:-$1} is symlink" || fail "${2:-$1} not symlink"; }
+assert_contains() { [[ -f "$1" ]] && grep -q "$2" "$1" && pass "${3:-$1 contains '$2'}" || fail "${3:-$1 missing '$2'}"; }
+assert_dir()      { [[ -d "$1" ]] && pass "${2:-$1} is dir" || fail "${2:-$1} not dir"; }
+assert_missing()  { [[ ! -e "$1" ]] && pass "${2:-$1} not created" || fail "${2:-$1} should not exist"; }
 
 create_test_repo() {
-  local tmp
-  tmp="$(mktemp -d)"
-
-  # Copy .ai/ directory
+  local tmp; tmp="$(mktemp -d)"
   cp -R "$SCRIPT_DIR" "$tmp/.ai"
+  mkdir -p "$tmp/services" "$tmp/packages" "$tmp/client/main" "$tmp/infra" "$tmp/.claude"
 
-  # Create minimal directory structure expected by setup.sh
-  mkdir -p "$tmp/services"
-  mkdir -p "$tmp/packages"
-  mkdir -p "$tmp/client/main"
-  mkdir -p "$tmp/infra"
-  mkdir -p "$tmp/.claude"
-
-  # Create a sample SKILL.md to test skill sync
-  mkdir -p "$tmp/.ai/skills/sample"
-  cat > "$tmp/.ai/skills/sample/SKILL.md" << 'SKILL_EOF'
+  # Create sample skill with nested metadata
+  mkdir -p "$tmp/.ai/skills/test-skill"
+  cat > "$tmp/.ai/skills/test-skill/SKILL.md" << 'SK'
 ---
-name: sample-skill
-scope: services
-auto_invoke: true
-description: A sample skill for testing
+name: test-skill
+description: |
+  Test skill for validation.
+  TRIGGER when: running tests.
+metadata:
+  version: '1.0.0'
+  scope: [root, client, services, packages, infra]
+  auto_invoke: 'When running tests'
+allowed-tools: [Read, Grep]
 ---
 
-# Sample Skill
+# Test Skill
 
-This is a test skill.
-SKILL_EOF
+## Critical Patterns
 
+- Always validate input
+SK
   echo "$tmp"
 }
 
-cleanup() {
-  if [[ -n "${TEST_DIR:-}" && -d "$TEST_DIR" ]]; then
-    rm -rf "$TEST_DIR"
-  fi
-}
-
+cleanup() { [[ -n "${TD:-}" && -d "$TD" ]] && cd / && rm -rf "$TD"; }
 trap cleanup EXIT
 
-# ── Test suites ─────────────────────────────────────────────────────────────
+# ── Test: --all generates everything ───────────────────────────────────────
 
-test_all_flag() {
-  printf "\n${BOLD}Test: --all flag${RESET}\n"
+test_all() {
+  printf "\n${BOLD}Test: --all generates all provider files${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+  # Root files
+  assert_exists "$TD/AGENTS.md" "Root AGENTS.md"
+  assert_exists "$TD/GEMINI.md" "Root GEMINI.md"
 
-  bash "$TEST_DIR/.ai/setup.sh" --all > /dev/null 2>&1
+  # Domain AGENTS.md
+  assert_exists "$TD/services/AGENTS.md" "services/AGENTS.md"
+  assert_exists "$TD/packages/AGENTS.md" "packages/AGENTS.md"
+  assert_exists "$TD/client/main/AGENTS.md" "client/main/AGENTS.md"
+  assert_exists "$TD/infra/AGENTS.md" "infra/AGENTS.md"
 
-  # Root AGENTS.md
-  assert_file_exists "$TEST_DIR/AGENTS.md" "Root AGENTS.md"
-  assert_file_not_empty "$TEST_DIR/AGENTS.md" "Root AGENTS.md"
+  # Claude: rules + agents + skills
+  assert_dir "$TD/.claude/rules" "Claude rules dir"
+  assert_exists "$TD/.claude/rules/global.md" "Claude global rule"
+  assert_exists "$TD/.claude/rules/services.md" "Claude services rule"
+  assert_exists "$TD/.claude/rules/client.md" "Claude client rule"
+  assert_exists "$TD/.claude/rules/infra.md" "Claude infra rule"
+  assert_exists "$TD/.claude/rules/packages.md" "Claude packages rule"
+  assert_dir "$TD/.claude/agents" "Claude agents dir"
+  assert_exists "$TD/.claude/agents/root.md" "Claude root agent"
+  assert_exists "$TD/.claude/agents/services.md" "Claude services agent"
+  assert_exists "$TD/.claude/agents/client.md" "Claude client agent"
+  assert_exists "$TD/.claude/agents/infra.md" "Claude infra agent"
+  assert_exists "$TD/.claude/agents/packages.md" "Claude packages agent"
+  assert_contains "$TD/.claude/agents/root.md" "name: root" "Claude agent has frontmatter"
+  assert_symlink "$TD/.claude/skills/test-skill" "Claude test-skill symlink"
 
-  # Domain AGENTS.md files
-  assert_file_exists "$TEST_DIR/services/AGENTS.md" "services/AGENTS.md"
-  assert_file_not_empty "$TEST_DIR/services/AGENTS.md" "services/AGENTS.md"
-  assert_file_exists "$TEST_DIR/packages/AGENTS.md" "packages/AGENTS.md"
-  assert_file_not_empty "$TEST_DIR/packages/AGENTS.md" "packages/AGENTS.md"
-  assert_file_exists "$TEST_DIR/client/main/AGENTS.md" "client/main/AGENTS.md"
-  assert_file_not_empty "$TEST_DIR/client/main/AGENTS.md" "client/main/AGENTS.md"
-  assert_file_exists "$TEST_DIR/infra/AGENTS.md" "infra/AGENTS.md"
-  assert_file_not_empty "$TEST_DIR/infra/AGENTS.md" "infra/AGENTS.md"
+  # Cursor: rules + skills + agents
+  assert_exists "$TD/.cursor/rules/global.mdc" "Cursor global rule"
+  assert_exists "$TD/.cursor/rules/services.mdc" "Cursor services rule"
+  assert_exists "$TD/.cursor/rules/client.mdc" "Cursor client rule"
+  assert_exists "$TD/.cursor/rules/infra.mdc" "Cursor infra rule"
+  assert_exists "$TD/.cursor/rules/packages.mdc" "Cursor packages rule"
+  assert_symlink "$TD/.cursor/skills/test-skill" "Cursor test-skill symlink"
+  assert_exists "$TD/.cursor/agents/root.md" "Cursor root agent"
+  assert_exists "$TD/.cursor/agents/services.md" "Cursor services agent"
 
-  # Claude: individual skill symlinks inside .claude/skills/
-  assert_symlink_exists "$TEST_DIR/.claude/skills/sample" "Claude skills/sample symlink"
-  assert_symlink_target "$TEST_DIR/.claude/skills/sample" "$TEST_DIR/.ai/skills/sample/" "Claude skills/sample"
+  # Codex: .agents/skills + .codex/agents
+  assert_symlink "$TD/.agents/skills/test-skill" "Codex test-skill symlink"
+  assert_exists "$TD/.codex/agents/root.toml" "Codex root agent"
+  assert_exists "$TD/.codex/agents/services.toml" "Codex services agent"
+  assert_exists "$TD/.codex/agents/client.toml" "Codex client agent"
 
-  # Codex: symlink
-  assert_symlink_exists "$TEST_DIR/.codex/skills" "Codex skills symlink"
-  assert_symlink_target "$TEST_DIR/.codex/skills" "$TEST_DIR/.ai/skills" "Codex skills"
+  # Gemini: GEMINI.md + settings + agents
+  assert_exists "$TD/.gemini/settings.json" "Gemini settings"
+  assert_exists "$TD/.gemini/agents/root.md" "Gemini root agent"
+  assert_exists "$TD/.gemini/agents/services.md" "Gemini services agent"
 
-  # Copilot: generated file
-  assert_file_exists "$TEST_DIR/.github/copilot-instructions.md" "Copilot instructions"
-  assert_file_not_empty "$TEST_DIR/.github/copilot-instructions.md" "Copilot instructions"
-
-  # Cursor: generated file
-  assert_file_exists "$TEST_DIR/.cursor/rules/ai-rules.mdc" "Cursor rules"
-  assert_file_not_empty "$TEST_DIR/.cursor/rules/ai-rules.mdc" "Cursor rules"
-
-  # Gemini: generated file
-  assert_file_exists "$TEST_DIR/GEMINI.md" "GEMINI.md"
-  assert_file_not_empty "$TEST_DIR/GEMINI.md" "GEMINI.md"
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
 
-test_claude_flag() {
-  printf "\n${BOLD}Test: --claude flag${RESET}\n"
+# ── Test: Gemini has ALL content compacted ─────────────────────────────────
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+test_gemini_compacted() {
+  printf "\n${BOLD}Test: Gemini compacts all rules + agents + skills${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --gemini > /dev/null 2>&1
 
-  bash "$TEST_DIR/.ai/setup.sh" --claude > /dev/null 2>&1
+  local f="$TD/GEMINI.md"
+  assert_contains "$f" "Module Map" "Gemini has root agent"
+  assert_contains "$f" "test-skill" "Gemini has skill content"
+  assert_contains "$f" "Always validate input" "Gemini has skill patterns"
 
-  assert_symlink_exists "$TEST_DIR/.claude/skills/sample" "Claude skills/sample symlink"
-  assert_symlink_target "$TEST_DIR/.claude/skills/sample" "$TEST_DIR/.ai/skills/sample/" "Claude skills/sample"
-
-  # AGENTS.md should still be generated (always runs)
-  assert_file_exists "$TEST_DIR/AGENTS.md" "Root AGENTS.md"
-
-  # Codex should NOT be created
-  if [[ ! -e "$TEST_DIR/.codex" ]]; then
-    pass "Codex directory not created when --claude only"
-  else
-    fail "Codex directory should not exist with --claude only"
-  fi
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
 
-test_codex_flag() {
-  printf "\n${BOLD}Test: --codex flag${RESET}\n"
+# ── Test: New skill gets distributed to all providers ──────────────────────
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+test_new_skill_distributed() {
+  printf "\n${BOLD}Test: Adding new skill distributes to all providers${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
 
-  bash "$TEST_DIR/.ai/setup.sh" --codex > /dev/null 2>&1
+  mkdir -p "$TD/.ai/skills/new-feature"
+  cat > "$TD/.ai/skills/new-feature/SKILL.md" << 'SK2'
+---
+name: new-feature
+description: New feature skill added after initial setup.
+metadata:
+  version: '2.0.0'
+  scope: [root, client]
+  auto_invoke: 'When creating new features'
+allowed-tools: [Read, Write]
+---
 
-  assert_symlink_exists "$TEST_DIR/.codex/skills" "Codex skills symlink"
-  assert_symlink_target "$TEST_DIR/.codex/skills" "$TEST_DIR/.ai/skills" "Codex skills"
+# New Feature Skill
 
-  rm -rf "$TEST_DIR"
+## Critical Patterns
+
+- Follow feature flag patterns
+SK2
+
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+
+  # Claude
+  assert_symlink "$TD/.claude/skills/new-feature" "Claude new-feature skill"
+
+  # Cursor
+  assert_symlink "$TD/.cursor/skills/new-feature" "Cursor new-feature skill"
+
+  # Codex
+  assert_symlink "$TD/.agents/skills/new-feature" "Codex new-feature skill"
+
+  # Gemini compacted
+  assert_contains "$TD/GEMINI.md" "new-feature" "Gemini has new skill"
+  assert_contains "$TD/GEMINI.md" "feature flag patterns" "Gemini has new skill content"
+
+  # AGENTS.md auto-invoke table
+  assert_contains "$TD/AGENTS.md" "new-feature" "AGENTS.md lists new skill"
+
+  cd / && rm -rf "$TD"
 }
 
-test_cursor_flag() {
-  printf "\n${BOLD}Test: --cursor flag${RESET}\n"
+# ── Test: New rule gets distributed to all providers ───────────────────────
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+test_new_rule_distributed() {
+  printf "\n${BOLD}Test: Adding new rule distributes to all providers${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
 
-  bash "$TEST_DIR/.ai/setup.sh" --cursor > /dev/null 2>&1
+  cat > "$TD/.ai/rules/security.md" << 'RULE'
+# Rule: Security
 
-  assert_file_exists "$TEST_DIR/.cursor/rules/ai-rules.mdc" "Cursor rules"
-  assert_file_not_empty "$TEST_DIR/.cursor/rules/ai-rules.mdc" "Cursor rules"
-  assert_file_contains "$TEST_DIR/.cursor/rules/ai-rules.mdc" "description:" "Cursor rules frontmatter"
+## Scope
 
-  rm -rf "$TEST_DIR"
+All modules.
+
+## Constraints
+
+- Never store credentials in source code
+- Always use parameterized queries
+RULE
+
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+
+  # Claude
+  assert_exists "$TD/.claude/rules/security.md" "Claude security rule"
+
+  # Cursor
+  assert_exists "$TD/.cursor/rules/security.mdc" "Cursor security rule"
+
+  # Gemini compacted
+  assert_contains "$TD/GEMINI.md" "parameterized queries" "Gemini has security rule"
+
+  cd / && rm -rf "$TD"
 }
 
-test_copilot_flag() {
-  printf "\n${BOLD}Test: --copilot flag${RESET}\n"
-
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
-
-  bash "$TEST_DIR/.ai/setup.sh" --copilot > /dev/null 2>&1
-
-  assert_file_exists "$TEST_DIR/.github/copilot-instructions.md" "Copilot instructions"
-  assert_file_not_empty "$TEST_DIR/.github/copilot-instructions.md" "Copilot instructions"
-  assert_file_contains "$TEST_DIR/.github/copilot-instructions.md" "Generated by .ai/setup.sh" "Copilot header comment"
-
-  rm -rf "$TEST_DIR"
-}
-
-test_gemini_flag() {
-  printf "\n${BOLD}Test: --gemini flag${RESET}\n"
-
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
-
-  bash "$TEST_DIR/.ai/setup.sh" --gemini > /dev/null 2>&1
-
-  assert_file_exists "$TEST_DIR/GEMINI.md" "GEMINI.md"
-  assert_file_not_empty "$TEST_DIR/GEMINI.md" "GEMINI.md"
-  assert_file_contains "$TEST_DIR/GEMINI.md" "Generated by .ai/setup.sh" "Gemini header comment"
-
-  rm -rf "$TEST_DIR"
-}
+# ── Test: Dry run ──────────────────────────────────────────────────────────
 
 test_dry_run() {
-  printf "\n${BOLD}Test: --dry-run flag${RESET}\n"
+  printf "\n${BOLD}Test: --dry-run creates no files${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --all --dry-run > /dev/null 2>&1
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+  assert_missing "$TD/GEMINI.md" "GEMINI.md in dry-run"
+  assert_missing "$TD/AGENTS.md" "AGENTS.md in dry-run"
 
-  bash "$TEST_DIR/.ai/setup.sh" --all --dry-run > /dev/null 2>&1
-
-  # No files should be created
-  if [[ ! -f "$TEST_DIR/GEMINI.md" ]]; then
-    pass "GEMINI.md not created in dry-run"
-  else
-    fail "GEMINI.md should not exist in dry-run"
-  fi
-
-  if [[ ! -f "$TEST_DIR/.github/copilot-instructions.md" ]]; then
-    pass "Copilot instructions not created in dry-run"
-  else
-    fail "Copilot instructions should not exist in dry-run"
-  fi
-
-  if [[ ! -L "$TEST_DIR/.claude/skills/sample" ]]; then
-    pass "Claude skill symlink not created in dry-run"
-  else
-    fail "Claude skill symlink should not exist in dry-run"
-  fi
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
+
+# ── Test: Idempotency ─────────────────────────────────────────────────────
 
 test_idempotency() {
-  printf "\n${BOLD}Test: idempotency (run twice)${RESET}\n"
+  printf "\n${BOLD}Test: Running twice produces same result${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+  local h1; h1="$(cat "$TD/AGENTS.md" | md5 2>/dev/null || md5sum "$TD/AGENTS.md" | cut -d' ' -f1)"
 
-  bash "$TEST_DIR/.ai/setup.sh" --all > /dev/null 2>&1
-  local first_checksum
-  first_checksum="$(cat "$TEST_DIR/AGENTS.md" | md5 2>/dev/null || md5sum "$TEST_DIR/AGENTS.md" | cut -d' ' -f1)"
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+  local h2; h2="$(cat "$TD/AGENTS.md" | md5 2>/dev/null || md5sum "$TD/AGENTS.md" | cut -d' ' -f1)"
 
-  bash "$TEST_DIR/.ai/setup.sh" --all > /dev/null 2>&1
-  local second_checksum
-  second_checksum="$(cat "$TEST_DIR/AGENTS.md" | md5 2>/dev/null || md5sum "$TEST_DIR/AGENTS.md" | cut -d' ' -f1)"
+  [[ "$h1" == "$h2" ]] && pass "AGENTS.md identical after second run" || fail "AGENTS.md differs"
 
-  if [[ "$first_checksum" == "$second_checksum" ]]; then
-    pass "AGENTS.md identical after second run"
-  else
-    fail "AGENTS.md differs after second run"
-  fi
-
-  # Symlinks should still work
-  assert_symlink_exists "$TEST_DIR/.claude/skills/sample" "Claude skill symlink after second run"
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
 
-test_skill_sync() {
-  printf "\n${BOLD}Test: skill sync (auto-invoke table)${RESET}\n"
+# ── Test: Cursor .mdc frontmatter ─────────────────────────────────────────
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+test_cursor_frontmatter() {
+  printf "\n${BOLD}Test: Cursor .mdc files have correct frontmatter${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --cursor > /dev/null 2>&1
 
-  bash "$TEST_DIR/.ai/setup.sh" --all > /dev/null 2>&1
+  assert_contains "$TD/.cursor/rules/global.mdc" "alwaysApply: true" "global rule is alwaysApply"
+  assert_contains "$TD/.cursor/rules/services.mdc" "alwaysApply: false" "services rule is conditional"
+  assert_contains "$TD/.cursor/rules/services.mdc" "globs:" "services rule has globs"
+  assert_contains "$TD/.cursor/rules/client.mdc" "alwaysApply: false" "client rule is conditional"
+  assert_contains "$TD/.cursor/rules/client.mdc" "globs:" "client rule has globs"
+  assert_contains "$TD/.cursor/rules/infra.mdc" "alwaysApply: false" "infra rule is conditional"
+  assert_contains "$TD/.cursor/rules/infra.mdc" "globs:" "infra rule has globs"
 
-  assert_file_contains "$TEST_DIR/services/AGENTS.md" "Auto-invoke Skills" "services/AGENTS.md has skill table"
-  assert_file_contains "$TEST_DIR/services/AGENTS.md" "sample-skill" "services/AGENTS.md lists sample-skill"
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
 
-test_content_merge() {
-  printf "\n${BOLD}Test: content merging${RESET}\n"
+# ── Test: Claude agent frontmatter ────────────────────────────────────────
 
-  TEST_DIR="$(create_test_repo)"
-  cd "$TEST_DIR"
+test_claude_agent_frontmatter() {
+  printf "\n${BOLD}Test: Claude agents have YAML frontmatter${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --claude > /dev/null 2>&1
 
-  bash "$TEST_DIR/.ai/setup.sh" --copilot --gemini > /dev/null 2>&1
+  assert_contains "$TD/.claude/agents/root.md" "name: root" "root agent has name"
+  assert_contains "$TD/.claude/agents/root.md" "model: inherit" "root agent has model"
+  assert_contains "$TD/.claude/agents/root.md" "tools:" "root agent has tools"
 
-  # Both should contain global rules content
-  assert_file_contains "$TEST_DIR/.github/copilot-instructions.md" "pnpm monorepo" "Copilot has global rules"
-  assert_file_contains "$TEST_DIR/.github/copilot-instructions.md" "Module Map" "Copilot has agent router"
-  assert_file_contains "$TEST_DIR/GEMINI.md" "pnpm monorepo" "Gemini has global rules"
-  assert_file_contains "$TEST_DIR/GEMINI.md" "Module Map" "Gemini has agent router"
-
-  rm -rf "$TEST_DIR"
+  cd / && rm -rf "$TD"
 }
 
-# ── Run all tests ───────────────────────────────────────────────────────────
+# ── Test: Codex TOML agents ──────────────────────────────────────────────
+
+test_codex_toml() {
+  printf "\n${BOLD}Test: Codex agents are valid TOML${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --codex > /dev/null 2>&1
+
+  assert_contains "$TD/.codex/agents/root.toml" 'name = "root"' "Codex root has name"
+  assert_contains "$TD/.codex/agents/root.toml" "developer_instructions" "Codex root has instructions"
+
+  cd / && rm -rf "$TD"
+}
+
+# ── Test: Gemini agents have frontmatter ──────────────────────────────────
+
+test_gemini_agents() {
+  printf "\n${BOLD}Test: Gemini agents have frontmatter${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --gemini > /dev/null 2>&1
+
+  assert_contains "$TD/.gemini/agents/root.md" "name: root" "Gemini root agent name"
+  assert_contains "$TD/.gemini/agents/root.md" "temperature: 0.3" "Gemini root agent temperature"
+  assert_contains "$TD/.gemini/agents/root.md" "max_turns: 20" "Gemini root agent max_turns"
+
+  cd / && rm -rf "$TD"
+}
+
+# ── Test: _example files are skipped ──────────────────────────────────────
+
+test_example_skipped() {
+  printf "\n${BOLD}Test: _example files are excluded${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+
+  assert_missing "$TD/.claude/skills/_example" "_example skill not in Claude"
+  assert_missing "$TD/.cursor/skills/_example" "_example skill not in Cursor"
+  assert_missing "$TD/.claude/rules/_example.md" "_example rule not in Claude"
+  assert_missing "$TD/.claude/agents/_example.md" "_example agent not in Claude"
+
+  cd / && rm -rf "$TD"
+}
+
+# ── Test: Copilot is NOT generated ────────────────────────────────────────
+
+test_no_copilot() {
+  printf "\n${BOLD}Test: Copilot files are not generated${RESET}\n"
+  TD="$(create_test_repo)"; cd "$TD"
+  bash "$TD/.ai/setup.sh" --all > /dev/null 2>&1
+
+  assert_missing "$TD/.github/copilot-instructions.md" "Copilot instructions not created"
+
+  cd / && rm -rf "$TD"
+}
+
+# ── Run ────────────────────────────────────────────────────────────────────
 
 printf "${BOLD}Running .ai/setup.sh tests...${RESET}\n"
 
-test_all_flag
-test_claude_flag
-test_codex_flag
-test_cursor_flag
-test_copilot_flag
-test_gemini_flag
+test_all
+test_gemini_compacted
+test_new_skill_distributed
+test_new_rule_distributed
 test_dry_run
 test_idempotency
-test_skill_sync
-test_content_merge
+test_cursor_frontmatter
+test_claude_agent_frontmatter
+test_codex_toml
+test_gemini_agents
+test_example_skipped
+test_no_copilot
 
-# ── Report ──────────────────────────────────────────────────────────────────
-
-printf "\n${BOLD}Results: %d total, ${GREEN}%d passed${RESET}, ${RED}%d failed${RESET}\n" \
-  "$TOTAL_COUNT" "$PASS_COUNT" "$FAIL_COUNT"
-
-if [[ $FAIL_COUNT -gt 0 ]]; then
-  printf "\n${RED}Some tests failed.${RESET}\n"
-  exit 1
-else
-  printf "\n${GREEN}All tests passed.${RESET}\n"
-  exit 0
-fi
+printf "\n${BOLD}Results: %d total, ${GREEN}%d passed${RESET}, ${RED}%d failed${RESET}\n" "$TOTAL" "$PASS" "$FAIL"
+[[ $FAIL -gt 0 ]] && exit 1 || { printf "${GREEN}All tests passed.${RESET}\n"; exit 0; }
