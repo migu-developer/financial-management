@@ -1,445 +1,239 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ── .ai/setup.sh ────────────────────────────────────────────────────────────
-# Distributes AI documentation (rules, agents, skills) to multiple tools.
-# Run from the repository root or from .ai/ -- the script auto-detects.
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ── Colors ──────────────────────────────────────────────────────────────────
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-RESET='\033[0m'
-
-# ── Resolve repo root ──────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ "$(basename "$SCRIPT_DIR")" == ".ai" ]]; then
-  ROOT="$(dirname "$SCRIPT_DIR")"
-else
-  ROOT="$SCRIPT_DIR"
-fi
+[[ "$(basename "$SCRIPT_DIR")" == ".ai" ]] && ROOT="$(dirname "$SCRIPT_DIR")" || ROOT="$SCRIPT_DIR"
 
-AI_DIR="$ROOT/.ai"
-RULES_DIR="$AI_DIR/rules"
-AGENTS_DIR="$AI_DIR/agents"
-SKILLS_DIR="$AI_DIR/skills"
+AI_DIR="$ROOT/.ai"; RULES_DIR="$AI_DIR/rules"; AGENTS_DIR="$AI_DIR/agents"; SKILLS_DIR="$AI_DIR/skills"
+GENERATED=0; SYMLINKED=0; SKIPPED=0; ERRORS=0
+DO_CLAUDE=false; DO_CODEX=false; DO_CURSOR=false; DO_GEMINI=false; DRY_RUN=false
 
-# ── Counters ────────────────────────────────────────────────────────────────
+info()   { printf "${BLUE}[INFO]${RESET}  %s\n" "$*"; }
+ok()     { printf "${GREEN}[OK]${RESET}    %s\n" "$*"; }
+warn()   { printf "${YELLOW}[WARN]${RESET}  %s\n" "$*"; }
+err()    { printf "${RED}[ERR]${RESET}   %s\n" "$*"; ERRORS=$((ERRORS + 1)); }
+header() { printf "\n${BOLD}${CYAN}── %s ──${RESET}\n" "$*"; }
 
-GENERATED=0
-SYMLINKED=0
-SKIPPED=0
-ERRORS=0
-
-# ── Flags ───────────────────────────────────────────────────────────────────
-
-DO_CLAUDE=false
-DO_CODEX=false
-DO_CURSOR=false
-DO_COPILOT=false
-DO_GEMINI=false
-DRY_RUN=false
-
-# ── Helpers ─────────────────────────────────────────────────────────────────
-
-info()    { printf "${BLUE}[INFO]${RESET}  %s\n" "$*"; }
-ok()      { printf "${GREEN}[OK]${RESET}    %s\n" "$*"; }
-warn()    { printf "${YELLOW}[WARN]${RESET}  %s\n" "$*"; }
-err()     { printf "${RED}[ERR]${RESET}   %s\n" "$*"; ERRORS=$((ERRORS + 1)); }
-header()  { printf "\n${BOLD}${CYAN}── %s ──${RESET}\n" "$*"; }
-
-# Write content to a file (respects --dry-run).
 write_file() {
-  local path="$1"
-  local content="$2"
-  if $DRY_RUN; then
-    info "[dry-run] Would write: $path"
-    SKIPPED=$((SKIPPED + 1))
-    return
-  fi
-  mkdir -p "$(dirname "$path")"
-  printf '%s\n' "$content" > "$path"
-  ok "Wrote: $path"
-  GENERATED=$((GENERATED + 1))
+  local path="$1" content="$2"
+  if $DRY_RUN; then info "[dry-run] Would write: $path"; SKIPPED=$((SKIPPED+1)); return; fi
+  mkdir -p "$(dirname "$path")"; printf '%s\n' "$content" > "$path"; ok "Wrote: $path"; GENERATED=$((GENERATED+1))
 }
 
-# Create a symlink (respects --dry-run).
 create_symlink() {
-  local target="$1"
-  local link="$2"
-  if $DRY_RUN; then
-    info "[dry-run] Would symlink: $link -> $target"
-    SKIPPED=$((SKIPPED + 1))
-    return
-  fi
+  local target="$1" link="$2"
+  if $DRY_RUN; then info "[dry-run] Would symlink: $link -> $target"; SKIPPED=$((SKIPPED+1)); return; fi
   mkdir -p "$(dirname "$link")"
-  if [[ -L "$link" ]]; then
-    rm "$link"
-  elif [[ -e "$link" ]]; then
-    warn "Removing existing non-symlink: $link"
-    rm -rf "$link"
-  fi
-  ln -s "$target" "$link"
-  ok "Symlinked: $link -> $target"
-  SYMLINKED=$((SYMLINKED + 1))
+  [[ -L "$link" ]] && rm "$link"
+  [[ -e "$link" ]] && rm -rf "$link"
+  ln -s "$target" "$link"; ok "Symlinked: $link -> $target"; SYMLINKED=$((SYMLINKED+1))
 }
 
-# Read a file and return its contents.
-read_file() {
-  local path="$1"
-  if [[ -f "$path" ]]; then
-    cat "$path"
-  else
-    warn "File not found: $path"
-    echo ""
-  fi
+copy_file() {
+  local src="$1" dst="$2"
+  if $DRY_RUN; then info "[dry-run] Would copy: $src -> $dst"; SKIPPED=$((SKIPPED+1)); return; fi
+  mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"; ok "Copied: $dst"; GENERATED=$((GENERATED+1))
 }
 
-# ── Skill Sync ──────────────────────────────────────────────────────────────
+read_file() { [[ -f "$1" ]] && cat "$1" || { warn "Not found: $1"; echo ""; }; }
 
-# Scan SKILL.md files and build auto-invoke tables for AGENTS.md.
-# Returns a string of markdown table rows for a given scope.
+# ── Skill table ────────────────────────────────────────────────────────────
 skill_table_for_scope() {
-  local scope="$1"
-  local rows=""
-
-  if [[ ! -d "$SKILLS_DIR" ]]; then
-    echo ""
-    return
-  fi
-
-  while IFS= read -r -d '' skill_file; do
-    local name="" skill_scope="" auto_invoke="" description=""
-    local in_frontmatter=false
-    local in_metadata=false
-    local in_desc_block=false
-
+  local scope="$1" rows=""
+  [[ ! -d "$SKILLS_DIR" ]] && echo "" && return
+  while IFS= read -r -d '' sf; do
+    local name="" sscope="" ainvoke="" desc="" infm=false imeta=false idesc=false
     while IFS= read -r line; do
-      if [[ "$line" == "---" ]]; then
-        if $in_frontmatter; then
-          break
-        else
-          in_frontmatter=true
-          continue
-        fi
+      [[ "$line" == "---" ]] && { $infm && break || { infm=true; continue; }; }
+      if $infm; then
+        [[ "$line" == "metadata:" ]] && { imeta=true; idesc=false; continue; }
+        $imeta && [[ "$line" != "  "* && "$line" != "" ]] && imeta=false
+        if $idesc; then [[ "$line" == "  "* && -z "$desc" ]] && desc="$(echo "$line"|xargs)"; [[ "$line" != "  "* && "$line" != "" ]] && idesc=false || continue; fi
+        case "$line" in name:*) name="$(echo "${line#name:}"|xargs)";; description:*) local dv; dv="$(echo "${line#description:}"|xargs)"; [[ "$dv" == "|" || "$dv" == ">" ]] && idesc=true || desc="$dv";; esac
+        if $imeta; then local t; t="$(echo "$line"|sed 's/^[[:space:]]*//')"; case "$t" in scope:*) sscope="$(echo "${t#scope:}"|xargs|tr -d '[]')";; auto_invoke:*) ainvoke="$(echo "${t#auto_invoke:}"|xargs|tr -d "'\"")" ;; esac; fi
       fi
-      if $in_frontmatter; then
-        # Detect metadata: block (indented keys below it)
-        if [[ "$line" == "metadata:" ]]; then
-          in_metadata=true
-          in_desc_block=false
-          continue
-        fi
-        # Non-indented line exits metadata block
-        if $in_metadata && [[ "$line" != "  "* && "$line" != "" ]]; then
-          in_metadata=false
-        fi
-        # Capture first line of description block scalar
-        if $in_desc_block; then
-          if [[ "$line" == "  "* && -z "$description" ]]; then
-            description="$(echo "$line" | xargs)"
-          fi
-          # Any non-indented line ends the block
-          if [[ "$line" != "  "* && "$line" != "" ]]; then
-            in_desc_block=false
-          else
-            continue
-          fi
-        fi
-        # Parse top-level keys
-        case "$line" in
-          name:*)        name="$(echo "${line#name:}" | xargs)" ;;
-          description:*)
-            local desc_val
-            desc_val="$(echo "${line#description:}" | xargs)"
-            if [[ "$desc_val" == "|" || "$desc_val" == ">" ]]; then
-              in_desc_block=true
-            else
-              description="$desc_val"
-            fi
-            ;;
-        esac
-        # Parse indented metadata keys (scope, auto_invoke) and top-level fallback
-        if $in_metadata; then
-          local trimmed
-          trimmed="$(echo "$line" | sed 's/^[[:space:]]*//')"
-          case "$trimmed" in
-            scope:*)       skill_scope="$(echo "${trimmed#scope:}" | xargs | tr -d '[]')" ;;
-            auto_invoke:*) auto_invoke="$(echo "${trimmed#auto_invoke:}" | xargs | tr -d "'\"")" ;;
-          esac
-        else
-          case "$line" in
-            scope:*)       skill_scope="$(echo "${line#scope:}" | xargs | tr -d '[]')" ;;
-            auto_invoke:*) auto_invoke="$(echo "${line#auto_invoke:}" | xargs | tr -d "'\"")" ;;
-          esac
-        fi
-      fi
-    done < "$skill_file"
-
-    # Match scope: supports comma-separated scopes (e.g., "services, packages")
-    local matched=false
-    IFS=', ' read -ra scopes <<< "$skill_scope"
-    for s in "${scopes[@]}"; do
-      s="$(echo "$s" | xargs)"
-      if [[ "$s" == "$scope" ]]; then
-        matched=true
-        break
-      fi
-    done
-
-    if $matched; then
-      local relative_path="${skill_file#"$ROOT"/}"
-      rows="${rows}| ${name:-unknown} | ${auto_invoke:-N/A} | ${description:-} | \`${relative_path}\` |
-"
-    fi
+    done < "$sf"
+    local matched=false; IFS=', ' read -ra ss <<< "$sscope"
+    for s in "${ss[@]}"; do [[ "$(echo "$s"|xargs)" == "$scope" ]] && { matched=true; break; }; done
+    $matched && rows="${rows}| ${name:-unknown} | ${ainvoke:-N/A} | ${desc:-} | \`${sf#"$ROOT"/}\` |\n"
   done < <(find "$SKILLS_DIR" -name "SKILL.md" -not -path "*/_example/*" -print0 2>/dev/null)
-
   echo "$rows"
 }
 
-# Append auto-invoke table to an AGENTS.md content string.
 append_skill_table() {
-  local content="$1"
-  local scope="$2"
-  local rows
-  rows="$(skill_table_for_scope "$scope")"
-
-  if [[ -n "$rows" ]]; then
-    content="${content}
+  local content="$1" scope="$2" rows; rows="$(skill_table_for_scope "$scope")"
+  [[ -n "$rows" ]] && content="${content}
 
 ## Auto-invoke Skills
 
 | Name | Auto-invoke | Description | Path |
 |------|-------------|-------------|------|
-${rows}"
-  fi
-
+$(echo -e "$rows")"
   echo "$content"
 }
 
-# ── Generate AGENTS.md files ────────────────────────────────────────────────
-
+# ── Generate AGENTS.md ─────────────────────────────────────────────────────
 generate_agents_md() {
   header "Generating AGENTS.md files"
+  local c; c="$(read_file "$AGENTS_DIR/root.md")"; c="$(append_skill_table "$c" "root")"; write_file "$ROOT/AGENTS.md" "$c"
+  local -A dm=(["services"]="$ROOT/services/AGENTS.md" ["packages"]="$ROOT/packages/AGENTS.md" ["client"]="$ROOT/client/main/AGENTS.md" ["infra"]="$ROOT/infra/AGENTS.md")
+  for d in "${!dm[@]}"; do
+    [[ -f "$AGENTS_DIR/${d}.md" ]] || continue
+    local c2; c2="$(read_file "$AGENTS_DIR/${d}.md")"; c2="$(append_skill_table "$c2" "$d")"; write_file "${dm[$d]}" "$c2"
+  done
+}
 
-  # Root AGENTS.md
-  local root_content
-  root_content="$(read_file "$AGENTS_DIR/root.md")"
-  root_content="$(append_skill_table "$root_content" "root")"
-  write_file "$ROOT/AGENTS.md" "$root_content"
+# ── Claude Code ────────────────────────────────────────────────────────────
+setup_claude() {
+  header "Claude Code"
 
-  # Domain AGENTS.md files
-  local -A domain_map=(
-    ["services"]="$ROOT/services/AGENTS.md"
-    ["packages"]="$ROOT/packages/AGENTS.md"
-    ["client"]="$ROOT/client/main/AGENTS.md"
-    ["infra"]="$ROOT/infra/AGENTS.md"
-  )
+  # Rules -> .claude/rules/*.md
+  for f in "$RULES_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f")"; [[ "$n" == _* ]] && continue; copy_file "$f" "$ROOT/.claude/rules/$n"; done
 
-  for domain in "${!domain_map[@]}"; do
-    local agent_file="$AGENTS_DIR/${domain}.md"
-    local target="${domain_map[$domain]}"
-
-    if [[ -f "$agent_file" ]]; then
-      local content
-      content="$(read_file "$agent_file")"
-      content="$(append_skill_table "$content" "$domain")"
-      write_file "$target" "$content"
+  # Agents -> .claude/agents/*.md with YAML frontmatter
+  for f in "$AGENTS_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f" .md)"; [[ "$n" == _* ]] && continue
+    local agent_content; agent_content="$(read_file "$f")"
+    if ! $DRY_RUN; then
+      mkdir -p "$ROOT/.claude/agents"
+      {
+        echo "---"
+        echo "name: ${n}"
+        echo "description: Agent for ${n} domain. Use when working on ${n} related code."
+        echo "model: inherit"
+        echo "tools:"
+        echo "  - Read"
+        echo "  - Edit"
+        echo "  - Write"
+        echo "  - Glob"
+        echo "  - Grep"
+        echo "  - Bash"
+        echo "---"
+        echo ""
+        echo "$agent_content"
+      } > "$ROOT/.claude/agents/${n}.md"
+      ok "Wrote: $ROOT/.claude/agents/${n}.md"; GENERATED=$((GENERATED+1))
     else
-      warn "Agent file not found: $agent_file"
+      info "[dry-run] Would write: $ROOT/.claude/agents/${n}.md"; SKIPPED=$((SKIPPED+1))
+    fi
+  done
+
+  # Skills -> .claude/skills/{name} (individual symlinks to coexist with existing skills)
+  for d in "$SKILLS_DIR"/*/; do [[ -d "$d" ]] || continue; local n; n="$(basename "$d")"; [[ "$n" == _* ]] && continue; create_symlink "$d" "$ROOT/.claude/skills/$n"; done
+}
+
+# ── Codex ──────────────────────────────────────────────────────────────────
+setup_codex() {
+  header "Codex"
+
+  # Skills -> .agents/skills/{name} (Codex reads from .agents/)
+  for d in "$SKILLS_DIR"/*/; do [[ -d "$d" ]] || continue; local n; n="$(basename "$d")"; [[ "$n" == _* ]] && continue; create_symlink "$d" "$ROOT/.agents/skills/$n"; done
+
+  # Agents -> .codex/agents/*.toml
+  for f in "$AGENTS_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f" .md)"; [[ "$n" == _* ]] && continue
+    local c; c="$(read_file "$f")"
+    if ! $DRY_RUN; then
+      mkdir -p "$ROOT/.codex/agents"
+      local toml_path="$ROOT/.codex/agents/${n}.toml"
+      printf 'name = "%s"\ndescription = "Agent for %s domain"\ndeveloper_instructions = """\n%s\n"""\n' "$n" "$n" "$c" > "$toml_path"
+      ok "Wrote: $toml_path"; GENERATED=$((GENERATED+1))
+    else
+      info "[dry-run] Would write: $ROOT/.codex/agents/${n}.toml"; SKIPPED=$((SKIPPED+1))
     fi
   done
 }
 
-# ── Tool-specific generators ────────────────────────────────────────────────
-
-setup_claude() {
-  header "Claude Code"
-  local claude_skills="$ROOT/.claude/skills"
-  mkdir -p "$claude_skills"
-  # Symlink each skill individually into .claude/skills/ to coexist with existing skills
-  for skill_dir in "$SKILLS_DIR"/*/; do
-    [[ -d "$skill_dir" ]] || continue
-    local skill_name
-    skill_name="$(basename "$skill_dir")"
-    # Skip example templates
-    [[ "$skill_name" == _example* ]] && continue
-    create_symlink "$skill_dir" "$claude_skills/$skill_name"
-  done
-}
-
-setup_codex() {
-  header "Codex"
-  local target="$ROOT/.codex/skills"
-  create_symlink "$SKILLS_DIR" "$target"
-}
-
-setup_copilot() {
-  header "Copilot"
-  local global_rules
-  global_rules="$(read_file "$RULES_DIR/global.md")"
-  local root_agents
-  root_agents="$(read_file "$AGENTS_DIR/root.md")"
-
-  local content="<!-- Generated by .ai/setup.sh -- do not edit manually -->
-
-${global_rules}
-
----
-
-${root_agents}"
-
-  write_file "$ROOT/.github/copilot-instructions.md" "$content"
-}
-
+# ── Cursor ─────────────────────────────────────────────────────────────────
 setup_cursor() {
   header "Cursor"
-  local global_rules
-  global_rules="$(read_file "$RULES_DIR/global.md")"
 
-  local content="---
-description: AI rules for the financial-management monorepo
-globs:
-  - \"**/*.ts\"
-  - \"**/*.tsx\"
-  - \"**/*.js\"
-  - \"**/*.jsx\"
----
+  # Rules -> .cursor/rules/{name}.mdc with frontmatter (alwaysApply + globs)
+  for f in "$RULES_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f" .md)"; [[ "$n" == _* ]] && continue
+    local c; c="$(read_file "$f")"; local aa="true" gb=""
+    [[ "$n" == "client" ]]   && aa="false" && gb=$'\nglobs:\n  - "client/**/*.ts"\n  - "client/**/*.tsx"'
+    [[ "$n" == "services" ]] && aa="false" && gb=$'\nglobs:\n  - "services/**/*.ts"'
+    [[ "$n" == "packages" ]] && aa="false" && gb=$'\nglobs:\n  - "packages/**/*.ts"'
+    [[ "$n" == "infra" ]]    && aa="false" && gb=$'\nglobs:\n  - "infra/**/*.ts"'
+    write_file "$ROOT/.cursor/rules/${n}.mdc" "---\ndescription: \"${n} rules\"\nalwaysApply: ${aa}${gb}\n---\n\n<!-- Generated by .ai/setup.sh -->\n\n${c}"
+  done
 
-<!-- Generated by .ai/setup.sh -- do not edit manually -->
+  # Skills -> .cursor/skills/{name} (symlinks)
+  for d in "$SKILLS_DIR"/*/; do [[ -d "$d" ]] || continue; local n; n="$(basename "$d")"; [[ "$n" == _* ]] && continue; create_symlink "$d" "$ROOT/.cursor/skills/$n"; done
 
-${global_rules}"
-
-  write_file "$ROOT/.cursor/rules/ai-rules.mdc" "$content"
+  # Agents -> .cursor/agents/*.md (copy)
+  for f in "$AGENTS_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f")"; [[ "$n" == _* ]] && continue; copy_file "$f" "$ROOT/.cursor/agents/$n"; done
 }
 
+# ── Gemini CLI ─────────────────────────────────────────────────────────────
 setup_gemini() {
   header "Gemini CLI"
-  local global_rules
-  global_rules="$(read_file "$RULES_DIR/global.md")"
-  local root_agents
-  root_agents="$(read_file "$AGENTS_DIR/root.md")"
 
-  local content="<!-- Generated by .ai/setup.sh -- do not edit manually -->
-
-${global_rules}
-
----
-
-${root_agents}"
-
+  # GEMINI.md: compact ALL rules + agents + skills into one file
+  local content="<!-- Generated by .ai/setup.sh -->"
+  content="${content}\n\n$(read_file "$RULES_DIR/global.md")"
+  for f in "$RULES_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f" .md)"; [[ "$n" == _* || "$n" == "global" ]] && continue
+    content="${content}\n\n---\n\n$(read_file "$f")"
+  done
+  content="${content}\n\n---\n\n$(read_file "$AGENTS_DIR/root.md")"
+  for sf in "$SKILLS_DIR"/*/SKILL.md; do [[ -f "$sf" ]] || continue; [[ "$sf" == */_example/* ]] && continue
+    content="${content}\n\n---\n\n$(read_file "$sf")"
+  done
   write_file "$ROOT/GEMINI.md" "$content"
-}
 
-# ── Interactive menu ────────────────────────────────────────────────────────
+  # .gemini/settings.json
+  write_file "$ROOT/.gemini/settings.json" '{ "context": { "fileName": ["GEMINI.md", "AGENTS.md"] } }'
 
-interactive_menu() {
-  printf "\n${BOLD}Which tools do you want to set up?${RESET}\n\n"
-  printf "  1) All\n"
-  printf "  2) Claude Code\n"
-  printf "  3) Codex\n"
-  printf "  4) Cursor\n"
-  printf "  5) Copilot\n"
-  printf "  6) Gemini CLI\n"
-  printf "  0) Cancel\n\n"
-  printf "Enter choices (comma-separated, e.g. 2,4): "
-  read -r choices
-
-  IFS=',' read -ra selected <<< "$choices"
-  for choice in "${selected[@]}"; do
-    choice="$(echo "$choice" | xargs)"
-    case "$choice" in
-      0) info "Cancelled."; exit 0 ;;
-      1) DO_CLAUDE=true; DO_CODEX=true; DO_CURSOR=true; DO_COPILOT=true; DO_GEMINI=true ;;
-      2) DO_CLAUDE=true ;;
-      3) DO_CODEX=true ;;
-      4) DO_CURSOR=true ;;
-      5) DO_COPILOT=true ;;
-      6) DO_GEMINI=true ;;
-      *) warn "Unknown choice: $choice" ;;
-    esac
+  # .gemini/agents/*.md with frontmatter
+  for f in "$AGENTS_DIR"/*.md; do [[ -f "$f" ]] || continue; local n; n="$(basename "$f" .md)"; [[ "$n" == _* ]] && continue
+    local agent_content; agent_content="$(read_file "$f")"
+    if ! $DRY_RUN; then
+      mkdir -p "$ROOT/.gemini/agents"
+      printf '%s\n' "---" > "$ROOT/.gemini/agents/${n}.md"
+      printf 'name: %s\n' "$n" >> "$ROOT/.gemini/agents/${n}.md"
+      printf 'description: Agent for %s domain in the financial-management monorepo.\n' "$n" >> "$ROOT/.gemini/agents/${n}.md"
+      printf 'tools:\n  - "*"\n' >> "$ROOT/.gemini/agents/${n}.md"
+      printf 'temperature: 0.3\n' >> "$ROOT/.gemini/agents/${n}.md"
+      printf 'max_turns: 20\n' >> "$ROOT/.gemini/agents/${n}.md"
+      printf '%s\n' "---" >> "$ROOT/.gemini/agents/${n}.md"
+      printf '\n%s\n' "$agent_content" >> "$ROOT/.gemini/agents/${n}.md"
+      ok "Wrote: $ROOT/.gemini/agents/${n}.md"; GENERATED=$((GENERATED+1))
+    else
+      info "[dry-run] Would write: $ROOT/.gemini/agents/${n}.md"; SKIPPED=$((SKIPPED+1))
+    fi
   done
 }
 
-# ── Parse arguments ─────────────────────────────────────────────────────────
+# ── Menu & Args ────────────────────────────────────────────────────────────
+interactive_menu() {
+  printf "\n${BOLD}Which tools?${RESET}\n  1) All  2) Claude  3) Codex  4) Cursor  5) Gemini  0) Cancel\n"
+  printf "Enter choices: "; read -r ch; IFS=',' read -ra sel <<< "$ch"
+  for c in "${sel[@]}"; do c="$(echo "$c"|xargs)"; case "$c" in 0) exit 0;; 1) DO_CLAUDE=true;DO_CODEX=true;DO_CURSOR=true;DO_GEMINI=true;; 2) DO_CLAUDE=true;; 3) DO_CODEX=true;; 4) DO_CURSOR=true;; 5) DO_GEMINI=true;; esac; done
+}
 
-if [[ $# -eq 0 ]]; then
-  interactive_menu
-fi
-
+[[ $# -eq 0 ]] && interactive_menu
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --all)     DO_CLAUDE=true; DO_CODEX=true; DO_CURSOR=true; DO_COPILOT=true; DO_GEMINI=true ;;
-    --claude)  DO_CLAUDE=true ;;
-    --codex)   DO_CODEX=true ;;
-    --cursor)  DO_CURSOR=true ;;
-    --copilot) DO_COPILOT=true ;;
-    --gemini)  DO_GEMINI=true ;;
-    --dry-run) DRY_RUN=true ;;
-    --help|-h)
-      printf "Usage: %s [--all|--claude|--codex|--cursor|--copilot|--gemini] [--dry-run]\n" "$0"
-      printf "\nFlags:\n"
-      printf "  --all       Set up all tools\n"
-      printf "  --claude    Symlink skills into .claude/skills/\n"
-      printf "  --codex     Symlink skills to .codex/skills/\n"
-      printf "  --cursor    Generate .cursor/rules/ai-rules.mdc\n"
-      printf "  --copilot   Generate .github/copilot-instructions.md\n"
-      printf "  --gemini    Generate GEMINI.md\n"
-      printf "  --dry-run   Preview changes without writing\n"
-      printf "\nIf no flags are given, an interactive menu is shown.\n"
-      exit 0
-      ;;
-    *)
-      err "Unknown flag: $1"
-      exit 1
-      ;;
-  esac
-  shift
+    --all)     DO_CLAUDE=true;DO_CODEX=true;DO_CURSOR=true;DO_GEMINI=true;;
+    --claude)  DO_CLAUDE=true;;
+    --codex)   DO_CODEX=true;;
+    --cursor)  DO_CURSOR=true;;
+    --gemini)  DO_GEMINI=true;;
+    --dry-run) DRY_RUN=true;;
+    --help|-h) echo "Usage: $0 [--all|--claude|--codex|--cursor|--gemini] [--dry-run]"; exit 0;;
+    *) err "Unknown: $1"; exit 1;;
+  esac; shift
 done
 
-# ── Validate ────────────────────────────────────────────────────────────────
-
-if [[ ! -d "$AI_DIR" ]]; then
-  err ".ai/ directory not found at: $AI_DIR"
-  exit 1
-fi
-
-if ! $DO_CLAUDE && ! $DO_CODEX && ! $DO_CURSOR && ! $DO_COPILOT && ! $DO_GEMINI; then
-  warn "No tools selected. Nothing to do."
-  exit 0
-fi
-
-if $DRY_RUN; then
-  header "DRY RUN -- no files will be written"
-fi
-
-# ── Execute ─────────────────────────────────────────────────────────────────
+[[ ! -d "$AI_DIR" ]] && err ".ai/ not found" && exit 1
+! $DO_CLAUDE && ! $DO_CODEX && ! $DO_CURSOR && ! $DO_GEMINI && exit 0
+$DRY_RUN && header "DRY RUN"
 
 generate_agents_md
-
-$DO_CLAUDE  && setup_claude
-$DO_CODEX   && setup_codex
-$DO_COPILOT && setup_copilot
-$DO_CURSOR  && setup_cursor
-$DO_GEMINI  && setup_gemini
-
-# ── Summary ─────────────────────────────────────────────────────────────────
+$DO_CLAUDE && setup_claude; $DO_CODEX && setup_codex; $DO_CURSOR && setup_cursor; $DO_GEMINI && setup_gemini
 
 header "Summary"
-printf "  Files generated : ${GREEN}%d${RESET}\n" "$GENERATED"
-printf "  Symlinks created: ${GREEN}%d${RESET}\n" "$SYMLINKED"
-if $DRY_RUN; then
-  printf "  Skipped (dry)   : ${YELLOW}%d${RESET}\n" "$SKIPPED"
-fi
-if [[ $ERRORS -gt 0 ]]; then
-  printf "  Errors          : ${RED}%d${RESET}\n" "$ERRORS"
-  exit 1
-fi
-
+printf "  Generated: ${GREEN}%d${RESET}  Symlinks: ${GREEN}%d${RESET}" "$GENERATED" "$SYMLINKED"
+$DRY_RUN && printf "  Skipped: ${YELLOW}%d${RESET}" "$SKIPPED"
+[[ $ERRORS -gt 0 ]] && printf "  Errors: ${RED}%d${RESET}" "$ERRORS"
 printf "\n${GREEN}Done.${RESET}\n"
