@@ -1,6 +1,6 @@
 # Observability and Monitoring
 
-![Observability and Monitoring Flow](https://github.com/user-attachments/assets/placeholder-observability-flow)
+![Observability and Monitoring Flow](https://github.com/user-attachments/assets/0f22d9f4-e3e1-444d-bab6-198949a25495)
 
 ## Overview
 
