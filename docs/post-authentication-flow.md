@@ -1,6 +1,6 @@
 # Post-Authentication Request Flow
 
-![Post-Authentication Request Flow](https://github.com/user-attachments/assets/placeholder-post-authentication-flow)
+![Post-Authentication Request Flow](https://github.com/user-attachments/assets/f02a6a93-49af-42c1-bed9-ba6e19379bdb)
 
 ## Overview
 
