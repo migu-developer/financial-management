@@ -1,6 +1,7 @@
+
 # Authentication and Registration Flow
 
-![Authentication and Registration Flow](https://github.com/user-attachments/assets/placeholder-auth-register-flow)
+![Authentication and Registration Flow](https://github.com/user-attachments/assets/a1a8a3d9-d95c-4c76-9d6a-9b711684fb93)
 
 ## Overview
 
