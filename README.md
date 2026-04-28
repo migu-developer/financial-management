@@ -111,11 +111,13 @@ pnpm dev
 
 ### Architecture Flows
 
-| Document                                                         | Description                                                   |
-| ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| [Authentication and Registration](docs/auth-register-flow.md)    | Cognito signup, social providers, MFA, email templates via S3 |
-| [Post-Authentication Requests](docs/post-authentication-flow.md) | JWT validation, API Gateway routing, DDD Lambda architecture  |
-| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 14 alarms, SNS alert pipeline, X-Ray    |
+| Document                                                         | Description                                                    |
+| ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Authentication and Registration](docs/auth-register-flow.md)    | Cognito signup, social providers, MFA, email templates via S3  |
+| [Post-Authentication Requests](docs/post-authentication-flow.md) | JWT validation, API Gateway routing, DDD Lambda architecture   |
+| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 14 alarms, SNS alert pipeline, X-Ray     |
+| [Amplify Hosting](docs/amplify-hosting-flow.md)                  | Web deployment, GitHub integration, SPA routing, custom domain |
+| [API Documentation](docs/api-docs-flow.md)                       | OpenAPI docs generation, export, versioning via API Gateway    |
 
 ### Operations
 
