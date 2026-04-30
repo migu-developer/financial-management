@@ -36,7 +36,7 @@ jobs:
       should_deploy: ${{ steps.resolve.outputs.should_deploy }}
     steps:
       - name: 📥 Checkout actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: .github/actions
           sparse-checkout-cone-mode: false
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: .github/actions
           sparse-checkout-cone-mode: false
