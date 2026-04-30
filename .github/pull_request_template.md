@@ -1,35 +1,57 @@
 ## Description
 
-### Core changes
+<!-- Provide a clear summary of what this PR does and why. -->
 
-### Schema changes
+### Core Changes
 
-### Minor changes
+### API / Data Changes
 
-## Screenshots/Recordings
+<!-- API routes, Lambda handlers, schema changes, new env vars -->
+
+### Minor Changes
+
+## Type of Change
+
+- [ ] Feature (new functionality)
+- [ ] Bug fix (non-breaking fix for an issue)
+- [ ] Refactor (code improvement with no behavior change)
+- [ ] Breaking change (fix or feature that would cause existing functionality to change)
+- [ ] Performance improvement
+- [ ] Documentation
+- [ ] Chore / maintenance
+
+## Screenshots / Recordings
+
+<!-- For UI changes, include before/after screenshots. -->
 
 ## How to Test
 
-<!-- Provide step-by-step instructions on how to test this PR manually. Include expected results where applicable. -->
+<!-- Step-by-step instructions to test this PR manually. Include expected results. -->
+
+1.
+2.
+3.
 
 ## Checklist
 
-- [ ] The PR description includes clear instructions on how to test the implementation manually.
+- [ ] PR description includes clear testing instructions
+- [ ] Self-reviewed the code for readability and correctness
+- [ ] No new warnings in format, lint, typecheck, or test
+- [ ] PR has the correct type label assigned
 
-##### Added Tests?
+### Tests
 
-- [ ] yes
-  - [ ] Verified that this PR is not creating duplicate use cases
-  - [ ] All edge cases described in the acceptance criteria are covered, and tests have clear and descriptive names
-- [ ] no, because they aren't needed
-- [ ] no, because I need help
+- [ ] Added or updated tests covering the changes
+  - [ ] Not creating duplicate test cases
+  - [ ] All edge cases from acceptance criteria are covered
+  - [ ] Tests have clear and descriptive names
+- [ ] Not needed (explain why):
+- [ ] Need help writing tests
 
-_Override these when needed._
+### Project Structure
 
-<!-- START OVERRIDES -->
-
-```sh
-
-```
-
-<!-- END OVERRIDES -->
+- [ ] New services are placed in `services/`
+- [ ] New client features are placed in `client/packages/features/`
+- [ ] New shared packages are placed in `packages/`
+- [ ] New CDK stacks follow versioning (`infra/lib/versions/`)
+- [ ] Shared config changes are reflected across dependent packages

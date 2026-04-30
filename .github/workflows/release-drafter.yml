@@ -2,21 +2,35 @@ name: Release Drafter
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.github/release-drafter.yml'
+      - '.envrc'
+      - 'config/**'
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
 
-jobs:
-  update_release_draft:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: read
+permissions:
+  contents: write
+  pull-requests: write
 
+concurrency:
+  group: release-drafter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: release-drafter/release-drafter@v6
+      - uses: release-drafter/release-drafter@v7.2.1
         with:
           config-name: release-drafter.yml
         env:
