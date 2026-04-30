@@ -1,31 +1,104 @@
-name-template: 🚀
+name-template: '🚀 v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
+
 categories:
-  - title: '✨ Features'
-    label: 'feat'
-  - title: '🐛 Fixes'
-    label: 'fix'
-  - title: '📝 Documentation'
-    label: 'docs'
-  - title: '� Styles'
-    label: 'style'
-  - title: '🔄 Refactors'
-    label: 'refactor'
-  - title: '🔥 Performance'
-    label: 'perf'
-  - title: '🧪 Tests'
-    label: 'test'
-  - title: '🔧 Build'
-    label: 'build'
-  - title: '🔄 CI/CD'
-    label: 'ci'
-  - title: '🧰 Chores'
-    label: 'chore'
-  - title: '🔄 Reverts'
-    label: 'revert'
+  - title: 'Features'
+    labels:
+      - 'feat'
+  - title: 'Bug Fixes'
+    labels:
+      - 'fix'
+  - title: 'Refactors'
+    labels:
+      - 'refactor'
+  - title: 'Performance'
+    labels:
+      - 'perf'
+  - title: 'Documentation'
+    labels:
+      - 'docs'
+  - title: 'Tests'
+    labels:
+      - 'test'
+  - title: 'Build'
+    labels:
+      - 'build'
+  - title: 'CI/CD'
+    labels:
+      - 'ci'
+  - title: 'Chores'
+    labels:
+      - 'chore'
+  - title: 'Styles'
+    labels:
+      - 'style'
+  - title: 'Reverts'
+    labels:
+      - 'revert'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'feat'
+  patch:
+    labels:
+      - 'fix'
+      - 'refactor'
+      - 'perf'
+      - 'chore'
+      - 'docs'
+      - 'test'
+      - 'build'
+      - 'ci'
+      - 'style'
+      - 'revert'
+  default: patch
+
+autolabeler:
+  - label: 'feat'
+    branch:
+      - '/^feat\/.+/'
+  - label: 'fix'
+    branch:
+      - '/^fix\/.+/'
+  - label: 'docs'
+    branch:
+      - '/^docs\/.+/'
+  - label: 'chore'
+    branch:
+      - '/^chore\/.+/'
+  - label: 'refactor'
+    branch:
+      - '/^refactor\/.+/'
+  - label: 'test'
+    branch:
+      - '/^test\/.+/'
+  - label: 'perf'
+    branch:
+      - '/^perf\/.+/'
+  - label: 'ci'
+    branch:
+      - '/^ci\/.+/'
+  - label: 'build'
+    branch:
+      - '/^build\/.+/'
+  - label: 'style'
+    branch:
+      - '/^style\/.+/'
+  - label: 'revert'
+    branch:
+      - '/^revert\/.+/'
+
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+change-title-escapes: '\<*_&'
+no-changes-template: 'No changes since last release.'
+
 template: |
   ## Changes
 
   $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
