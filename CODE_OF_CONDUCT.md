@@ -51,8 +51,9 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-**miguelangelgutierrezmaya@gmail.com**.
+reported to the community leaders responsible for enforcement by
+[opening an issue](https://github.com/migu-developer/financial-management/issues)
+or contacting the maintainers through the project's GitHub profile.
 
 All complaints will be reviewed and investigated promptly and fairly.
 
