@@ -1,4 +1,4 @@
-import { handler } from '@services/expenses/index';
+import { handler } from '@services/expenses/handlers/get-expenses';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 
