@@ -5,7 +5,7 @@ import { PostgresDatabaseService } from '@services/shared/infrastructure/service
 import { PostgresUserRepository } from '@services/users/infrastructure/repositories/postgres-user.repository';
 import { CognitoAdminAdapter } from '@user-sync/infrastructure/adapters/cognito-admin.adapter';
 import { TRIGGER_HANDLERS } from '@user-sync/infrastructure/adapters/trigger-handlers';
-import type { CognitoUserSyncEvent } from './types';
+import type { CognitoUserSyncEvent } from '@user-sync/types';
 
 const logger = new Logger({ serviceName: 'cognito-user-sync' });
 const tracerService = new TracerServiceImplementation('cognito-user-sync');

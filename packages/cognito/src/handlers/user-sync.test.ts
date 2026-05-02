@@ -1,4 +1,4 @@
-import type { CognitoUserSyncEvent } from './types';
+import type { CognitoUserSyncEvent } from '@user-sync/types';
 
 jest.mock('@aws-lambda-powertools/logger', () => ({
   Logger: jest.fn(() => ({
@@ -46,7 +46,7 @@ jest.mock('@user-sync/infrastructure/adapters/trigger-handlers', () => ({
   },
 }));
 
-import { handler } from './index';
+import { handler } from './user-sync';
 
 function buildEvent(
   triggerSource: CognitoUserSyncEvent['triggerSource'],

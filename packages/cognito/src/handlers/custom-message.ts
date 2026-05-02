@@ -1,14 +1,14 @@
 import { Logger } from '@aws-lambda-powertools/logger';
 import { TracerServiceImplementation } from '@services/shared/infrastructure/services/TracerServiceImp';
 import { S3Client } from '@aws-sdk/client-s3';
-import type { CustomMessageTriggerEvent } from './types';
+import type { CustomMessageTriggerEvent } from '@custom-message/types';
 
 import {
   resolveLocale,
   getMessages,
   getEmailHtmlFromS3,
   TRIGGER_TO_TEMPLATE,
-} from './templates/index';
+} from '@custom-message/templates/index';
 
 /** Minimal Lambda context shape for addContext (requestId, coldStart, etc.). */
 interface LambdaContext {

@@ -2,9 +2,9 @@ import { Logger } from '@aws-lambda-powertools/logger';
 import { TracerServiceImplementation } from '@services/shared/infrastructure/services/TracerServiceImp';
 import { SESClient } from '@aws-sdk/client-ses';
 import { S3Client } from '@aws-sdk/client-s3';
-import type { SNSEvent } from './domain/types';
-import { parseAlarmMessage } from './domain/alarm-parser';
-import { sendAlertEmail } from './infrastructure/ses-sender';
+import type { SNSEvent } from '@notifications/domain/types';
+import { parseAlarmMessage } from '../domain/alarm-parser';
+import { sendAlertEmail } from '../infrastructure/ses-sender';
 
 const logger = new Logger({ serviceName: 'alarm-notifications' });
 const tracerService = new TracerServiceImplementation('alarm-notifications');

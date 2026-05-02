@@ -3,7 +3,7 @@ import { TracerServiceImplementation } from '@services/shared/infrastructure/ser
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { CognitoAdminAdapter } from '@user-sync/infrastructure/adapters/cognito-admin.adapter';
 import { TRIGGER_HANDLERS } from '@pre-signup/infrastructure/adapters/trigger-handlers';
-import type { PreSignUpEvent } from './types';
+import type { PreSignUpEvent } from '@pre-signup/types';
 
 const logger = new Logger({ serviceName: 'cognito-pre-signup' });
 const tracerService = new TracerServiceImplementation('cognito-pre-signup');

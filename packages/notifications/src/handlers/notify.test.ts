@@ -6,11 +6,11 @@ jest.mock('@aws-lambda-powertools/tracer', () => ({
   })),
 }));
 
-jest.mock('./infrastructure/ses-sender', () => ({
+jest.mock('../infrastructure/ses-sender', () => ({
   sendAlertEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { handler } from './index';
+import { handler } from './notify';
 
 const makeSNSEvent = (message: string) => ({
   Records: [
@@ -40,7 +40,7 @@ const validAlarmMessage = JSON.stringify({
 describe('notification handler', () => {
   it('processes SNS event and calls sendAlertEmail', async () => {
     const { sendAlertEmail } = jest.requireMock(
-      './infrastructure/ses-sender',
+      '../infrastructure/ses-sender',
     ) as { sendAlertEmail: jest.Mock };
     sendAlertEmail.mockClear();
 
@@ -70,7 +70,7 @@ describe('notification handler', () => {
 
   it('processes multiple records', async () => {
     const { sendAlertEmail } = jest.requireMock(
-      './infrastructure/ses-sender',
+      '../infrastructure/ses-sender',
     ) as { sendAlertEmail: jest.Mock };
     sendAlertEmail.mockClear();
 

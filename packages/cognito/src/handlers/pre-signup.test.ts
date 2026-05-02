@@ -1,4 +1,4 @@
-import type { PreSignUpEvent } from './types';
+import type { PreSignUpEvent } from '@pre-signup/types';
 
 jest.mock('@aws-lambda-powertools/logger', () => ({
   Logger: jest.fn(() => ({
@@ -26,7 +26,7 @@ jest.mock('@pre-signup/infrastructure/adapters/trigger-handlers', () => ({
   },
 }));
 
-import { handler } from './index';
+import { handler } from './pre-signup';
 
 function buildEvent(
   triggerSource: PreSignUpEvent['triggerSource'],
