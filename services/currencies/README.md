@@ -18,7 +18,8 @@ The service follows the same layered Domain-Driven Design architecture as all ot
 
 ### Presentation Layer
 
-- **`index.ts`** -- Lambda handler entry point. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
+- **`handlers/get-currencies.ts`** -- Lambda handler for GET /currencies. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
+- **`handlers/update-rates.ts`** -- Lambda handler for exchange rate updates (EventBridge). Initializes database, tracer, and logger services at module scope.
 - **`presentation/application.ts`** -- Composes the Application context from the API Gateway event, user profile, logger, and database service. Defines the single route-to-module mapping.
 - **`presentation/controller.ts`** -- Controller handling the GET method for the `/currencies` route.
 - **`presentation/router.ts`** -- Presentation-level router resolving modules from the Application's route table.
@@ -122,7 +123,11 @@ services/currencies/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── index.ts                          # Lambda handler entry point
+    ├── handlers/
+    │   ├── get-currencies.ts             # Lambda handler for GET /currencies (CDK entry point)
+    │   └── update-rates.ts              # Lambda handler for exchange rate updates (EventBridge)
+    ├── exec/                             # Local test scripts
+    │   └── get-currencies.ts
     ├── router.ts                         # Top-level route matching + dispatch
     ├── router.test.ts
     ├── application/
@@ -133,8 +138,6 @@ services/currencies/
     │   │   └── currency.entity.ts
     │   └── repositories/
     │       └── currency.repository.ts
-    ├── exec/
-    │   └── get-currencies.ts
     ├── infrastructure/
     │   └── repositories/
     │       └── postgres-currency.repository.ts

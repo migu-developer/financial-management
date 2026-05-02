@@ -197,15 +197,6 @@ services/expenses/
     │       ├── expense.repository.ts
     │       ├── expense-category.repository.ts
     │       └── expense-type.repository.ts
-    ├── exec/
-    │   ├── create-expense.ts
-    │   ├── delete-expense.ts
-    │   ├── get-expense-by-id.ts
-    │   ├── get-expense-categories.ts
-    │   ├── get-expense-types.ts
-    │   ├── get-expenses.ts
-    │   ├── patch-expense.ts
-    │   └── put-expense.ts
     ├── infrastructure/
     │   └── repositories/
     │       ├── postgres-expense.repository.ts

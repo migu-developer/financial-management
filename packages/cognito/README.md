@@ -40,14 +40,17 @@ The package handles 13 Cognito trigger sources across three Lambda functions:
 
 ## Exports
 
-This package does not export a public API. Each subfolder contains a Lambda `handler` function that serves as the entry point for its respective trigger.
+This package does not export a public API. Each handler in `handlers/` serves as the Lambda entry point for its respective trigger.
 
 ## Structure
 
 ```
 src/
+  handlers/
+    custom-message.ts           # Lambda handler (CDK entry point)
+    pre-signup.ts               # Lambda handler (CDK entry point)
+    user-sync.ts                # Lambda handler (CDK entry point)
   custom-message/
-    index.ts                    # Lambda handler
     types.ts                    # CustomMessageTriggerEvent, SupportedLocale, MessageContent
     templates/
       index.ts                  # resolveLocale(), getMessages()
@@ -55,13 +58,11 @@ src/
       es.ts                     # Spanish subject/SMS messages
       s3.ts                     # getEmailHtmlFromS3(), getS3Key(), TRIGGER_TO_TEMPLATE
   pre-signup/
-    index.ts                    # Lambda handler
     types.ts                    # PreSignUpEvent, PreSignUpTriggerSource
     infrastructure/
       adapters/
         trigger-handlers.ts     # PreSignUp_ExternalProvider handler
   user-sync/
-    index.ts                    # Lambda handler
     types.ts                    # CognitoUserSyncEvent, UserSyncTriggerSource
     domain/
       ports/
