@@ -64,10 +64,11 @@ Extend `@packages/config/tsconfig.base.json`. Set paths:
 - `service.ts` -- Orchestrates use-cases, instantiates repositories
 - `router.ts` -- Maps route patterns to controller factories
 
-**Entry point** (`src/index.ts`):
+**Handler** (`src/handlers/get-{name}.ts`):
 
 - Lambda handler function: parses event, creates Application, dispatches via Router
 - Uses `@services/shared` for CORS, error handling, logger, tracer, database
+- CDK `entry:` points to this file (NEVER to `index.ts` or `exec/`)
 
 **Router** (`src/router.ts`):
 

@@ -180,7 +180,7 @@ Example log entry:
 | Component            | Path                                                          |
 | -------------------- | ------------------------------------------------------------- |
 | Monitoring CDK stack | `infra/lib/versions/v3/monitoring-stack.ts`                   |
-| Notification Lambda  | `packages/notifications/src/index.ts`                         |
+| Notification Lambda  | `packages/notifications/src/handlers/notify.ts`               |
 | Alarm parser         | `packages/notifications/src/domain/alarm-parser.ts`           |
 | SES email sender     | `packages/notifications/src/infrastructure/ses-sender.ts`     |
 | Alert email template | `packages/transactional/emails/{en,es}/service-alert.tsx`     |

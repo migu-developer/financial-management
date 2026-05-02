@@ -36,7 +36,7 @@ services/<name>/src/
 ### Entry Points
 
 - `src/handlers/*.ts` -- Lambda handlers. CDK stacks point `entry:` to these files.
-  For API Gateway handlers, `src/index.ts` may re-export for backwards compatibility.
+  All handlers live here — no `index.ts` at service root.
 - `src/exec/*.ts` -- **Local test scripts ONLY**. These import handlers and invoke
   them with mock payloads for local testing via `pnpm execute` or `pnpm run:file`.
   NEVER point CDK `entry:` to `exec/` files. NEVER put business logic in `exec/`.

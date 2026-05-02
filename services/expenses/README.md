@@ -35,7 +35,7 @@ The service follows a layered Domain-Driven Design architecture with mixin-based
 
 ### Presentation Layer
 
-- **`index.ts`** -- Lambda handler entry point. Initializes database, tracer, and logger services at module scope for connection reuse across warm invocations.
+- **`handlers/get-expenses.ts`** -- Lambda handler. Initializes database, tracer, and logger services at module scope for connection reuse across warm invocations.
 - **`presentation/application.ts`** -- Composes the Application context from the API Gateway event, user profile, logger, and database service. Defines route-to-module mappings.
 - **`presentation/controller.ts`** -- Mixin-based controller built from `GetWrapper`, `PostWrapper`, `PutWrapper`, `PatchWrapper`, `DeleteWrapper`. Each mixin handles a single HTTP method.
 - **`presentation/router.ts`** -- Presentation-level router that resolves modules from the Application's route table.
@@ -169,7 +169,17 @@ services/expenses/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── index.ts                          # Lambda handler entry point
+    ├── handlers/
+    │   └── get-expenses.ts               # Lambda handler (CDK entry point)
+    ├── exec/                             # Local test scripts
+    │   ├── create-expense.ts
+    │   ├── delete-expense.ts
+    │   ├── get-expense-by-id.ts
+    │   ├── get-expense-categories.ts
+    │   ├── get-expense-types.ts
+    │   ├── get-expenses.ts
+    │   ├── patch-expense.ts
+    │   └── put-expense.ts
     ├── router.ts                         # Top-level route matching + dispatch
     ├── router.test.ts
     ├── application/
