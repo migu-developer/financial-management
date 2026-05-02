@@ -73,7 +73,7 @@ export class MonitoringStack extends BaseStack {
         runtime: Runtime.NODEJS_24_X,
         entry: join(
           __dirname,
-          '../../../node_modules/@packages/notifications/src/index.ts',
+          '../../../node_modules/@packages/notifications/src/handlers/notify.ts',
         ),
         handler: 'handler',
         bundling: {

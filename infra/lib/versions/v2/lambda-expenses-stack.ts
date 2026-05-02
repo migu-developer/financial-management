@@ -61,7 +61,7 @@ export class LambdaExpensesStack extends BaseStack {
       runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/expenses/src/index.ts',
+        '../../../node_modules/@services/expenses/src/handlers/get-expenses.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,

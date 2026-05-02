@@ -48,7 +48,7 @@ export class LambdaDocumentsStack extends BaseStack {
       runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/documents/src/index.ts',
+        '../../../node_modules/@services/documents/src/handlers/get-documents.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,
