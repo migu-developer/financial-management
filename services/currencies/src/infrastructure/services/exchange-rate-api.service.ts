@@ -1,6 +1,4 @@
-import { Tracer } from '@aws-lambda-powertools/tracer';
-
-const tracer = new Tracer({ serviceName: 'exchange-rate-api' });
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 interface ExchangeRateApiResponse {
   result: string;
@@ -10,7 +8,7 @@ interface ExchangeRateApiResponse {
 export class ExchangeRateApiService {
   constructor(private readonly baseUrl: string) {}
 
-  @tracer.captureMethod({ subSegmentName: 'ExchangeRateApi:fetchRates' })
+  @trace('ExchangeRateApi:fetchRates')
   async fetchRates(apiKey: string): Promise<Record<string, number>> {
     const url = `${this.baseUrl}/v6/${apiKey}/latest/USD`;
 

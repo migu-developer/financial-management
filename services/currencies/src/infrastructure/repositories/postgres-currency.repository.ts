@@ -1,10 +1,8 @@
-import { Tracer } from '@aws-lambda-powertools/tracer';
 import type { CurrencyEntity } from '@services/currencies/domain/entities/currency.entity';
 import type { CurrencyWithRateEntity } from '@services/currencies/domain/entities/currency-with-rate.entity';
 import type { CurrencyRepository } from '@services/currencies/domain/repositories/currency.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
-
-const tracer = new Tracer({ serviceName: 'currencies-repository' });
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 interface CurrencyWithRateRow {
   id: string;
@@ -19,14 +17,14 @@ interface CurrencyWithRateRow {
 export class PostgresCurrencyRepository implements CurrencyRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
-  @tracer.captureMethod({ subSegmentName: 'Currency:findAll' })
+  @trace('Currency:findAll')
   async findAll(): Promise<CurrencyEntity[]> {
     return this.dbService.queryReadOnly<CurrencyEntity>(
       'SELECT id, code, name, symbol, country FROM financial_management.currencies ORDER BY code ASC',
     );
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Currency:findAllWithLatestRates' })
+  @trace('Currency:findAllWithLatestRates')
   async findAllWithLatestRates(): Promise<CurrencyWithRateEntity[]> {
     const rows = await this.dbService.queryReadOnly<CurrencyWithRateRow>(
       `SELECT
