@@ -38,7 +38,7 @@ jest.mock('aws-cdk-lib', () => {
     Duration: { seconds: (s: number) => s },
     RemovalPolicy: { RETAIN: 'Retain', DESTROY: 'Destroy' },
     SecretValue: { unsafePlainText: jest.fn().mockReturnValue('mock-secret') },
-    Runtime: { NODEJS_22_X: 'nodejs22.x' },
+    Runtime: { NODEJS_24_X: 'nodejs24.x' },
     Tracing: { ACTIVE: 'Active' },
   };
 });

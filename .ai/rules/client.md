@@ -73,6 +73,25 @@ pnpm --filter @client/main typecheck
 pnpm --filter @client/main test
 ```
 
+## Design Tokens — No Hardcoded Values
+
+- NEVER hardcode colors -- use tokens from `@features/ui/utils/colors`
+  (e.g., `colors.primary[500]`, `colors.semantic.error`).
+- NEVER hardcode spacing, radius, shadows, or font sizes -- use tokens from
+  `@features/ui/utils/colors` (`space`, `radius`, `boxShadow`, `iconSize`).
+- NEVER hardcode user-facing strings -- always use `useTranslation()` keys.
+- Reusable components MUST go in `@features/ui` (atoms/molecules), not in
+  individual feature packages. Feature-specific components stay in the feature.
+
+## Testing Conventions
+
+- Test files are **co-located** next to the source: `component.tsx` →
+  `component.test.tsx` (same directory). Do NOT create `__tests__/` folders.
+- Exception: `client/main/` uses `client/main/tests/` with a mirror of the
+  `app/` structure because Expo Router treats files in `app/` as routes.
+- Test with `ts-jest` (v29). Config lives in `client/main/jest.config.ts`.
+- Every new component, hook, provider, and use case MUST have a unit test.
+
 ## Constraints
 
 - NEVER import from `services/` directly -- use API calls or shared types
@@ -80,6 +99,7 @@ pnpm --filter @client/main test
 - NEVER add `react` as a direct dependency in feature packages -- use
   `peerDependencies` with `catalog:`.
 - NEVER use `require()` -- use ES module imports.
+- NEVER use relative paths (`../../`) -- use path aliases (`@features/<name>`,
+  `@packages/<name>`, `@client/main`).
 - Keep feature packages self-contained; cross-feature imports go through
   `@packages/utils` or `@packages/models`.
-- Test with `ts-jest` (v29). Config lives in `client/main/jest.config.ts`.

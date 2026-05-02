@@ -8,5 +8,6 @@ export enum ActiveStack {
   LAMBDA_DOCUMENTS = 'LambdaDocuments',
   LAMBDA_CURRENCIES = 'LambdaCurrencies',
   LAMBDA_USERS = 'LambdaUsers',
+  LAMBDA_EXCHANGE_RATES = 'LambdaExchangeRates',
   API_DOCS = 'ApiDocs',
 }

@@ -58,7 +58,7 @@ export class LambdaExpensesStack extends BaseStack {
 
     const lambda = new NodejsFunction(this, `${stackName}-ExpensesFn`, {
       functionName: fnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
         '../../../node_modules/@services/expenses/src/index.ts',

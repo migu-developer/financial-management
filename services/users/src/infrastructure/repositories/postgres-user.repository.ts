@@ -3,15 +3,13 @@ import type {
   CreateUserInput,
   PatchUserInput,
 } from '@packages/models/users/types';
-import { Tracer } from '@aws-lambda-powertools/tracer';
 import type { UserRepository } from '@services/users/domain/repositories/user.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import {
   DataNotDefinedError,
   ModuleNotFoundError,
 } from '@packages/models/shared/utils/errors';
-
-const tracer = new Tracer({ serviceName: 'users-repository' });
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 const USER_COLUMNS = `
   id, uid, email, first_name, last_name, identities, locale, picture, phone,
@@ -22,7 +20,7 @@ const USER_COLUMNS = `
 export class PostgresUserRepository implements UserRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
-  @tracer.captureMethod({ subSegmentName: 'User:findByUid' })
+  @trace('User:findByUid')
   async findByUid(uid: string): Promise<UserProfile | null> {
     const rows = await this.dbService.queryReadOnly<UserProfile>(
       `SELECT ${USER_COLUMNS}
@@ -33,7 +31,7 @@ export class PostgresUserRepository implements UserRepository {
     return rows[0] ?? null;
   }
 
-  @tracer.captureMethod({ subSegmentName: 'User:findByEmail' })
+  @trace('User:findByEmail')
   async findByEmail(email: string): Promise<UserProfile | null> {
     const rows = await this.dbService.queryReadOnly<UserProfile>(
       `SELECT ${USER_COLUMNS}
@@ -44,7 +42,7 @@ export class PostgresUserRepository implements UserRepository {
     return rows[0] ?? null;
   }
 
-  @tracer.captureMethod({ subSegmentName: 'User:create' })
+  @trace('User:create')
   async create(
     input: CreateUserInput,
     createdBy: string,
@@ -104,7 +102,7 @@ export class PostgresUserRepository implements UserRepository {
     return rows[0];
   }
 
-  @tracer.captureMethod({ subSegmentName: 'User:patch' })
+  @trace('User:patch')
   async patch(
     uid: string,
     input: PatchUserInput,
@@ -156,7 +154,7 @@ export class PostgresUserRepository implements UserRepository {
     return rows[0];
   }
 
-  @tracer.captureMethod({ subSegmentName: 'User:updateUid' })
+  @trace('User:updateUid')
   async updateUid(
     email: string,
     newUid: string,

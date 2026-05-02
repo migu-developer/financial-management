@@ -36,6 +36,26 @@ Workspaces: `client/*`, `client/packages/*`, `client/packages/features/*`,
 - Prefer TDD London School (mock-first) for new code.
 - Ensure input validation at system boundaries.
 
+## Imports -- Path Aliases Only
+
+- NEVER use relative paths (`../../`) for cross-module imports.
+- Use path aliases configured in tsconfig: `@services/<name>`,
+  `@packages/<name>`, `@features/<name>`, `@client/main`.
+- Relative imports (`./`, `../`) are only acceptable within the same
+  directory or one level up inside the same module.
+
+## Testing Conventions
+
+- ALWAYS write unit tests for new use cases and services.
+- ALWAYS write integration tests for new repository methods and endpoints.
+- Test files are **co-located** next to the source file: `foo.ts` →
+  `foo.test.ts` (same directory). Do NOT create `__tests__/` folders.
+- Exception: `client/main/` uses `client/main/tests/` with a mirror of the
+  app/ structure because Expo Router treats files in `app/` as routes.
+- Integration tests go in `src/test/` within each service/package.
+- Test helpers (mocks, fixtures, factories) go in `src/test/` subdirectories.
+- Name integration tests `*.integration.test.ts` to distinguish from unit tests.
+
 ## Build, Test, and Lint
 
 ```bash

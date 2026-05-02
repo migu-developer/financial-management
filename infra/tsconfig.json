@@ -26,7 +26,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": false,
     "inlineSources": true,
-    "experimentalDecorators": true,
     "strictPropertyInitialization": false
   },
   "include": ["bin", "lib", "eslint.config.ts", "jest.config.ts"],

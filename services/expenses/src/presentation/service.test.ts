@@ -98,6 +98,8 @@ const mockExpense = {
   currency_id: 'cur-1',
   expense_type_id: 'type-1',
   expense_category_id: null,
+  date: '2024-01-01',
+  global_value: 12,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   created_by: 'u@test.com',
@@ -209,7 +211,7 @@ describe('ExpensesService', () => {
   it('executePOST returns 200 with created expense', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([mockExpense]),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const response = await new ExpensesService(
@@ -224,7 +226,7 @@ describe('ExpensesService', () => {
   it('executePOST propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('insert failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
       end: jest.fn(),
     };
     await expect(
@@ -267,7 +269,7 @@ describe('ExpenseService — PUT', () => {
     const updatedExpense = { ...mockExpense, name: 'Updated' };
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([updatedExpense]),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const app = makeApp(
@@ -284,7 +286,7 @@ describe('ExpenseService — PUT', () => {
   it('executePUT propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('update failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
       end: jest.fn(),
     };
     const app = makeApp(
@@ -298,7 +300,7 @@ describe('ExpenseService — PUT', () => {
 });
 
 describe('ExpenseService — PATCH', () => {
-  it('executePATCH returns 200 with patched expense', async () => {
+  it('executePATCH returns 200 with patched expense (name only, no conversion)', async () => {
     const patchedExpense = { ...mockExpense, name: 'Patched' };
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([patchedExpense]),
@@ -314,10 +316,33 @@ describe('ExpenseService — PATCH', () => {
     expect(json.data).toEqual(patchedExpense);
   });
 
+  it('executePATCH recalculates global_value when value is patched', async () => {
+    const patchedExpense = {
+      ...mockExpense,
+      value: 100,
+      global_value: 0.024,
+    };
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([patchedExpense]),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ rate_to_usd: 0.00024 }]),
+      end: jest.fn(),
+    };
+    const body = JSON.stringify({ value: 100 });
+    const app = makeApp({ pathParameters: { id: 'exp-1' }, body }, dbService);
+    const response = await new ExpenseService(app).executePATCH();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+  });
+
   it('executePATCH propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('patch failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const body = JSON.stringify({ value: 100 });

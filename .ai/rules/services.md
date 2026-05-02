@@ -14,6 +14,7 @@ services/<name>/src/
   domain/
     entities/         # Optional: only for read-only catalogs (documents, currencies)
     repositories/     # Repository interfaces (ports)
+    services/         # Domain service interfaces (e.g., CurrencyConversionService)
   application/
     use-cases/        # Single-responsibility use cases
   presentation/
@@ -23,12 +24,31 @@ services/<name>/src/
     router.ts         # Module registration
   infrastructure/
     repositories/     # PostgreSQL repository implementations
-  exec/               # Lambda handler entry points
+    services/         # Infrastructure service implementations
+  handlers/           # Lambda entry points for non-API-Gateway triggers (EventBridge, etc.)
+  exec/               # Local test scripts ONLY (run with `pnpm execute` or `pnpm run:file`)
   types/
     controller.ts     # Base Controller with mixin composition
     service.ts        # Base Service with mixin composition
     module.ts         # ModuleType interface
 ```
+
+### Entry Points
+
+- `src/handlers/*.ts` -- Lambda handlers. CDK stacks point `entry:` to these files.
+  For API Gateway handlers, `src/index.ts` may re-export for backwards compatibility.
+- `src/exec/*.ts` -- **Local test scripts ONLY**. These import handlers and invoke
+  them with mock payloads for local testing via `pnpm execute` or `pnpm run:file`.
+  NEVER point CDK `entry:` to `exec/` files. NEVER put business logic in `exec/`.
+
+### Handler Typing
+
+- NEVER type Lambda handler event parameters as `unknown`.
+- Use the correct event interface from `@services/shared/domain/interfaces/`:
+  - API Gateway: `APIGatewayProxyEvent` from `request.ts`
+  - EventBridge / Scheduler: `ScheduledEvent` from `eventbridge.ts`
+  - SQS: `SQSEvent` (add to shared when needed)
+- Local test scripts in `exec/` MUST also use the typed event interface.
 
 ## Patterns
 
@@ -101,10 +121,26 @@ pnpm --filter @services/<name> test
 pnpm test:integration
 ```
 
+## Testing Requirements
+
+- **Unit tests**: Every use case MUST have a unit test (`*.use-case.test.ts`)
+  co-located next to the source file. Mock the repository.
+- **Integration tests**: Every repository method MUST have an integration test
+  in `src/test/*.integration.test.ts` that hits a real database.
+- **Lambda test scripts**: Every new Lambda handler MUST have a corresponding
+  test script in `src/exec/` that imports the handler and invokes it with a
+  mock payload. Run via `pnpm execute` or `pnpm run:file src/exec/<name>.ts`.
+- Use `TestDatabaseService` with schema isolation for integration tests.
+- Fixtures go in `src/test/fixtures/`, factories in `src/test/factories/`.
+
 ## Constraints
 
 - NEVER import from `presentation/` inside `domain/`.
 - NEVER put business logic in controllers -- delegate to services/use cases.
 - NEVER use `any` type. Define proper interfaces.
-- NEVER access `process.env` outside of `exec/` entry points or `application.ts`.
+- NEVER access `process.env` outside of `handlers/`, `exec/`, or `application.ts`.
+- NEVER put Lambda handler code in `exec/` -- handlers go in `handlers/` or
+  `index.ts`. The `exec/` directory is for local test scripts ONLY.
+- NEVER point CDK `entry:` to files in `exec/`.
 - Shared utilities go in `services/shared`, not duplicated per service.
+- NEVER use relative paths (`../../`) -- use path aliases (`@services/<name>`).

@@ -45,7 +45,7 @@ export class LambdaDocumentsStack extends BaseStack {
 
     const lambda = new NodejsFunction(this, `${stackName}-DocumentsFn`, {
       functionName: fnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
         '../../../node_modules/@services/documents/src/index.ts',
