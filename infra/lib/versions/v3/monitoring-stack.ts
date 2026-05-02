@@ -70,7 +70,7 @@ export class MonitoringStack extends BaseStack {
       `${stackName}-NotificationFn`,
       {
         functionName: notificationFnName,
-        runtime: Runtime.NODEJS_22_X,
+        runtime: Runtime.NODEJS_24_X,
         entry: join(
           __dirname,
           '../../../node_modules/@packages/notifications/src/index.ts',
@@ -146,6 +146,12 @@ export class MonitoringStack extends BaseStack {
         'FunctionName',
       ),
       Users: importFromVersion(this, 'v2', 'LambdaUsers', 'FunctionName'),
+      UpdateRates: importFromVersion(
+        this,
+        'v2',
+        'LambdaExchangeRates',
+        'FunctionName',
+      ),
     };
 
     const cognitoTriggers: Record<string, string> = {
@@ -256,6 +262,28 @@ export class MonitoringStack extends BaseStack {
       throttleAlarm.addAlarmAction(snsAction);
       this.alarms.push(throttleAlarm);
     }
+
+    // ── Exchange Rate Scheduler Alarm (24h window) ─────────
+    const updateRatesFnName = lambdaFunctions['UpdateRates']!;
+    const updateRatesAlarm = new Alarm(
+      this,
+      `${stackName}-UpdateRates-ErrorsAlarm`,
+      {
+        alarmName: `${stackName}-Lambda-UpdateRates-24h-Errors`,
+        alarmDescription:
+          'Exchange rate update Lambda errors exceed 2 in 24 hours',
+        metric: lambdaMetric(updateRatesFnName, 'Errors').with({
+          period: Duration.hours(24),
+        }),
+        threshold: 2,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    updateRatesAlarm.addAlarmAction(snsAction);
+    this.alarms.push(updateRatesAlarm);
 
     // ── Cognito Trigger Alarms ─────────────────────────────
     for (const [trigger, fnName] of Object.entries(cognitoTriggers)) {

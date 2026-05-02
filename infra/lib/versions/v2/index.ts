@@ -8,6 +8,7 @@ import { LambdaExpensesStack } from './lambda-expenses-stack';
 import { LambdaDocumentsStack } from './lambda-documents-stack';
 import { LambdaCurrenciesStack } from './lambda-currencies-stack';
 import { LambdaUsersStack } from './lambda-users-stack';
+import { LambdaExchangeRatesStack } from './lambda-exchange-rates-stack';
 import { ApiDocsStack } from './api-docs-stack';
 
 const createApiGatewayStack: NamedStackFactory = {
@@ -144,6 +145,27 @@ const createLambdaUsersStack: NamedStackFactory = {
     ),
 };
 
+const createLambdaExchangeRatesStack: NamedStackFactory = {
+  name: 'LambdaExchangeRates',
+  create: (scope: Construct, version: string) =>
+    new LambdaExchangeRatesStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_EXCHANGE_RATES}Stack`),
+      {
+        version,
+        stackName: fullStackResource(
+          version,
+          ActiveStack.LAMBDA_EXCHANGE_RATES,
+        ),
+        description: 'Lambda function for exchange rate updates',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        exchangeRateApiKey: process.env.EXCHANGE_RATE_API_KEY ?? '',
+        exchangeRateApiBaseUrl: process.env.EXCHANGE_RATE_API_BASE_URL ?? '',
+        stage: process.env.STAGE ?? 'dev',
+      },
+    ),
+};
+
 const createApiDocsStack: NamedStackFactory = {
   name: 'ApiDocs',
   create: (scope: Construct, version: string, deps: StackDeps) =>
@@ -162,14 +184,16 @@ const createApiDocsStack: NamedStackFactory = {
 // Order matters:
 // 1. ApiGateway first (lambdas depend on it, includes certificate + custom domain)
 // 2. Lambda stacks (add resources to the API)
-// 3. ApiDocs (documents the fully-built API)
-// 4. AmplifyHosting last (references the API URL)
+// 3. LambdaExchangeRates (standalone Lambda + EventBridge schedule, no API Gateway)
+// 4. ApiDocs (documents the fully-built API)
+// 5. AmplifyHosting last (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,
   createLambdaDocumentsStack,
   createLambdaCurrenciesStack,
   createLambdaUsersStack,
+  createLambdaExchangeRatesStack,
   createApiDocsStack,
   createAmplifyHostingStack,
 ];

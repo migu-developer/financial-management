@@ -23,6 +23,7 @@ jest.mock('aws-cdk-lib', () => {
     Duration: {
       minutes: (m: number) => m * 60,
       seconds: (s: number) => s,
+      hours: (h: number) => h * 3600,
     },
   };
 });
@@ -54,7 +55,7 @@ jest.mock('aws-cdk-lib/aws-sns-subscriptions', () => ({
 }));
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
-  Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Runtime: { NODEJS_24_X: 'nodejs24.x' },
   Tracing: { ACTIVE: 'Active' },
 }));
 
@@ -168,10 +169,34 @@ describe('MonitoringStack', () => {
       (c: unknown[]) => (c[2] as Record<string, unknown>).alarmName as string,
     );
 
-    for (const service of ['Expenses', 'Documents', 'Currencies', 'Users']) {
+    for (const service of [
+      'Expenses',
+      'Documents',
+      'Currencies',
+      'Users',
+      'UpdateRates',
+    ]) {
       expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Errors`);
       expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Throttles`);
     }
+  });
+
+  test('creates UpdateRates 24h error alarm', () => {
+    const { Alarm: MockAlarm } = jest.requireMock(
+      'aws-cdk-lib/aws-cloudwatch',
+    ) as { Alarm: jest.Mock };
+    MockAlarm.mockClear();
+
+    new MonitoringStack(
+      app as unknown as Construct,
+      'MonitoringStack',
+      defaultProps,
+    );
+
+    const alarmNames = MockAlarm.mock.calls.map(
+      (c: unknown[]) => (c[2] as Record<string, unknown>).alarmName as string,
+    );
+    expect(alarmNames).toContain('Monitoring-Lambda-UpdateRates-24h-Errors');
   });
 
   test('creates Cognito trigger alarms', () => {
@@ -231,8 +256,8 @@ describe('MonitoringStack', () => {
       defaultProps,
     );
 
-    // 3 API + (4 services × 2 each) + 3 Cognito triggers = 14
-    expect(stack.alarms).toHaveLength(14);
+    // 3 API + (5 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers = 17
+    expect(stack.alarms).toHaveLength(17);
   });
 
   test('stackName follows BaseStack convention', () => {

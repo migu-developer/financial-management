@@ -25,6 +25,7 @@ const createMonitoringStack: NamedStackFactory = {
           V2Stack.LAMBDA_DOCUMENTS,
           V2Stack.LAMBDA_CURRENCIES,
           V2Stack.LAMBDA_USERS,
+          V2Stack.LAMBDA_EXCHANGE_RATES,
           V2Stack.AMPLIFY_HOSTING,
         ],
       },
