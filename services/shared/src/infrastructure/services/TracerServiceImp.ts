@@ -26,6 +26,10 @@ export class TracerServiceImplementation {
     this.tracer.putMetadata(key, value);
   }
 
+  captureAWSv3Client<T>(client: T): T {
+    return this.tracer.captureAWSv3Client(client);
+  }
+
   /**
    * Wraps an async function in a subsegment for tracing.
    * Use for DB queries, S3 calls, external API calls, etc.

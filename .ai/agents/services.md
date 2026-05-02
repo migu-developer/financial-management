@@ -68,4 +68,15 @@ src/
 - `@packages/config` -- shared ESLint/TypeScript config.
 - `pg` -- PostgreSQL client.
 - `@aws-lambda-powertools/logger` -- structured logging.
-- `@aws-lambda-powertools/tracer` -- X-Ray tracing.
+- `@aws-lambda-powertools/tracer` -- X-Ray tracing (used via `TracerServiceImplementation` and `@trace` decorator).
+
+## Tracing
+
+Two patterns, used consistently across all services:
+
+- **Handler level** (`handlers/*.ts`): `TracerServiceImplementation` for cold start
+  annotations, `putAnnotation()`, and `captureAWSv3Client()`.
+- **Method level** (repos/services): `@trace('SegmentName')` Stage 3 decorator from
+  `@services/shared/infrastructure/decorators/trace` for X-Ray subsegments.
+- NEVER use `@tracer.captureMethod()` or `new Tracer()` directly.
+- NEVER enable `experimentalDecorators` in tsconfig.

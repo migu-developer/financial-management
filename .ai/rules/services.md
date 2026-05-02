@@ -93,6 +93,19 @@ business logic; unimplemented methods throw `ServiceNotImplementedError`.
   consistent API Gateway responses.
 - Wrap unknown errors with `HttpCode.INTERNAL_SERVER_ERROR`.
 
+### Tracing (X-Ray)
+
+Two patterns, applied consistently across all services:
+
+- **Handler level** (`handlers/*.ts`): Use `TracerServiceImplementation` from
+  `@services/shared` for `annotateColdStart()`, `putAnnotation()`, and
+  `captureAWSv3Client()`. Create at module scope (outside handler).
+- **Method level** (repos/services): Use `@trace('SegmentName')` Stage 3 decorator
+  from `@services/shared/infrastructure/decorators/trace`. Creates X-Ray subsegments.
+- NEVER use `@tracer.captureMethod()` from Powertools (legacy decorator).
+- NEVER use `new Tracer()` directly -- use `TracerServiceImplementation` or `@trace`.
+- NEVER enable `experimentalDecorators` in tsconfig.
+
 ### CORS Handling
 
 - Use the `addCors()` utility from `services/shared`.

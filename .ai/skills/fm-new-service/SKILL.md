@@ -121,10 +121,14 @@ pnpm infra:cdk synth
 - Use `@services/shared` for cross-cutting concerns (CORS, error handling, database, logger, tracer)
 - Use `@packages/models` for shared schemas and validation
 - Lambda functions use ESM format with source maps and X-Ray tracing
+- Use `TracerServiceImplementation` in handlers for cold start and annotations
+- Use `@trace('SegmentName')` Stage 3 decorator on all repository/service methods
 
 ## Must NOT Do
 
 - Put business logic in the controller or router
 - Import infrastructure directly from use-cases (use repository interfaces)
 - Skip adding the service to monitoring (v3)
+- Use `@tracer.captureMethod()` or `new Tracer()` directly -- use `@trace` decorator
+- Enable `experimentalDecorators` in tsconfig
 - Forget to add the workspace dependency to `infra/package.json`

@@ -5,7 +5,8 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@notifications/domain/types": ["./src/domain/types.ts"]
+      "@notifications/domain/types": ["./src/domain/types.ts"],
+      "@services/shared/*": ["node_modules/@services/shared/src/*"]
     }
   },
   "include": ["src", "eslint.config.ts", "jest.config.ts"]

@@ -980,6 +980,9 @@ importers:
       '@aws-sdk/client-ses':
         specifier: 'catalog:'
         version: 3.1029.0
+      '@services/shared':
+        specifier: workspace:*
+        version: link:../../services/shared
     devDependencies:
       '@packages/config':
         specifier: workspace:*
