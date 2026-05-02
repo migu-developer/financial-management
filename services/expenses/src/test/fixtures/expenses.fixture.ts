@@ -20,6 +20,8 @@ export interface TestExpense {
 }
 
 export class ExpenseFixture extends FixtureBase<ExpenseInput, TestExpense> {
+  private insertCount = 0;
+
   constructor(
     dbService: DatabaseService,
     private readonly userId: string,
@@ -30,10 +32,11 @@ export class ExpenseFixture extends FixtureBase<ExpenseInput, TestExpense> {
 
   async insert(overrides?: Partial<ExpenseInput>): Promise<TestExpense> {
     const data = this.factory.build(overrides);
+    this.insertCount++;
     const rows = await this.dbService.query<TestExpense>(
       `INSERT INTO financial_management.expenses
-         (user_id, name, value, currency_id, expense_type_id, expense_category_id, created_by, modified_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING *`,
+         (user_id, name, value, currency_id, expense_type_id, expense_category_id, created_by, modified_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, now() + ($8 || ' seconds')::interval) RETURNING *`,
       [
         this.userId,
         data.name,
@@ -42,6 +45,7 @@ export class ExpenseFixture extends FixtureBase<ExpenseInput, TestExpense> {
         data.expense_type_id,
         data.expense_category_id ?? null,
         this.createdBy ?? null,
+        this.insertCount,
       ],
     );
     return rows[0]!;

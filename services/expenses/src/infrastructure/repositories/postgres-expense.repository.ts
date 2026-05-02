@@ -12,31 +12,29 @@ import {
   decodeCursor,
   buildPaginatedResult,
 } from '@packages/models/shared/pagination';
-import { Tracer } from '@aws-lambda-powertools/tracer';
 import type { ExpenseRepository } from '@services/expenses/domain/repositories/expense.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import {
   DataNotDefinedError,
   ModuleNotFoundError,
 } from '@packages/models/shared/utils/errors';
-
-const tracer = new Tracer({ serviceName: 'expenses-repository' });
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 const EXPENSE_COLUMNS = `
   e.id, e.user_id, e.name, e.value, e.currency_id,
-  e.expense_type_id, e.expense_category_id,
+  e.expense_type_id, e.expense_category_id, e.date, e.global_value,
   e.created_at, e.updated_at, e.created_by, e.modified_by
 `.trim();
 
 const RETURNING_COLUMNS = `id, user_id, name, value, currency_id, expense_type_id, expense_category_id,
-                 created_at, updated_at, created_by, modified_by`;
+                 date, global_value, created_at, updated_at, created_by, modified_by`;
 
 const USER_SUBQUERY = `(SELECT u.id FROM financial_management.users u WHERE u.uid = `;
 
 export class PostgresExpenseRepository implements ExpenseRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:findAll' })
+  @trace('Expense:findAll')
   async findAllByUserUid(
     uid: string,
     pagination: PaginationParams,
@@ -77,7 +75,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return result;
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:count' })
+  @trace('Expense:count')
   async countByUserUid(uid: string, filters?: ExpenseFilters): Promise<number> {
     const whereClauses = ['u.uid = $1'];
     const params: unknown[] = [uid];
@@ -115,7 +113,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return paramIndex;
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:findById' })
+  @trace('Expense:findById')
   async findByIdAndUserUid(id: string, uid: string): Promise<Expense | null> {
     const rows = await this.dbService.queryReadOnly<Expense>(
       `SELECT ${EXPENSE_COLUMNS}
@@ -127,18 +125,19 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0] ?? null;
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:create' })
+  @trace('Expense:create')
   async create(
     input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
     createdBy: string,
+    globalValue?: number | null,
   ): Promise<Expense> {
     const rows = await this.dbService.query<Expense>(
       `INSERT INTO financial_management.expenses
-         (user_id, name, value, currency_id, expense_type_id, expense_category_id, created_by, modified_by)
-       SELECT u.id, $1, $2, $3, $4, $5, $6, $6
+         (user_id, name, value, currency_id, expense_type_id, expense_category_id, date, global_value, created_by, modified_by)
+       SELECT u.id, $1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), $7, $8, $8
        FROM financial_management.users u
-       WHERE u.uid = $7
+       WHERE u.uid = $9
        RETURNING ${RETURNING_COLUMNS}`,
       [
         input.name,
@@ -146,6 +145,8 @@ export class PostgresExpenseRepository implements ExpenseRepository {
         input.currency_id,
         input.expense_type_id,
         input.expense_category_id ?? null,
+        input.date ?? null,
+        globalValue ?? null,
         createdBy,
         uid,
       ],
@@ -154,18 +155,20 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:update' })
+  @trace('Expense:update')
   async update(
     id: string,
     input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
     modifiedBy: string,
+    globalValue?: number | null,
   ): Promise<Expense> {
     const rows = await this.dbService.query<Expense>(
       `UPDATE financial_management.expenses
        SET name = $1, value = $2, currency_id = $3, expense_type_id = $4,
-           expense_category_id = $5, modified_by = $6
-       WHERE id = $7 AND user_id = ${USER_SUBQUERY}$8)
+           expense_category_id = $5, date = COALESCE($6::date, CURRENT_DATE),
+           global_value = $7, modified_by = $8
+       WHERE id = $9 AND user_id = ${USER_SUBQUERY}$10)
        RETURNING ${RETURNING_COLUMNS}`,
       [
         input.name,
@@ -173,6 +176,8 @@ export class PostgresExpenseRepository implements ExpenseRepository {
         input.currency_id,
         input.expense_type_id,
         input.expense_category_id ?? null,
+        input.date ?? null,
+        globalValue ?? null,
         modifiedBy,
         id,
         uid,
@@ -182,12 +187,13 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:patch' })
+  @trace('Expense:patch')
   async patch(
     id: string,
     input: PatchExpenseInput,
     uid: string,
     modifiedBy: string,
+    globalValue?: number | null,
   ): Promise<Expense> {
     const setClauses: string[] = [];
     const values: unknown[] = [];
@@ -213,6 +219,14 @@ export class PostgresExpenseRepository implements ExpenseRepository {
       setClauses.push(`expense_category_id = $${paramIndex++}`);
       values.push(input.expense_category_id);
     }
+    if (input.date !== undefined) {
+      setClauses.push(`date = $${paramIndex++}::date`);
+      values.push(input.date);
+    }
+    if (globalValue !== undefined) {
+      setClauses.push(`global_value = $${paramIndex++}`);
+      values.push(globalValue);
+    }
 
     setClauses.push(`modified_by = $${paramIndex++}`);
     values.push(modifiedBy);
@@ -232,7 +246,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     return rows[0];
   }
 
-  @tracer.captureMethod({ subSegmentName: 'Expense:delete' })
+  @trace('Expense:delete')
   async deleteByIdAndUserUid(id: string, uid: string): Promise<void> {
     const rows = await this.dbService.query<{ id: string }>(
       `DELETE FROM financial_management.expenses

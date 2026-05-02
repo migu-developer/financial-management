@@ -15,6 +15,7 @@ import { GetExpenseCategoriesUseCase } from '@services/expenses/application/use-
 import { PostgresExpenseRepository } from '@services/expenses/infrastructure/repositories/postgres-expense.repository';
 import { PostgresExpenseTypeRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-type.repository';
 import { PostgresExpenseCategoryRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-category.repository';
+import { PostgresCurrencyConversionService } from '@services/expenses/infrastructure/services/postgres-currency-conversion.service';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { parsePaginationParams } from '@packages/models/shared/pagination';
 import { parseExpenseFilters } from '@packages/models/expenses';
@@ -54,7 +55,10 @@ export class ExpensesService extends Service {
       'user_id'
     >;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new CreateExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new CreateExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       input,
       this.app.user.uid,
@@ -90,7 +94,10 @@ export class ExpenseService extends Service {
       'user_id'
     >;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new UpdateExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new UpdateExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       id,
       input,
@@ -110,7 +117,10 @@ export class ExpenseService extends Service {
     const id = this.app.event.pathParameters?.['id'] ?? '';
     const input = JSON.parse(this.app.event.body!) as PatchExpenseInput;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new PatchExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new PatchExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       id,
       input,
