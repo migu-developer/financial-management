@@ -12,6 +12,11 @@ const valueField = {
   exclusiveMinimum: true,
 };
 
+const dateField = {
+  type: 'string' as const,
+  pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+};
+
 export const createExpenseSchema = {
   schema: 'http://json-schema.org/draft-04/schema#',
   title: 'CreateExpense',
@@ -23,6 +28,7 @@ export const createExpenseSchema = {
     currency_id: uuidField,
     expense_type_id: uuidField,
     expense_category_id: uuidField,
+    date: dateField,
   },
   additionalProperties: false,
 };
@@ -43,6 +49,7 @@ export const patchExpenseSchema = {
     currency_id: uuidField,
     expense_type_id: uuidField,
     expense_category_id: uuidField,
+    date: dateField,
   },
   additionalProperties: false,
 };

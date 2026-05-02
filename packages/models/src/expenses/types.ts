@@ -6,6 +6,8 @@ export interface Expense {
   currency_id: string;
   expense_type_id: string;
   expense_category_id: string | null;
+  date: string | null;
+  global_value: number | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -19,6 +21,7 @@ export interface CreateExpenseInput {
   currency_id: string;
   expense_type_id: string;
   expense_category_id?: string;
+  date?: string;
 }
 
 export type UpdateExpenseInput = CreateExpenseInput;
@@ -29,6 +32,7 @@ export interface PatchExpenseInput {
   currency_id?: string;
   expense_type_id?: string;
   expense_category_id?: string;
+  date?: string;
 }
 
 export interface Currency {
