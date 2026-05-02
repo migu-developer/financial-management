@@ -1,10 +1,10 @@
-import type { CurrencyEntity } from '@services/currencies/domain/entities/currency.entity';
+import type { CurrencyWithRateEntity } from '@services/currencies/domain/entities/currency-with-rate.entity';
 import type { CurrencyRepository } from '@services/currencies/domain/repositories/currency.repository';
 
 export class GetCurrenciesUseCase {
   constructor(private readonly repository: CurrencyRepository) {}
 
-  async execute(): Promise<CurrencyEntity[]> {
-    return this.repository.findAll();
+  async execute(): Promise<CurrencyWithRateEntity[]> {
+    return this.repository.findAllWithLatestRates();
   }
 }

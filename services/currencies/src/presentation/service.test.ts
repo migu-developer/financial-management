@@ -78,14 +78,16 @@ function makeApp(dbService: DatabaseService): Application {
 }
 
 describe('CurrenciesService', () => {
-  it('executeGET returns 200 with currencies from db', async () => {
-    const mockCurrencies = [
+  it('executeGET returns 200 with currencies and latest rates from db', async () => {
+    const mockRows = [
       {
         id: 'uuid-1',
         code: 'COP',
         name: 'Peso Colombiano',
         symbol: '$',
         country: 'Colombia',
+        rate_to_usd: 0.000234,
+        rate_date: '2026-04-30',
       },
       {
         id: 'uuid-2',
@@ -93,11 +95,13 @@ describe('CurrenciesService', () => {
         name: 'Euro',
         symbol: '€',
         country: 'Finland',
+        rate_to_usd: 1.08,
+        rate_date: '2026-04-30',
       },
     ];
     const dbService: DatabaseService = {
       query: jest.fn(),
-      queryReadOnly: jest.fn().mockResolvedValue(mockCurrencies),
+      queryReadOnly: jest.fn().mockResolvedValue(mockRows),
       end: jest.fn(),
     };
 
@@ -107,7 +111,60 @@ describe('CurrenciesService', () => {
     expect(response.status).toBe(HttpCode.SUCCESS);
     const body = (await response.json()) as { success: boolean; data: unknown };
     expect(body.success).toBe(true);
-    expect(body.data).toEqual(mockCurrencies);
+    expect(body.data).toEqual([
+      {
+        id: 'uuid-1',
+        code: 'COP',
+        name: 'Peso Colombiano',
+        symbol: '$',
+        country: 'Colombia',
+        latest_rate: { rate_to_usd: 0.000234, rate_date: '2026-04-30' },
+      },
+      {
+        id: 'uuid-2',
+        code: 'EUR',
+        name: 'Euro',
+        symbol: '€',
+        country: 'Finland',
+        latest_rate: { rate_to_usd: 1.08, rate_date: '2026-04-30' },
+      },
+    ]);
+  });
+
+  it('executeGET returns null latest_rate when no exchange rate exists', async () => {
+    const mockRows = [
+      {
+        id: 'uuid-1',
+        code: 'COP',
+        name: 'Peso Colombiano',
+        symbol: '$',
+        country: 'Colombia',
+        rate_to_usd: null,
+        rate_date: null,
+      },
+    ];
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue(mockRows),
+      end: jest.fn(),
+    };
+
+    const service = new CurrenciesService(makeApp(dbService));
+    const response = await service.executeGET();
+
+    expect(response.status).toBe(HttpCode.SUCCESS);
+    const body = (await response.json()) as { success: boolean; data: unknown };
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([
+      {
+        id: 'uuid-1',
+        code: 'COP',
+        name: 'Peso Colombiano',
+        symbol: '$',
+        country: 'Colombia',
+        latest_rate: null,
+      },
+    ]);
   });
 
   it('executeGET propagates db errors', async () => {

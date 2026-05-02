@@ -78,6 +78,7 @@ The service follows the same layered Domain-Driven Design architecture as all ot
 | `ALLOWED_ORIGINS`       | Yes      | Comma-separated list of allowed CORS origins                        |
 | `ALLOWED_METHODS`       | No       | Comma-separated list of allowed HTTP methods (recommended for CORS) |
 | `PROJECT_PREFIX`        | No       | Service name prefix for logger (default: `app`)                     |
+| `EXCHANGE_RATE_API_KEY` | Yes      | API key for ExchangeRate-API (used by update-rates handler)         |
 
 ## Scripts
 
