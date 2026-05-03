@@ -6,7 +6,7 @@ jest.mock('@aws-lambda-powertools/tracer', () => ({
   })),
 }));
 
-jest.mock('../infrastructure/ses-sender', () => ({
+jest.mock('@notifications/infrastructure/ses-sender', () => ({
   sendAlertEmail: jest.fn().mockResolvedValue(undefined),
 }));
 

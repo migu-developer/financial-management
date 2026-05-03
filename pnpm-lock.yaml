@@ -464,6 +464,9 @@ importers:
       '@packages/i18n':
         specifier: workspace:*
         version: link:../../i18n
+      '@packages/models':
+        specifier: workspace:*
+        version: link:../../../../packages/models
       '@packages/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -601,6 +604,9 @@ importers:
       '@packages/i18n':
         specifier: workspace:*
         version: link:../../i18n
+      '@packages/models':
+        specifier: workspace:*
+        version: link:../../../../packages/models
       '@packages/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -650,6 +656,9 @@ importers:
       '@packages/i18n':
         specifier: workspace:*
         version: link:../../i18n
+      '@packages/models':
+        specifier: workspace:*
+        version: link:../../../../packages/models
       '@packages/utils':
         specifier: workspace:*
         version: link:../../utils

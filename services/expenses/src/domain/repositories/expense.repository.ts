@@ -3,6 +3,8 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
   ExpenseFilters,
+  MetricsFilters,
+  MetricsResponse,
 } from '@packages/models/expenses';
 import type {
   PaginationParams,
@@ -38,4 +40,8 @@ export interface ExpenseRepository {
     globalValue?: number | null,
   ): Promise<Expense>;
   deleteByIdAndUserUid(id: string, uid: string): Promise<void>;
+  getMetrics(
+    uid: string,
+    filters: MetricsFilters,
+  ): Promise<Omit<MetricsResponse, 'period'>>;
 }

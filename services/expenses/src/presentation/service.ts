@@ -3,6 +3,7 @@ import type { Application } from '@services/expenses/presentation/application';
 import type {
   CreateExpenseInput,
   PatchExpenseInput,
+  MetricsFilters,
 } from '@packages/models/expenses';
 import { GetExpensesByUserUseCase } from '@services/expenses/application/use-cases/get-expenses-by-user.use-case';
 import { GetExpenseByIdUseCase } from '@services/expenses/application/use-cases/get-expense-by-id.use-case';
@@ -12,6 +13,7 @@ import { PatchExpenseUseCase } from '@services/expenses/application/use-cases/pa
 import { DeleteExpenseUseCase } from '@services/expenses/application/use-cases/delete-expense.use-case';
 import { GetExpenseTypesUseCase } from '@services/expenses/application/use-cases/get-expense-types.use-case';
 import { GetExpenseCategoriesUseCase } from '@services/expenses/application/use-cases/get-expense-categories.use-case';
+import { GetMetricsUseCase } from '@services/expenses/application/use-cases/get-metrics.use-case';
 import { PostgresExpenseRepository } from '@services/expenses/infrastructure/repositories/postgres-expense.repository';
 import { PostgresExpenseTypeRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-type.repository';
 import { PostgresExpenseCategoryRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-category.repository';
@@ -182,6 +184,45 @@ export class ExpensesCategoriesService extends Service {
     const useCase = new GetExpenseCategoriesUseCase(repository);
     const categories = await useCase.execute();
     return new Response(JSON.stringify({ success: true, data: categories }), {
+      status: HttpCode.SUCCESS,
+    });
+  }
+}
+
+export class ExpensesMetricsService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing expenses metrics GET request',
+      ExpensesMetricsService.name,
+    );
+    const qs = this.app.event.queryStringParameters;
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const from = qs?.['from'] ?? firstDay.toISOString().split('T')[0] ?? '';
+    const to = qs?.['to'] ?? lastDay.toISOString().split('T')[0] ?? '';
+
+    const filters: MetricsFilters = {
+      from,
+      to,
+      ...(qs?.['currency_id'] && { currency_id: qs['currency_id'] }),
+      ...(qs?.['expense_type_id'] && {
+        expense_type_id: qs['expense_type_id'],
+      }),
+      ...(qs?.['expense_category_id'] && {
+        expense_category_id: qs['expense_category_id'],
+      }),
+    };
+
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new GetMetricsUseCase(repository);
+    const metrics = await useCase.execute(this.app.user.uid, filters);
+    return new Response(JSON.stringify({ success: true, data: metrics }), {
       status: HttpCode.SUCCESS,
     });
   }

@@ -92,6 +92,10 @@ export class ApiGatewayStack extends BaseStack {
             throttlingRateLimit: 5,
             throttlingBurstLimit: 10,
           },
+          '/expenses/metrics/GET': {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
           '/expenses/types/GET': {
             throttlingRateLimit: 20,
             throttlingBurstLimit: 40,

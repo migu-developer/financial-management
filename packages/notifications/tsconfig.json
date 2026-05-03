@@ -5,7 +5,7 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@notifications/domain/types": ["./src/domain/types.ts"],
+      "@notifications/*": ["./src/*"],
       "@services/shared/*": ["node_modules/@services/shared/src/*"]
     }
   },

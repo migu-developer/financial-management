@@ -3,6 +3,7 @@ import {
   ExpenseService,
   ExpensesTypesService,
   ExpensesCategoriesService,
+  ExpensesMetricsService,
 } from './service';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { ModuleNotFoundError } from '@packages/models/shared/utils/errors';
@@ -432,6 +433,143 @@ describe('ExpensesCategoriesService', () => {
     };
     await expect(
       new ExpensesCategoriesService(makeApp({}, dbService)).executeGET(),
+    ).rejects.toThrow('DB error');
+  });
+});
+
+describe('ExpensesMetricsService', () => {
+  const mockRawMetrics = {
+    metrics: {
+      summary: {
+        total_income: '5000',
+        total_outcome: '3000',
+        total_transactions: 10,
+        avg_transaction: '800',
+      },
+      by_category: [
+        {
+          category_id: 'cat-1',
+          category_name: 'Food',
+          total: '1500',
+          count: 5,
+        },
+      ],
+      by_type: [
+        { type_id: 'type-1', type_name: 'income', total: '5000', count: 3 },
+      ],
+      by_currency: [
+        {
+          currency_id: 'cur-1',
+          currency_code: 'USD',
+          total_original: '3000',
+          total_usd: '3000',
+          count: 5,
+        },
+      ],
+      daily_trend: [{ date: '2024-01-01', income: '1000', outcome: '500' }],
+      top_expenses: [
+        {
+          id: 'exp-1',
+          name: 'Rent',
+          global_value: '1200',
+          date: '2024-01-01',
+          category_name: 'Housing',
+          currency_code: 'USD',
+          original_value: '1200',
+        },
+      ],
+    },
+  };
+
+  it('executeGET returns 200 with metrics data', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const app = makeApp(
+      {
+        queryStringParameters: {
+          from: '2024-01-01',
+          to: '2024-01-31',
+        },
+      },
+      dbService,
+    );
+    const response = await new ExpensesMetricsService(app).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+    const json = (await response.json()) as {
+      success: boolean;
+      data: { period: { from: string; to: string } };
+    };
+    expect(json.success).toBe(true);
+    expect(json.data.period).toEqual({
+      from: '2024-01-01',
+      to: '2024-01-31',
+    });
+  });
+
+  it('executeGET defaults date range to current month when not provided', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const response = await new ExpensesMetricsService(
+      makeApp({}, dbService),
+    ).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+    const json = (await response.json()) as {
+      success: boolean;
+      data: { period: { from: string; to: string } };
+    };
+    expect(json.success).toBe(true);
+    expect(json.data.period.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(json.data.period.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('executeGET passes optional filter params to the query', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const app = makeApp(
+      {
+        queryStringParameters: {
+          from: '2024-01-01',
+          to: '2024-01-31',
+          currency_id: 'cur-1',
+          expense_type_id: 'type-1',
+          expense_category_id: 'cat-1',
+        },
+      },
+      dbService,
+    );
+    const response = await new ExpensesMetricsService(app).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+
+    const calls = (dbService.queryReadOnly as jest.Mock).mock
+      .calls as unknown[][];
+    const sql = calls[0]![0] as string;
+    expect(sql).toContain('e.currency_id');
+    expect(sql).toContain('e.expense_type_id');
+    expect(sql).toContain('e.expense_category_id');
+
+    const params = calls[0]![1] as unknown[];
+    expect(params).toContain('cur-1');
+    expect(params).toContain('type-1');
+    expect(params).toContain('cat-1');
+  });
+
+  it('executeGET propagates db errors', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockRejectedValue(new Error('DB error')),
+      end: jest.fn(),
+    };
+    await expect(
+      new ExpensesMetricsService(makeApp({}, dbService)).executeGET(),
     ).rejects.toThrow('DB error');
   });
 });

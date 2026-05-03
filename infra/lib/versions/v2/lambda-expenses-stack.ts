@@ -113,6 +113,9 @@ export class LambdaExpensesStack extends BaseStack {
       gateway.authWithBody(createModel),
     );
 
+    const metricsResource = expensesResource.addResource('metrics');
+    metricsResource.addMethod('GET', integration, gateway.authOnly());
+
     const singleExpenseResource = expensesResource.addResource('{id}');
     singleExpenseResource.addMethod('GET', integration, gateway.authOnly());
     singleExpenseResource.addMethod(

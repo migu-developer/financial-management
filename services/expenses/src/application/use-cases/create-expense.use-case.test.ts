@@ -12,6 +12,7 @@ function makeMockRepository(): jest.Mocked<ExpenseRepository> {
     update: jest.fn(),
     patch: jest.fn(),
     deleteByIdAndUserUid: jest.fn(),
+    getMetrics: jest.fn(),
   };
 }
 

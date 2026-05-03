@@ -87,6 +87,43 @@ export class ApiDocsStack extends BaseStack {
       methods: [{ method: 'GET', description: 'List all expense categories' }],
     });
 
+    docs.addResource({
+      path: '/expenses/metrics',
+      description: 'Financial metrics and analytics for the authenticated user',
+      methods: [
+        {
+          method: 'GET',
+          description:
+            'Get aggregated metrics (summary, by category, by type, by currency, daily trend, top expenses)',
+          queryParameters: [
+            {
+              name: 'from',
+              description:
+                'Start date YYYY-MM-DD (default: first day of current month)',
+            },
+            {
+              name: 'to',
+              description:
+                'End date YYYY-MM-DD (default: last day of current month)',
+            },
+            { name: 'currency_id', description: 'Filter by currency UUID' },
+            {
+              name: 'expense_type_id',
+              description: 'Filter by expense type UUID (income/outcome)',
+            },
+            {
+              name: 'expense_category_id',
+              description: 'Filter by category UUID',
+            },
+          ],
+          responses: {
+            '200':
+              'MetricsResponse: period, summary, by_category, by_type, by_currency, daily_trend, top_expenses',
+          },
+        },
+      ],
+    });
+
     // ── Users ────────────────────────────────────────────
     docs.addResource({
       path: '/users',
