@@ -62,6 +62,7 @@ const defaultProps = {
   stackName: 'LambdaExchangeRates',
   description: 'Test Lambda Exchange Rates stack',
   databaseUrl: 'postgresql://localhost:5432/test',
+  databaseReadonlyUrl: 'postgresql://localhost:5432/test-readonly',
   exchangeRateApiKey: 'test-api-key',
   exchangeRateApiBaseUrl: 'https://api.example.com',
   stage: 'dev',
@@ -138,6 +139,7 @@ describe('LambdaExchangeRatesStack', () => {
       >;
       const env = fnProps.environment as Record<string, string>;
       expect(env.DATABASE_URL).toBe('postgresql://localhost:5432/test');
+      expect(env.DATABASE_READONLY_URL).toBe('postgresql://localhost:5432/test-readonly');
       expect(env.EXCHANGE_RATE_API_KEY).toBe('test-api-key');
       expect(env.EXCHANGE_RATE_API_BASE_URL).toBe('https://api.example.com');
     });

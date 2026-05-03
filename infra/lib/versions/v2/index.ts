@@ -159,6 +159,7 @@ const createLambdaExchangeRatesStack: NamedStackFactory = {
         ),
         description: 'Lambda function for exchange rate updates',
         databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
         exchangeRateApiKey: process.env.EXCHANGE_RATE_API_KEY ?? '',
         exchangeRateApiBaseUrl: process.env.EXCHANGE_RATE_API_BASE_URL ?? '',
         stage: process.env.STAGE ?? 'dev',

@@ -11,6 +11,7 @@ import { join } from 'path';
 
 export interface LambdaExchangeRatesStackProps extends BaseStackProps {
   readonly databaseUrl: string;
+  readonly databaseReadonlyUrl: string;
   readonly exchangeRateApiKey: string;
   readonly exchangeRateApiBaseUrl: string;
   readonly stage: string;
@@ -27,6 +28,7 @@ export class LambdaExchangeRatesStack extends BaseStack {
       stackName,
       description,
       databaseUrl,
+      databaseReadonlyUrl,
       exchangeRateApiKey,
       exchangeRateApiBaseUrl,
       stage,
@@ -63,6 +65,7 @@ export class LambdaExchangeRatesStack extends BaseStack {
       logGroup,
       environment: {
         DATABASE_URL: databaseUrl,
+        DATABASE_READONLY_URL: databaseReadonlyUrl,
         EXCHANGE_RATE_API_KEY: exchangeRateApiKey,
         EXCHANGE_RATE_API_BASE_URL: exchangeRateApiBaseUrl,
       },
