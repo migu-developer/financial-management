@@ -131,27 +131,71 @@ export class MonitoringStack extends BaseStack {
       'AppId',
     );
 
-    const lambdaFunctions: Record<string, string> = {
-      Expenses: importFromVersion(this, 'v2', 'LambdaExpenses', 'FunctionName'),
-      Documents: importFromVersion(
-        this,
-        'v2',
-        'LambdaDocuments',
-        'FunctionName',
-      ),
-      Currencies: importFromVersion(
-        this,
-        'v2',
-        'LambdaCurrencies',
-        'FunctionName',
-      ),
-      Users: importFromVersion(this, 'v2', 'LambdaUsers', 'FunctionName'),
-      UpdateRates: importFromVersion(
-        this,
-        'v2',
-        'LambdaExchangeRates',
-        'FunctionName',
-      ),
+    interface LambdaAlarmConfig {
+      fnName: string;
+      errorThreshold: number;
+      evaluationPeriods: number;
+      datapointsToAlarm: number;
+      period: ReturnType<typeof Duration.minutes>;
+      includeThrottleAlarm: boolean;
+    }
+
+    const lambdaFunctions: Record<string, LambdaAlarmConfig> = {
+      Expenses: {
+        fnName: importFromVersion(this, 'v2', 'LambdaExpenses', 'FunctionName'),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(1),
+        includeThrottleAlarm: true,
+      },
+      Documents: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'LambdaDocuments',
+          'FunctionName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(1),
+        includeThrottleAlarm: true,
+      },
+      Currencies: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'LambdaCurrencies',
+          'FunctionName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(1),
+        includeThrottleAlarm: true,
+      },
+      Users: {
+        fnName: importFromVersion(this, 'v2', 'LambdaUsers', 'FunctionName'),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(1),
+        includeThrottleAlarm: true,
+      },
+      UpdateRates: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'LambdaExchangeRates',
+          'FunctionName',
+        ),
+        errorThreshold: 2,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        period: Duration.hours(24),
+        includeThrottleAlarm: false,
+      },
     };
 
     const cognitoTriggers: Record<string, string> = {
@@ -231,59 +275,41 @@ export class MonitoringStack extends BaseStack {
     this.alarms.push(apiLatencyAlarm);
 
     // ── Lambda Alarms (per service function) ───────────────
-    for (const [service, fnName] of Object.entries(lambdaFunctions)) {
+    for (const [service, config] of Object.entries(lambdaFunctions)) {
       const errAlarm = new Alarm(this, `${stackName}-${service}-ErrorsAlarm`, {
         alarmName: `${stackName}-Lambda-${service}-Errors`,
         alarmDescription: `Lambda ${service} errors exceed threshold`,
-        metric: lambdaMetric(fnName, 'Errors'),
-        threshold: 3,
-        evaluationPeriods: 3,
-        datapointsToAlarm: 2,
+        metric: lambdaMetric(config.fnName, 'Errors').with({
+          period: config.period,
+        }),
+        threshold: config.errorThreshold,
+        evaluationPeriods: config.evaluationPeriods,
+        datapointsToAlarm: config.datapointsToAlarm,
         comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
         treatMissingData: TreatMissingData.NOT_BREACHING,
       });
       errAlarm.addAlarmAction(snsAction);
       this.alarms.push(errAlarm);
 
-      const throttleAlarm = new Alarm(
-        this,
-        `${stackName}-${service}-ThrottlesAlarm`,
-        {
-          alarmName: `${stackName}-Lambda-${service}-Throttles`,
-          alarmDescription: `Lambda ${service} is being throttled`,
-          metric: lambdaMetric(fnName, 'Throttles'),
-          threshold: 0,
-          evaluationPeriods: 1,
-          datapointsToAlarm: 1,
-          comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-          treatMissingData: TreatMissingData.NOT_BREACHING,
-        },
-      );
-      throttleAlarm.addAlarmAction(snsAction);
-      this.alarms.push(throttleAlarm);
+      if (config.includeThrottleAlarm) {
+        const throttleAlarm = new Alarm(
+          this,
+          `${stackName}-${service}-ThrottlesAlarm`,
+          {
+            alarmName: `${stackName}-Lambda-${service}-Throttles`,
+            alarmDescription: `Lambda ${service} is being throttled`,
+            metric: lambdaMetric(config.fnName, 'Throttles'),
+            threshold: 0,
+            evaluationPeriods: 1,
+            datapointsToAlarm: 1,
+            comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treatMissingData: TreatMissingData.NOT_BREACHING,
+          },
+        );
+        throttleAlarm.addAlarmAction(snsAction);
+        this.alarms.push(throttleAlarm);
+      }
     }
-
-    // ── Exchange Rate Scheduler Alarm (24h window) ─────────
-    const updateRatesFnName = lambdaFunctions['UpdateRates']!;
-    const updateRatesAlarm = new Alarm(
-      this,
-      `${stackName}-UpdateRates-ErrorsAlarm`,
-      {
-        alarmName: `${stackName}-Lambda-UpdateRates-24h-Errors`,
-        alarmDescription:
-          'Exchange rate update Lambda errors exceed 2 in 24 hours',
-        metric: lambdaMetric(updateRatesFnName, 'Errors').with({
-          period: Duration.hours(24),
-        }),
-        threshold: 2,
-        evaluationPeriods: 1,
-        datapointsToAlarm: 1,
-        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-        treatMissingData: TreatMissingData.NOT_BREACHING,
-      },
-    );
-    updateRatesAlarm.addAlarmAction(snsAction);
-    this.alarms.push(updateRatesAlarm);
 
     // ── Cognito Trigger Alarms ─────────────────────────────
     for (const [trigger, fnName] of Object.entries(cognitoTriggers)) {
@@ -361,7 +387,9 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    const fnEntries = Object.entries(lambdaFunctions);
+    const fnEntries = Object.entries(lambdaFunctions).map(
+      ([name, config]) => [name, config.fnName] as [string, string],
+    );
 
     this.dashboard.addWidgets(
       new GraphWidget({
