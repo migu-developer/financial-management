@@ -175,6 +175,6 @@ export class ApiDocsStack extends BaseStack {
     });
 
     // ── Documentation Version ────────────────────────────
-    docs.createVersion('1.0.0', 'Initial API documentation');
+    docs.createVersion('1.0.1', 'Initial API documentation');
   }
 }
