@@ -41,6 +41,8 @@ const config: Config = {
       '<rootDir>/tests/__mocks__/async-storage.ts',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/tests/__mocks__/nativewind.ts',
+    '^react-native-gifted-charts$':
+      '<rootDir>/tests/__mocks__/react-native-gifted-charts.ts',
     '^expo-linking$': '<rootDir>/tests/__mocks__/expo-linking.ts',
     '^expo-web-browser$': '<rootDir>/tests/__mocks__/expo-web-browser.ts',
     '^react-native-qrcode-svg$':

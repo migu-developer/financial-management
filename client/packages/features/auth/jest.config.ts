@@ -24,6 +24,8 @@ const config: Config = {
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
+    '^react-native-gifted-charts$':
+      '<rootDir>/src/__mocks__/react-native-gifted-charts.ts',
     '^expo-crypto$': '<rootDir>/src/__mocks__/expo-crypto.ts',
     '^expo-linking$': '<rootDir>/src/__mocks__/expo-linking.ts',
     '^expo-web-browser$': '<rootDir>/src/__mocks__/expo-web-browser.ts',
