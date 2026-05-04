@@ -44,7 +44,12 @@ pages/        # Full screens (in app/ routes)
 
 ## Platform Detection
 
-- Use `Platform.OS` or utility helpers (`isWeb`, `isMobile`).
+- ALWAYS use platform helpers from `@packages/utils` (`isWeb()`, `isMobile()`,
+  `isIOS()`, `isAndroid()`) for platform detection. NEVER use `Platform.OS`
+  directly — the helpers provide a consistent, tested API.
+- Inside React components, ALWAYS wrap platform helpers in `useMemo`:
+  `const isPlatformWeb = useMemo(() => isWeb(), [])`. This avoids
+  re-evaluation on every render.
 - Prefer responsive Tailwind classes over platform branching when possible.
 
 ## peerDependencies
