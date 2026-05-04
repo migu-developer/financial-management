@@ -539,9 +539,9 @@ describe('ExpensesMetricsService', () => {
         queryStringParameters: {
           from: '2024-01-01',
           to: '2024-01-31',
-          currency_id: 'cur-1',
-          expense_type_id: 'type-1',
-          expense_category_id: 'cat-1',
+          currency_id: '00000000-0000-0000-0000-000000000001',
+          expense_type_id: '00000000-0000-0000-0000-000000000002',
+          expense_category_id: '00000000-0000-0000-0000-000000000003',
         },
       },
       dbService,
@@ -557,9 +557,9 @@ describe('ExpensesMetricsService', () => {
     expect(sql).toContain('e.expense_category_id');
 
     const params = calls[0]![1] as unknown[];
-    expect(params).toContain('cur-1');
-    expect(params).toContain('type-1');
-    expect(params).toContain('cat-1');
+    expect(params).toContain('00000000-0000-0000-0000-000000000001');
+    expect(params).toContain('00000000-0000-0000-0000-000000000002');
+    expect(params).toContain('00000000-0000-0000-0000-000000000003');
   });
 
   it('executeGET propagates db errors', async () => {
