@@ -1,5 +1,6 @@
 import React from 'react';
 import { FlatList, View } from 'react-native';
+import { space } from '@features/ui/utils/spacing';
 import type {
   Expense,
   ExpenseType,
@@ -44,7 +45,7 @@ export function ExpenseList({
 }: ExpenseListProps) {
   if (loading && expenses.length === 0) {
     return (
-      <View className="flex-1" style={{ paddingBottom: 24 }}>
+      <View className="flex-1" style={{ paddingBottom: space.lg }}>
         <FilterBarSkeleton />
         {Array.from({ length: SKELETON_COUNT }, (_, i) => (
           <ExpenseCardSkeleton key={i} />
@@ -82,7 +83,7 @@ export function ExpenseList({
       onEndReachedThreshold={0.5}
       ListFooterComponent={loadingMore ? <LoadingSpinner size="small" /> : null}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingBottom: space.lg }}
     />
   );
 }

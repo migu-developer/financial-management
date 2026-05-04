@@ -17,6 +17,7 @@ const config: Config = {
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
+    '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
     '^@packages/i18n$': '<rootDir>/../../i18n/src/index.ts',
     '^@packages/i18n/(.*)$': '<rootDir>/../../i18n/src/$1',
   },

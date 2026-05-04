@@ -3,6 +3,8 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
   ExpenseFilters,
+  MetricsFilters,
+  MetricsResponse,
   Currency,
   ExpenseType,
   ExpenseCategory,
@@ -99,6 +101,28 @@ export class ExpenseApiRepository implements ExpenseRepositoryPort {
   async listExpenseCategories(): Promise<ExpenseCategory[]> {
     const response = await this.api.get<ApiResponse<ExpenseCategory[]>>(
       '/expenses/categories',
+    );
+    return response.data;
+  }
+
+  async getMetrics(
+    filters: MetricsFilters,
+    signal?: AbortSignal,
+  ): Promise<MetricsResponse> {
+    const params: Record<string, string> = {
+      from: filters.from,
+      to: filters.to,
+    };
+    if (filters.currency_id) params['currency_id'] = filters.currency_id;
+    if (filters.expense_type_id)
+      params['expense_type_id'] = filters.expense_type_id;
+    if (filters.expense_category_id)
+      params['expense_category_id'] = filters.expense_category_id;
+
+    const response = await this.api.get<ApiResponse<MetricsResponse>>(
+      '/expenses/metrics',
+      params,
+      signal,
     );
     return response.data;
   }

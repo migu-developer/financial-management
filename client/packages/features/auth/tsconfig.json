@@ -14,7 +14,8 @@
       "@features/ui/components/*": [
         "./node_modules/@features/ui/src/components/*"
       ],
-      "@features/ui/utils/*": ["./node_modules/@features/ui/src/utils/*"]
+      "@features/ui/utils/*": ["./node_modules/@features/ui/src/utils/*"],
+      "@packages/models/*": ["./node_modules/@packages/models/src/*"]
     }
   },
   "include": ["src", "nativewind-env.d.ts", "eslint.config.ts"],

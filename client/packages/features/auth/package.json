@@ -13,6 +13,7 @@
   "dependencies": {
     "@expo/vector-icons": "catalog:",
     "@features/ui": "workspace:*",
+    "@packages/models": "workspace:*",
     "@react-native-async-storage/async-storage": "catalog:",
     "@packages/i18n": "workspace:*",
     "@packages/utils": "workspace:*",

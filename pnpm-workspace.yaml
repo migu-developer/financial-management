@@ -53,6 +53,7 @@ catalog:
   expo-font: ~14.0.11
   expo-haptics: ~15.0.8
   expo-image: ~3.0.11
+  expo-linear-gradient: ~55.0.13
   expo-linking: ~8.0.11
   expo-router: ~6.0.23
   expo-secure-store: ~15.0.8
@@ -71,6 +72,7 @@ catalog:
   react-dom: 19.1.0
   react-email: ^5.2.10
   react-native: 0.81.5
+  react-native-gifted-charts: ^1.4.76
   react-native-gesture-handler: ~2.31.0
   react-native-qrcode-svg: ^6.3.21
   react-native-reanimated: ~4.1.7

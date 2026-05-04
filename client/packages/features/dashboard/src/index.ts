@@ -33,3 +33,11 @@ export {
   useExpenses,
 } from './presentation/providers/expense-provider';
 export type { ExpenseContextValue } from './presentation/providers/expense-provider';
+
+// Metrics
+export {
+  MetricsProvider,
+  useMetrics,
+} from './presentation/providers/metrics-provider';
+export type { MetricsContextValue } from './presentation/providers/metrics-provider';
+export { GetMetricsUseCase } from './application/use-cases/get-metrics.use-case';

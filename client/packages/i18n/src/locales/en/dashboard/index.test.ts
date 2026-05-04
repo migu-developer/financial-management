@@ -10,6 +10,7 @@ describe('en/dashboard namespace', () => {
   it('has required top-level keys', () => {
     expect(dashboard).toHaveProperty('home');
     expect(dashboard).toHaveProperty('expenses');
+    expect(dashboard).toHaveProperty('metrics');
   });
 
   it('home has required keys', () => {
@@ -126,6 +127,88 @@ describe('en/dashboard namespace', () => {
 
     it('selector.selectTitle contains field placeholder', () => {
       expect(dashboard.expenses.selector.selectTitle).toContain('{{field}}');
+    });
+  });
+
+  describe('metrics namespace', () => {
+    it('has required keys', () => {
+      expect(dashboard.metrics).toHaveProperty('title');
+      expect(dashboard.metrics).toHaveProperty('income');
+      expect(dashboard.metrics).toHaveProperty('outcome');
+      expect(dashboard.metrics).toHaveProperty('balance');
+      expect(dashboard.metrics).toHaveProperty('transactions');
+      expect(dashboard.metrics).toHaveProperty('avgTransaction');
+      expect(dashboard.metrics).toHaveProperty('topExpenses');
+      expect(dashboard.metrics).toHaveProperty('byCategory');
+      expect(dashboard.metrics).toHaveProperty('byCurrency');
+      expect(dashboard.metrics).toHaveProperty('dailyTrend');
+      expect(dashboard.metrics).toHaveProperty('noData');
+      expect(dashboard.metrics).toHaveProperty('allCategories');
+      expect(dashboard.metrics).toHaveProperty('allCurrencies');
+      expect(dashboard.metrics).toHaveProperty('allTypes');
+      expect(dashboard.metrics).toHaveProperty('filterFrom');
+      expect(dashboard.metrics).toHaveProperty('filterTo');
+      expect(dashboard.metrics).toHaveProperty('globalCurrency');
+      expect(dashboard.metrics).toHaveProperty('equivalent');
+      expect(dashboard.metrics).toHaveProperty('byCategoryUsd');
+      expect(dashboard.metrics).toHaveProperty('periodTotal');
+    });
+
+    it('all top-level metrics values are non-empty strings', () => {
+      const metricsKeys = [
+        'title',
+        'income',
+        'outcome',
+        'balance',
+        'transactions',
+        'avgTransaction',
+        'topExpenses',
+        'byCategory',
+        'byCurrency',
+        'dailyTrend',
+        'noData',
+        'allCategories',
+        'allCurrencies',
+        'allTypes',
+        'filterFrom',
+        'filterTo',
+        'globalCurrency',
+        'equivalent',
+        'byCategoryUsd',
+        'periodTotal',
+      ] as const;
+      for (const key of metricsKeys) {
+        const value = dashboard.metrics[key];
+        expect(typeof value).toBe('string');
+        expect((value as string).length).toBeGreaterThan(0);
+      }
+    });
+
+    it('has metrics.errors sub-keys', () => {
+      expect(dashboard.metrics.errors).toHaveProperty('loadMetrics');
+      expect(typeof dashboard.metrics.errors.loadMetrics).toBe('string');
+      expect(dashboard.metrics.errors.loadMetrics.length).toBeGreaterThan(0);
+    });
+
+    it('has globalCurrency key', () => {
+      expect(dashboard.metrics).toHaveProperty('globalCurrency');
+      expect(dashboard.metrics.globalCurrency).toBe('USD');
+    });
+
+    it('equivalent contains value placeholder', () => {
+      expect(dashboard.metrics.equivalent).toContain('{{value}}');
+    });
+
+    it('has byCategoryUsd key', () => {
+      expect(dashboard.metrics).toHaveProperty('byCategoryUsd');
+      expect(typeof dashboard.metrics.byCategoryUsd).toBe('string');
+      expect(dashboard.metrics.byCategoryUsd.length).toBeGreaterThan(0);
+    });
+
+    it('has periodTotal key', () => {
+      expect(dashboard.metrics).toHaveProperty('periodTotal');
+      expect(typeof dashboard.metrics.periodTotal).toBe('string');
+      expect(dashboard.metrics.periodTotal.length).toBeGreaterThan(0);
     });
   });
 

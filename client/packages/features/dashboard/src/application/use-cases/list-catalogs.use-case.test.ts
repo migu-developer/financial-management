@@ -35,6 +35,7 @@ function createMockRepository(): jest.Mocked<ExpenseRepositoryPort> {
     listCurrencies: jest.fn(),
     listExpenseTypes: jest.fn(),
     listExpenseCategories: jest.fn(),
+    getMetrics: jest.fn(),
   };
 }
 

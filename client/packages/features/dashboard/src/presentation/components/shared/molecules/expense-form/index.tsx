@@ -10,6 +10,7 @@ import type {
 } from '@packages/models/expenses';
 import {
   Button,
+  DateInput,
   FormInput,
   Modal,
   SelectableOption,
@@ -100,6 +101,10 @@ export function ExpenseForm({
   const isDark = colorScheme === ColorScheme.DARK;
   const [name, setName] = useState('');
   const [value, setValue] = useState('');
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [currencyId, setCurrencyId] = useState('');
   const [expenseTypeId, setExpenseTypeId] = useState('');
   const [expenseCategoryId, setExpenseCategoryId] = useState('');
@@ -112,6 +117,7 @@ export function ExpenseForm({
     if (expense) {
       setName(expense.name);
       setValue(String(expense.value));
+      if (expense.date) setDate(expense.date.split('T')[0]!);
       setCurrencyId(expense.currency_id);
       setExpenseTypeId(expense.expense_type_id);
       setExpenseCategoryId(expense.expense_category_id ?? '');
@@ -137,6 +143,7 @@ export function ExpenseForm({
       currency_id: currencyId,
       expense_type_id: expenseTypeId,
       ...(expenseCategoryId && { expense_category_id: expenseCategoryId }),
+      ...(date && { date }),
     });
   };
 
@@ -159,6 +166,12 @@ export function ExpenseForm({
         value={name}
         onChangeText={setName}
         placeholder={t('expenses.form.namePlaceholder')}
+      />
+
+      <DateInput
+        label={t('expenses.form.date')}
+        value={date}
+        onChangeText={setDate}
       />
 
       {/* Currency + Value — PhoneInput style */}

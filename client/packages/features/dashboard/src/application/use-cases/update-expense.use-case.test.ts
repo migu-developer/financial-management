@@ -12,6 +12,8 @@ const mockExpense: Expense = {
   expense_category_id: 'cat-2',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-02-01T00:00:00.000Z',
+  date: '2026-01-01',
+  global_value: 75,
   created_by: null,
   modified_by: 'user-1',
 };
@@ -26,6 +28,7 @@ function createMockRepository(): jest.Mocked<ExpenseRepositoryPort> {
     listCurrencies: jest.fn(),
     listExpenseTypes: jest.fn(),
     listExpenseCategories: jest.fn(),
+    getMetrics: jest.fn(),
   };
 }
 

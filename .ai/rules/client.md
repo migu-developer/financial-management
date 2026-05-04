@@ -78,12 +78,35 @@ pnpm --filter @client/main typecheck
 pnpm --filter @client/main test
 ```
 
-## Design Tokens — No Hardcoded Values
+## Design Tokens — STRICTLY No Hardcoded Values
 
-- NEVER hardcode colors -- use tokens from `@features/ui/utils/colors`
-  (e.g., `colors.primary[500]`, `colors.semantic.error`).
-- NEVER hardcode spacing, radius, shadows, or font sizes -- use tokens from
-  `@features/ui/utils/colors` (`space`, `radius`, `boxShadow`, `iconSize`).
+This is CRITICAL. Violations of these rules create visual inconsistency and
+make the design system useless. Every PR will be rejected if these are broken.
+
+- NEVER use hardcoded color strings (`'#1e293b'`, `'#ffffff'`, `'red'`) in
+  any component. ALWAYS use tokens from `@features/ui/utils/colors`:
+  `primary[500]`, `neutral[400]`, `surface.dark.card`, `generic.error`, etc.
+- NEVER use hardcoded font sizes (`fontSize: 12`, `fontSize: 16`). ALWAYS
+  use `fontSizeScale` from `@features/ui/utils/spacing`:
+  `fontSizeScale.xs` (12), `fontSizeScale.sm` (14), `fontSizeScale.base` (16).
+- NEVER use hardcoded spacing (`padding: 8`, `margin: 16`). Use `space`
+  tokens from `@features/ui/utils/spacing`: `space.sm`, `space.md`, etc.
+  Exception: Tailwind classes (`px-4`, `mt-2`) are acceptable.
+- NEVER use hardcoded font weights (`fontWeight: '600'`, `fontWeight: '700'`).
+  ALWAYS use `fontWeight` from `@features/ui/utils/typography`:
+  `fontWeight.normal` ('400'), `fontWeight.medium` ('500'),
+  `fontWeight.semibold` ('600'), `fontWeight.bold` ('700').
+  Exception: Tailwind classes (`font-semibold`, `font-bold`) are acceptable.
+- NEVER use hardcoded border radius (`borderRadius: 8`). Use `radius` tokens
+  from `@features/ui/utils/spacing`: `radius.sm` (4), `radius.md` (8),
+  `radius.lg` (12), `radius.xl` (16).
+- NEVER hardcode shadows. Use `boxShadow` tokens.
+
+Token source files (single source of truth):
+
+- Colors: `@features/ui/utils/colors`
+- Spacing, fontSize, radius, iconSize: `@features/ui/utils/spacing`
+- FontWeight, fontFamily: `@features/ui/utils/typography`
 - NEVER hardcode user-facing strings -- always use `useTranslation()` keys.
 - Reusable components MUST go in `@features/ui` (atoms/molecules), not in
   individual feature packages. Feature-specific components stay in the feature.
