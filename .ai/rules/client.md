@@ -41,6 +41,9 @@ pages/        # Full screens (in app/ routes)
 - Use `useTranslation()` hook from `@packages/i18n`.
 - Translation keys are namespaced by feature.
 - NEVER hardcode user-facing strings -- always use translation keys.
+  This includes `accessibilityLabel`, `accessibilityHint`, and any other
+  text that screen readers present to the user. Pass translated strings
+  via props or use `useTranslation()` directly.
 
 ## Platform Detection
 
