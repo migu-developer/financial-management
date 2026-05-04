@@ -21,6 +21,6 @@ export class PostgresCurrencyConversionService implements CurrencyConversionServ
     const rate = rows[0];
     if (!rate) return null;
 
-    return value * rate.rate_to_usd;
+    return value / Number(rate.rate_to_usd);
   }
 }

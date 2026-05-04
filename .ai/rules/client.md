@@ -82,6 +82,9 @@ pnpm --filter @client/main test
 - NEVER hardcode user-facing strings -- always use `useTranslation()` keys.
 - Reusable components MUST go in `@features/ui` (atoms/molecules), not in
   individual feature packages. Feature-specific components stay in the feature.
+- Every generic input type (text, date, number, selector, etc.) MUST exist as
+  an atom in `@features/ui` before being used in any feature. If it does not
+  exist, create it first. NEVER inline a generic input directly in a feature.
 
 ## Testing Conventions
 
