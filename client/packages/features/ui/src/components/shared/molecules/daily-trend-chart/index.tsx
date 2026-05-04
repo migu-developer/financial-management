@@ -109,7 +109,8 @@ export function DailyTrendChart({ trends }: DailyTrendChartProps) {
   }
 
   const Y_AXIS_WIDTH = 50;
-  const availableWidth = containerWidth > 0 ? containerWidth - Y_AXIS_WIDTH : 0;
+  const availableWidth =
+    containerWidth > 0 ? containerWidth - Y_AXIS_WIDTH : space.zero;
   const barPairs = trends.length;
   const barsPerPair = 2;
   const gapBetweenPairs = 20;

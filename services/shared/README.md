@@ -43,11 +43,21 @@ abstract class LoggerService {
 
 ### TracerServiceImplementation
 
-AWS X-Ray tracing wrapper using Lambda Powertools.
+AWS X-Ray tracing wrapper using Lambda Powertools. Designed for Node.js 24 runtime.
 
 - Annotates cold starts, HTTP methods, resources, and user IDs.
 - Provides a `trace<T>(name, fn)` method for wrapping arbitrary async operations in named subsegments.
+- Provides `captureAWSv3Client<T>(client)` for tracing AWS SDK v3 service clients (e.g. S3, SES).
 - Designed as a singleton per service -- instantiated at module scope outside the handler.
+
+### `@trace` Decorator
+
+Stage 3 decorator for method-level X-Ray subsegments, defined in `infrastructure/decorators/trace.ts`.
+
+- Usage: `@trace('SegmentName')` on any async class method.
+- Creates an X-Ray subsegment with the given name, closes it on success, and records errors on failure.
+- Preferred over the legacy `@tracer.captureMethod()` Powertools decorator.
+- Does NOT require `experimentalDecorators` in tsconfig.
 
 ### matchRoute
 
@@ -166,12 +176,15 @@ services/shared/
     │       ├── error-handler.ts          # ErrorHandler class
     │       └── error-handler.test.ts
     ├── infrastructure/
+    │   ├── decorators/
+    │   │   ├── trace.ts                   # @trace Stage 3 decorator for X-Ray subsegments
+    │   │   └── trace.test.ts
     │   └── services/
     │       ├── DatabaseServiceImp.ts      # PostgresDatabaseService (write + read pools)
     │       ├── DatabaseServiceImp.test.ts
     │       ├── LoggerServiceImp.ts        # LoggerServiceImplementation (Powertools)
     │       ├── LoggerServiceImp.test.ts
-    │       └── TracerServiceImp.ts        # TracerServiceImplementation (X-Ray)
+    │       └── TracerServiceImp.ts        # TracerServiceImplementation (X-Ray + captureAWSv3Client)
     ├── test/
     │   ├── setup.ts                      # Shared test setup
     │   ├── factories/

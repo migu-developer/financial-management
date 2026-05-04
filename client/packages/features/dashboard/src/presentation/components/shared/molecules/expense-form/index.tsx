@@ -214,7 +214,7 @@ export function ExpenseForm({
             placeholder={t('expenses.form.valuePlaceholder')}
             keyboardType="decimal-pad"
             className="flex-1 px-3 py-3 rounded-none border-0"
-            style={[{ borderWidth: 0 }]}
+            style={[{ borderWidth: space.zero }]}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             accessibilityLabel={t('expenses.form.value')}

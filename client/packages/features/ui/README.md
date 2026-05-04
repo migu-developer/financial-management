@@ -4,40 +4,54 @@ Design system and shared UI component library for the Financial Management appli
 
 ## Components
 
-### Atoms (21)
+### Atoms (28)
 
-| Component          | Description                                          |
-| ------------------ | ---------------------------------------------------- |
-| `Avatar`           | User avatar with initials fallback                   |
-| `Badge`            | Status or count badge                                |
-| `Button`           | Primary action button with variants                  |
-| `Card`             | Container card with shadow                           |
-| `EmptyState`       | Empty state placeholder with icon and message        |
-| `FilterChip`       | Selectable filter tag                                |
-| `FormInput`        | Labeled text input with validation error display     |
-| `Icon`             | Expo vector icon wrapper                             |
-| `InfoPopup`        | Informational popup/tooltip                          |
-| `LanguageSelector` | Language picker (en/es)                              |
-| `LoadingSpinner`   | Activity indicator                                   |
-| `Modal`            | Overlay modal dialog                                 |
-| `PasswordInput`    | Password input with show/hide toggle                 |
-| `PhoneInput`       | International phone input with country code selector |
-| `SearchInput`      | Search text input with icon                          |
-| `SelectableOption` | Radio/checkbox option item                           |
-| `SelectorField`    | Dropdown-style selector field                        |
-| `Skeleton`         | Animated loading placeholder                         |
-| `Text`             | Typography component with design system styles       |
-| `TextInputBase`    | Base text input primitive                            |
-| `ThemeToggle`      | Light/dark mode toggle switch                        |
+| Component              | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `Avatar`               | User avatar with initials fallback                   |
+| `Badge`                | Status or count badge                                |
+| `Button`               | Primary action button with variants                  |
+| `ChatBubble`           | Chat message bubble (user/bot variants)              |
+| `ChatInput`            | Text input for chat messages with send button        |
+| `CurrencyAmount`       | Formatted currency amount with symbol                |
+| `Card`                 | Container card with shadow                           |
+| `DateInput`            | Date picker input field (YYYY-MM-DD)                 |
+| `EmptyState`           | Empty state placeholder with icon and message        |
+| `FilterChip`           | Selectable filter tag                                |
+| `FloatingActionButton` | Positioned floating action button                    |
+| `FormInput`            | Labeled text input with validation error display     |
+| `Icon`                 | Expo vector icon wrapper                             |
+| `InfoPopup`            | Informational popup/tooltip                          |
+| `LanguageSelector`     | Language picker (en/es)                              |
+| `LoadingSpinner`       | Activity indicator                                   |
+| `Modal`                | Overlay modal dialog                                 |
+| `PasswordInput`        | Password input with show/hide toggle                 |
+| `ProgressBar`          | Horizontal progress bar with percentage fill         |
+| `PhoneInput`           | International phone input with country code selector |
+| `SearchInput`          | Search text input with icon                          |
+| `SelectableOption`     | Radio/checkbox option item                           |
+| `SelectorField`        | Dropdown-style selector field                        |
+| `Skeleton`             | Animated loading placeholder                         |
+| `StatCard`             | Metric statistic card with label, value, and trend   |
+| `Text`                 | Typography component with design system styles       |
+| `TextInputBase`        | Base text input primitive                            |
+| `ThemeToggle`          | Light/dark mode toggle switch                        |
 
-### Molecules (4)
+### Molecules (11)
 
-| Component          | Description                                                |
-| ------------------ | ---------------------------------------------------------- |
-| `ConfirmDialog`    | Confirmation modal with cancel/confirm actions             |
-| `CurrencyDisplay`  | Formatted currency amount display                          |
-| `FilterBar`        | Horizontal scrollable filter chip bar                      |
-| `SocialAuthButton` | OAuth provider button (Google, Facebook, Apple, Microsoft) |
+| Component              | Description                                                                 |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `CategoryBreakdown`    | Per-category expense breakdown with progress bars and percentages           |
+| `ChatMessageList`      | Scrollable list of chat messages (user and bot bubbles)                     |
+| `ConfirmDialog`        | Confirmation modal with cancel/confirm actions                              |
+| `CurrencyDisplay`      | Formatted currency amount display                                           |
+| `CurrencyDistribution` | Per-currency distribution showing original and USD-equivalent totals        |
+| `DailyTrendChart`      | Line chart showing daily income/outcome trends (react-native-gifted-charts) |
+| `FilterBar`            | Horizontal scrollable filter chip bar                                       |
+| `MetricsFilterBar`     | Date range and category/type/currency filter controls for metrics           |
+| `MetricsSummaryRow`    | Horizontal row of StatCards showing income, outcome, and balance            |
+| `SocialAuthButton`     | OAuth provider button (Google, Facebook, Apple, Microsoft)                  |
+| `TopExpensesList`      | Ranked list of top expenses by global_value                                 |
 
 ## Color tokens
 
@@ -153,7 +167,7 @@ The `ThemeContext` is a plain React context. The actual provider (`PreferencesPr
 
 ### External
 
-@expo/vector-icons, libphonenumber-js
+@expo/vector-icons, libphonenumber-js, react-native-gifted-charts
 
 ## Scripts
 

@@ -14,6 +14,7 @@ import {
 } from '@react-email/components';
 import tailwindConfig from '@root/tailwind.config';
 import { config } from '@config/index';
+import { space } from '@features/ui/src/utils/spacing';
 
 const baseUrl = config.ASSETS_URL;
 const applicationUrl = config.APPLICATION_URL;
@@ -98,7 +99,7 @@ export function EmailLayout({ preview, children, footer }: EmailLayoutProps) {
           style={{
             padding: '24px 16px',
             width: '100%',
-            margin: 0,
+            margin: space.zero,
             boxSizing: 'border-box',
           }}
         >

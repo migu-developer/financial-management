@@ -41,3 +41,6 @@ export {
 } from './presentation/providers/metrics-provider';
 export type { MetricsContextValue } from './presentation/providers/metrics-provider';
 export { GetMetricsUseCase } from './application/use-cases/get-metrics.use-case';
+
+// AI Chat
+export { AIChatDrawer } from './presentation/components/shared/organisms/ai-chat-drawer';

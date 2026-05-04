@@ -101,6 +101,16 @@ export const dashboard = {
       loadMetrics: 'Error al cargar metricas',
     },
   },
+  aiChat: {
+    title: 'Asistente AI',
+    placeholder: 'Describe tu gasto...',
+    welcomeMessage:
+      'Hola! Puedo ayudarte a registrar gastos. Dime en que gastaste, envia una foto del recibo o graba una nota de voz.',
+    comingSoon: 'Esta funcionalidad estara disponible pronto',
+    botReply:
+      'Entendido! Esta funcionalidad esta en desarrollo. Pronto podre crear gastos desde tus mensajes automaticamente.',
+    send: 'Enviar',
+  },
 } as const;
 
 export type DashboardTranslation = typeof dashboard;

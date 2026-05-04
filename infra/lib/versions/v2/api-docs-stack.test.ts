@@ -150,11 +150,11 @@ describe('ApiDocsStack', () => {
     expect(methods).toEqual(['GET', 'PATCH']);
   });
 
-  test('creates documentation version 1.0.0', () => {
+  test('creates documentation version 1.0.1', () => {
     createStack();
     expect(mockCreateVersion).toHaveBeenCalledTimes(1);
     expect(mockCreateVersion).toHaveBeenCalledWith(
-      '1.0.0',
+      '1.0.1',
       'Initial API documentation',
     );
   });

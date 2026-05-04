@@ -26,6 +26,14 @@ export type {
   Currency,
   ExpenseType,
   ExpenseCategory,
+  MetricsFilters,
+  MetricsSummary,
+  MetricsByCategory,
+  MetricsByType,
+  MetricsByCurrency,
+  MetricsDailyTrend,
+  MetricsTopExpense,
+  MetricsResponse,
 } from './expenses';
 ```
 
@@ -37,7 +45,7 @@ export type {
 | `@packages/models/shared/fields`          | `UUID_PATTERN`, `uuidField`, `UUID_REGEX`          |
 | `@packages/models/shared/utils/errors`    | All error classes and error codes                  |
 | `@packages/models/shared/utils/http-code` | `HttpCode` enum                                    |
-| `@packages/models/expenses`               | Expense schemas, types, filters                    |
+| `@packages/models/expenses`               | Expense schemas, types, filters, metrics types     |
 | `@packages/models/users/types`            | `UserProfile`, `CreateUserInput`, `PatchUserInput` |
 | `@packages/models/users/schema`           | `createUserSchema`, `patchUserSchema`              |
 | `@packages/models/users/utils`            | `getUserProfile()`                                 |
@@ -68,25 +76,40 @@ Input types: `CreateUserInput` (required: `uid`, `email`), `PatchUserInput` (all
 
 ### Expense
 
-| Field                        | Type             | Description                           |
-| ---------------------------- | ---------------- | ------------------------------------- |
-| `id`                         | `string`         | UUID                                  |
-| `user_id`                    | `string`         | FK to users                           |
-| `name`                       | `string`         | Expense description                   |
-| `value`                      | `number`         | Amount (positive, exclusive of zero)  |
-| `currency_id`                | `string`         | FK to currencies                      |
-| `expense_type_id`            | `string`         | FK to expenses_types (income/outcome) |
-| `expense_category_id`        | `string \| null` | FK to expenses_categories             |
-| `created_at` / `updated_at`  | `string`         | Timestamps                            |
-| `created_by` / `modified_by` | `string \| null` | Audit fields                          |
+| Field                        | Type             | Description                            |
+| ---------------------------- | ---------------- | -------------------------------------- |
+| `id`                         | `string`         | UUID                                   |
+| `user_id`                    | `string`         | FK to users                            |
+| `name`                       | `string`         | Expense description                    |
+| `value`                      | `number`         | Amount (positive, exclusive of zero)   |
+| `currency_id`                | `string`         | FK to currencies                       |
+| `expense_type_id`            | `string`         | FK to expenses_types (income/outcome)  |
+| `expense_category_id`        | `string \| null` | FK to expenses_categories              |
+| `date`                       | `string \| null` | Expense date (YYYY-MM-DD)              |
+| `global_value`               | `number \| null` | USD-equivalent value via exchange rate |
+| `created_at` / `updated_at`  | `string`         | Timestamps                             |
+| `created_by` / `modified_by` | `string \| null` | Audit fields                           |
 
-Input types: `CreateExpenseInput` (required: `name`, `value`, `currency_id`, `expense_type_id`), `PatchExpenseInput` (all optional, min 1 property).
+Input types: `CreateExpenseInput` (required: `name`, `value`, `currency_id`, `expense_type_id`; optional: `date`), `PatchExpenseInput` (all optional, min 1 property; includes `date`).
 
 ### Catalog Types
 
 - **`Currency`** -- `id`, `code` (3-char ISO), `name`, `symbol`, `country`
 - **`ExpenseType`** -- `id`, `name` (`'income'` | `'outcome'`), `description`
 - **`ExpenseCategory`** -- `id`, `name`, `description`
+
+### Metrics Types
+
+| Type                | Description                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `MetricsFilters`    | Date range (`from`, `to`) plus optional `currency_id`, `expense_type_id`, `expense_category_id`                               |
+| `MetricsSummary`    | Aggregate totals: `total_income`, `total_outcome`, `net_balance`, `total_transactions`, `avg_transaction`                     |
+| `MetricsByCategory` | Per-category breakdown: `category_id`, `category_name`, `total`, `count`, `percentage`                                        |
+| `MetricsByType`     | Per-type breakdown: `type_id`, `type_name`, `total`, `count`                                                                  |
+| `MetricsByCurrency` | Per-currency breakdown: `currency_id`, `currency_code`, `total_original`, `total_usd`, `count`                                |
+| `MetricsDailyTrend` | Daily income/outcome values: `date`, `income`, `outcome`                                                                      |
+| `MetricsTopExpense` | Top expense entry: `id`, `name`, `global_value`, `date`, `category_name`, `currency_code`, `original_value`                   |
+| `MetricsResponse`   | Full response envelope containing `period`, `summary`, `by_category`, `by_type`, `by_currency`, `daily_trend`, `top_expenses` |
 
 ## JSON Validation Schemas
 

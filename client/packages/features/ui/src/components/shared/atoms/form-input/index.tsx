@@ -97,9 +97,9 @@ export function FormInput({
           <View
             style={{
               position: 'absolute',
-              right: 0,
-              top: 0,
-              bottom: 0,
+              right: space.zero,
+              top: space.zero,
+              bottom: space.zero,
               justifyContent: 'center',
               paddingHorizontal: space.sm,
             }}

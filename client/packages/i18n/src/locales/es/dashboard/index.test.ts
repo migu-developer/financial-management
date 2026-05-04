@@ -11,6 +11,7 @@ describe('es/dashboard namespace', () => {
     expect(dashboard).toHaveProperty('home');
     expect(dashboard).toHaveProperty('expenses');
     expect(dashboard).toHaveProperty('metrics');
+    expect(dashboard).toHaveProperty('aiChat');
   });
 
   it('home has required keys', () => {
@@ -209,6 +210,33 @@ describe('es/dashboard namespace', () => {
       expect(dashboard.metrics).toHaveProperty('periodTotal');
       expect(typeof dashboard.metrics.periodTotal).toBe('string');
       expect(dashboard.metrics.periodTotal.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('aiChat namespace', () => {
+    it('has required keys', () => {
+      expect(dashboard.aiChat).toHaveProperty('title');
+      expect(dashboard.aiChat).toHaveProperty('placeholder');
+      expect(dashboard.aiChat).toHaveProperty('welcomeMessage');
+      expect(dashboard.aiChat).toHaveProperty('comingSoon');
+      expect(dashboard.aiChat).toHaveProperty('botReply');
+      expect(dashboard.aiChat).toHaveProperty('send');
+    });
+
+    it('all aiChat values are non-empty strings (Spanish translations exist)', () => {
+      const aiChatKeys = [
+        'title',
+        'placeholder',
+        'welcomeMessage',
+        'comingSoon',
+        'botReply',
+        'send',
+      ] as const;
+      for (const key of aiChatKeys) {
+        const value = dashboard.aiChat[key];
+        expect(typeof value).toBe('string');
+        expect((value as string).length).toBeGreaterThan(0);
+      }
     });
   });
 

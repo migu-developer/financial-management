@@ -27,6 +27,8 @@ const config: Config = {
     '^react-native$': '<rootDir>/src/__mocks__/react-native.ts',
     '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.ts',
     '^nativewind$': '<rootDir>/src/__mocks__/nativewind.ts',
+    '^react-native-gifted-charts$':
+      '<rootDir>/src/__mocks__/react-native-gifted-charts.ts',
   },
   transformIgnorePatterns: ['/node_modules/(?!(i18next|react-i18next)/)/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

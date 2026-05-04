@@ -203,11 +203,11 @@ Migrations use semantic versioning: `src/migrations/{major}/{minor}/{patch}/`
 
 ### CDK Stacks
 
-| Version | Stacks                                          | Purpose                                          |
-| ------- | ----------------------------------------------- | ------------------------------------------------ |
-| v1      | Assets, Auth                                    | S3 bucket, Cognito (4 IdPs, MFA, triggers)       |
-| v2      | ApiGateway, 4 Lambda services, ApiDocs, Amplify | REST API, business logic, hosting                |
-| v3      | Monitoring                                      | Dashboard, 14 alarms, EventBridge, notifications |
+| Version | Stacks                                          | Purpose                                           |
+| ------- | ----------------------------------------------- | ------------------------------------------------- |
+| v1      | Assets, Auth                                    | S3 bucket, Cognito (4 IdPs, MFA, triggers)        |
+| v2      | ApiGateway, 5 Lambda services, ApiDocs, Amplify | REST API, business logic, exchange rates, hosting |
+| v3      | Monitoring                                      | Dashboard, 15 alarms, EventBridge, notifications  |
 
 ### Deploy
 
@@ -229,6 +229,11 @@ Environment files live in `config/`:
 - `.env.local` — local development
 - `.env.development` — dev environment (us-east-1)
 - `.env.production` — prod environment (us-east-2)
+
+Required additional variables for exchange rate functionality:
+
+- `EXCHANGE_RATE_API_KEY` -- API key for ExchangeRate-API (used by the update-rates Lambda)
+- `EXCHANGE_RATE_API_BASE_URL` -- Base URL for ExchangeRate-API (e.g. `https://v6.exchangerate-api.com`)
 
 Loaded via `.envrc` (direnv). See the root README.md for the complete variable list.
 

@@ -89,8 +89,10 @@ make the design system useless. Every PR will be rejected if these are broken.
 - NEVER use hardcoded font sizes (`fontSize: 12`, `fontSize: 16`). ALWAYS
   use `fontSizeScale` from `@features/ui/utils/spacing`:
   `fontSizeScale.xs` (12), `fontSizeScale.sm` (14), `fontSizeScale.base` (16).
-- NEVER use hardcoded spacing (`padding: 8`, `margin: 16`). Use `space`
-  tokens from `@features/ui/utils/spacing`: `space.sm`, `space.md`, etc.
+- NEVER use hardcoded spacing (`padding: 8`, `margin: 16`, `top: 0`). Use
+  `space` tokens from `@features/ui/utils/spacing`: `space.sm`, `space.md`,
+  etc. This includes zero — use `space.zero` instead of `0` for spacing,
+  positioning, and offsets (e.g., `top: space.zero`, `shadowOffset: { width: space.zero }`).
   Exception: Tailwind classes (`px-4`, `mt-2`) are acceptable.
 - NEVER use hardcoded font weights (`fontWeight: '600'`, `fontWeight: '700'`).
   ALWAYS use `fontWeight` from `@features/ui/utils/typography`:

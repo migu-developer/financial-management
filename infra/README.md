@@ -24,11 +24,11 @@ All stacks extend `BaseStack`, which applies a standardized naming convention (`
 
 The infrastructure uses a versioning strategy defined in `lib/versions/deploy-config.ts`. Each version groups related stacks by deployment tier:
 
-| Version | Layer         | Purpose                                                               | Stacks                                                                                              |
-| ------- | ------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **v1**  | Foundation    | Identity and storage resources that other layers depend on            | AssetsBucket, Cognito                                                                               |
-| **v2**  | Application   | API Gateway, Lambda services, documentation, and frontend hosting     | ApiGateway, LambdaExpenses, LambdaDocuments, LambdaCurrencies, LambdaUsers, ApiDocs, AmplifyHosting |
-| **v3**  | Observability | Monitoring, alerting, and dashboards that observe v1 and v2 resources | Monitoring                                                                                          |
+| Version | Layer         | Purpose                                                               | Stacks                                                                                                                   |
+| ------- | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **v1**  | Foundation    | Identity and storage resources that other layers depend on            | AssetsBucket, Cognito                                                                                                    |
+| **v2**  | Application   | API Gateway, Lambda services, documentation, and frontend hosting     | ApiGateway, LambdaExpenses, LambdaDocuments, LambdaCurrencies, LambdaUsers, LambdaExchangeRates, ApiDocs, AmplifyHosting |
+| **v3**  | Observability | Monitoring, alerting, and dashboards that observe v1 and v2 resources | Monitoring                                                                                                               |
 
 Versions are deployed in order: **v1 first, then v2, then v3**. Each higher version imports CloudFormation outputs from the versions below it. The `DEPLOY_VERSIONS` array in `lib/versions/deploy-config.ts` controls which versions are synthesized and deployed. The current default is `['v1', 'v2', 'v3']`.
 
@@ -96,9 +96,9 @@ All providers map email, given name, and family name. Google additionally maps p
 
 | Trigger                                              | Function Name               | Purpose                                                                         | Runtime      | Timeout | Tracing |
 | ---------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------- | ------------ | ------- | ------- |
-| **PreSignUp**                                        | `fm-{stage}-pre-signup`     | Links social providers to existing native accounts before signup                | Node.js 22.x | 10s     | Active  |
-| **CustomMessage**                                    | `fm-{stage}-custom-message` | Multi-language email/SMS message customization using HTML templates from S3     | Node.js 22.x | 10s     | Active  |
-| **UserSync** (PostConfirmation + PostAuthentication) | `fm-{stage}-user-sync`      | Syncs Cognito users to the application database; handles social account linking | Node.js 22.x | 10s     | Active  |
+| **PreSignUp**                                        | `fm-{stage}-pre-signup`     | Links social providers to existing native accounts before signup                | Node.js 24.x | 10s     | Active  |
+| **CustomMessage**                                    | `fm-{stage}-custom-message` | Multi-language email/SMS message customization using HTML templates from S3     | Node.js 24.x | 10s     | Active  |
+| **UserSync** (PostConfirmation + PostAuthentication) | `fm-{stage}-user-sync`      | Syncs Cognito users to the application database; handles social account linking | Node.js 24.x | 10s     | Active  |
 
 **SMS Protection:**
 
@@ -144,6 +144,7 @@ Shared REST API Gateway with Cognito authorization, request validation, rate lim
 | `PUT /expenses/{id}`       | 10/s | 20    |
 | `PATCH /expenses/{id}`     | 10/s | 20    |
 | `DELETE /expenses/{id}`    | 5/s  | 10    |
+| `GET /expenses/metrics`    | 10/s | 20    |
 | `GET /expenses/types`      | 20/s | 40    |
 | `GET /expenses/categories` | 20/s | 40    |
 | `GET /currencies`          | 20/s | 40    |
@@ -176,12 +177,13 @@ When `CUSTOM_DOMAIN` and `CUSTOM_DOMAIN_HOSTED_ZONE_ID` are set:
 
 Lambda function and API routes for the expenses service.
 
-**Endpoints (8):**
+**Endpoints (9):**
 
 | Method   | Path                   | Validation                                 |
 | -------- | ---------------------- | ------------------------------------------ |
 | `GET`    | `/expenses`            | Auth + params                              |
 | `POST`   | `/expenses`            | Auth + body (CreateExpense model)          |
+| `GET`    | `/expenses/metrics`    | Auth + params                              |
 | `GET`    | `/expenses/{id}`       | Auth + params                              |
 | `PUT`    | `/expenses/{id}`       | Auth + body + params (UpdateExpense model) |
 | `PATCH`  | `/expenses/{id}`       | Auth + body + params (PatchExpense model)  |
@@ -233,6 +235,26 @@ Lambda function and API routes for the users service.
 
 **Cross-version exports:** `FunctionName` (namespace: LambdaUsers).
 
+### LambdaExchangeRatesStack
+
+Lambda function triggered by EventBridge to update currency exchange rates every 12 hours.
+
+**Trigger:** EventBridge scheduled rule (`rate(12 hours)`).
+
+**Lambda configuration:**
+
+| Property     | Value                     |
+| ------------ | ------------------------- |
+| **Function** | `fm-{stage}-update-rates` |
+| **Runtime**  | Node.js 24.x              |
+| **Memory**   | 128 MB                    |
+| **Timeout**  | 60s                       |
+| **Tracing**  | Active (X-Ray)            |
+
+**Environment variables:** `DATABASE_URL`, `DATABASE_READONLY_URL`, `EXCHANGE_RATE_API_KEY`, `EXCHANGE_RATE_API_BASE_URL`.
+
+**Cross-version exports:** `FunctionName` (namespace: LambdaExchangeRates).
+
 ### ApiDocsStack
 
 OpenAPI documentation parts attached to the shared API Gateway. Documents all routes for expenses, users, currencies, and documents resources with descriptions, request bodies, query parameters, and response schemas. Creates an API documentation version (`1.0.0`).
@@ -276,7 +298,7 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 | Property          | Value                                                                  |
 | ----------------- | ---------------------------------------------------------------------- |
 | **Function name** | `fm-{stage}-notifications`                                             |
-| **Runtime**       | Node.js 22.x                                                           |
+| **Runtime**       | Node.js 24.x                                                           |
 | **Timeout**       | 10s                                                                    |
 | **Tracing**       | Active (X-Ray)                                                         |
 | **Purpose**       | Sends formatted alert emails via SES when alarms trigger               |
@@ -284,35 +306,36 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 
 Subscribed to the SNS alert topic via `LambdaSubscription`.
 
-**Alarms (14 total):**
+**Alarms (15 total):**
 
-| Alarm                        | Metric                    | Threshold | Eval Periods | Datapoints |
-| ---------------------------- | ------------------------- | --------- | ------------ | ---------- |
-| Api-5xx-Errors               | ApiGateway 5XXError       | > 5       | 3            | 2          |
-| Api-4xx-Spike                | ApiGateway 4XXError       | > 50      | 5            | 3          |
-| Api-Latency-High             | ApiGateway Latency p99    | > 5000ms  | 5            | 3          |
-| Lambda-Expenses-Errors       | Lambda Errors             | > 3       | 3            | 2          |
-| Lambda-Expenses-Throttles    | Lambda Throttles          | > 0       | 1            | 1          |
-| Lambda-Documents-Errors      | Lambda Errors             | > 3       | 3            | 2          |
-| Lambda-Documents-Throttles   | Lambda Throttles          | > 0       | 1            | 1          |
-| Lambda-Currencies-Errors     | Lambda Errors             | > 3       | 3            | 2          |
-| Lambda-Currencies-Throttles  | Lambda Throttles          | > 0       | 1            | 1          |
-| Lambda-Users-Errors          | Lambda Errors             | > 3       | 3            | 2          |
-| Lambda-Users-Throttles       | Lambda Throttles          | > 0       | 1            | 1          |
-| Cognito-PreSignUp-Errors     | Lambda Errors (5m period) | > 1       | 3            | 2          |
-| Cognito-CustomMessage-Errors | Lambda Errors (5m period) | > 1       | 3            | 2          |
-| Cognito-UserSync-Errors      | Lambda Errors (5m period) | > 1       | 3            | 2          |
+| Alarm                        | Metric                     | Threshold | Eval Periods | Datapoints |
+| ---------------------------- | -------------------------- | --------- | ------------ | ---------- |
+| Api-5xx-Errors               | ApiGateway 5XXError        | > 5       | 3            | 2          |
+| Api-4xx-Spike                | ApiGateway 4XXError        | > 50      | 5            | 3          |
+| Api-Latency-High             | ApiGateway Latency p99     | > 5000ms  | 5            | 3          |
+| Lambda-Expenses-Errors       | Lambda Errors              | > 3       | 3            | 2          |
+| Lambda-Expenses-Throttles    | Lambda Throttles           | > 0       | 1            | 1          |
+| Lambda-Documents-Errors      | Lambda Errors              | > 3       | 3            | 2          |
+| Lambda-Documents-Throttles   | Lambda Throttles           | > 0       | 1            | 1          |
+| Lambda-Currencies-Errors     | Lambda Errors              | > 3       | 3            | 2          |
+| Lambda-Currencies-Throttles  | Lambda Throttles           | > 0       | 1            | 1          |
+| Lambda-Users-Errors          | Lambda Errors              | > 3       | 3            | 2          |
+| Lambda-Users-Throttles       | Lambda Throttles           | > 0       | 1            | 1          |
+| Lambda-UpdateRates-Errors    | Lambda Errors (24h period) | > 2       | 1            | 1          |
+| Cognito-PreSignUp-Errors     | Lambda Errors (5m period)  | > 1       | 3            | 2          |
+| Cognito-CustomMessage-Errors | Lambda Errors (5m period)  | > 1       | 3            | 2          |
+| Cognito-UserSync-Errors      | Lambda Errors (5m period)  | > 1       | 3            | 2          |
 
 All alarms use `TreatMissingData.NOT_BREACHING` and trigger the SNS alert topic.
 
 **CloudWatch Dashboard sections:**
 
 1. **API Gateway** -- Requests, Errors (4xx/5xx), Latency (p50/p90/p99)
-2. **Lambda Services** -- Invocations, Errors, Duration (p90), Throttles, Concurrent Executions (for all 4 service Lambdas)
+2. **Lambda Services** -- Invocations, Errors, Duration (p90), Throttles, Concurrent Executions (for all 5 service Lambdas including UpdateRates)
 3. **Cognito Triggers** -- Invocations, Errors, Duration (for PreSignUp, CustomMessage, UserSync; 5-minute period)
 4. **Cognito Trigger Errors (Logs Insights)** -- LogQueryWidget querying `/aws/lambda/{fnName}` log groups for recent ERROR entries
 5. **Amplify Hosting** -- Requests, Errors (4xx/5xx), Latency (p50/p90)
-6. **Alarm Status** -- AlarmStatusWidget showing all 14 alarms
+6. **Alarm Status** -- AlarmStatusWidget showing all 15 alarms
 
 **EventBridge Rule:** Captures Amplify Deployment Status Change events (STARTED, FAILED, SUCCEED) for the monitored app and forwards them to the SNS alert topic.
 
@@ -355,7 +378,7 @@ v1:Auth     --exports-->  UserPoolId, UserPoolClientId, IdentityPoolId,
 v2:ApiGateway --exports-->  ApiName
                             +--> v3:Monitoring (API Gateway alarms + dashboard)
 
-v2:Lambda*  --exports-->  FunctionName (per service)
+v2:Lambda*  --exports-->  FunctionName (per service, including LambdaExchangeRates)
                           +--> v3:Monitoring (Lambda alarms + dashboard)
 
 v2:AmplifyHosting --exports-->  AppId
@@ -424,11 +447,13 @@ All environment variables are read at synth time from `process.env` in the stack
 
 ### V2 -- Lambda Services
 
-| Variable                | Description                          |
-| ----------------------- | ------------------------------------ |
-| `DATABASE_URL`          | Database connection string           |
-| `DATABASE_READONLY_URL` | Read-only database connection string |
-| `ALLOWED_ORIGINS`       | Comma-separated CORS allowed origins |
+| Variable                     | Description                                              |
+| ---------------------------- | -------------------------------------------------------- |
+| `DATABASE_URL`               | Database connection string                               |
+| `DATABASE_READONLY_URL`      | Read-only database connection string                     |
+| `ALLOWED_ORIGINS`            | Comma-separated CORS allowed origins                     |
+| `EXCHANGE_RATE_API_KEY`      | API key for ExchangeRate-API (LambdaExchangeRates only)  |
+| `EXCHANGE_RATE_API_BASE_URL` | Base URL for ExchangeRate-API (LambdaExchangeRates only) |
 
 ### V2 -- Amplify Hosting
 
@@ -494,18 +519,19 @@ export const DEPLOY_VERSIONS: string[] = ['v1', 'v2', 'v3'];
 
 ## Lambda Functions
 
-All Lambda functions use Node.js 22.x runtime, ESM output format, minified bundles with source maps, and `aws-xray-sdk-core` for X-Ray tracing.
+All Lambda functions use Node.js 24.x runtime, ESM output format, minified bundles with source maps, and `aws-xray-sdk-core` for X-Ray tracing.
 
-| Function Name               | Stack                      | Service                                       | Memory           | Timeout | Tracing | Log Retention |
-| --------------------------- | -------------------------- | --------------------------------------------- | ---------------- | ------- | ------- | ------------- |
-| `fm-{stage}-expenses`       | LambdaExpensesStack (v2)   | Expenses CRUD                                 | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-documents`      | LambdaDocumentsStack (v2)  | Documents catalog                             | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-currencies`     | LambdaCurrenciesStack (v2) | Currencies catalog                            | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-users`          | LambdaUsersStack (v2)      | Users CRUD                                    | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-pre-signup`     | CognitoStack (v1)          | Cognito PreSignUp trigger                     | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-custom-message` | CognitoStack (v1)          | Cognito CustomMessage trigger                 | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-user-sync`      | CognitoStack (v1)          | Cognito PostConfirmation + PostAuthentication | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-notifications`  | MonitoringStack (v3)       | SES alarm email notifications                 | default (128 MB) | 10s     | Active  | 3 months      |
+| Function Name               | Stack                         | Service                                       | Memory           | Timeout | Tracing | Log Retention |
+| --------------------------- | ----------------------------- | --------------------------------------------- | ---------------- | ------- | ------- | ------------- |
+| `fm-{stage}-expenses`       | LambdaExpensesStack (v2)      | Expenses CRUD + metrics                       | default (128 MB) | 30s     | Active  | 3 months      |
+| `fm-{stage}-documents`      | LambdaDocumentsStack (v2)     | Documents catalog                             | default (128 MB) | 30s     | Active  | 3 months      |
+| `fm-{stage}-currencies`     | LambdaCurrenciesStack (v2)    | Currencies catalog                            | default (128 MB) | 30s     | Active  | 3 months      |
+| `fm-{stage}-users`          | LambdaUsersStack (v2)         | Users CRUD                                    | default (128 MB) | 30s     | Active  | 3 months      |
+| `fm-{stage}-update-rates`   | LambdaExchangeRatesStack (v2) | Exchange rate updates (EventBridge, 12h)      | 128 MB           | 60s     | Active  | 3 months      |
+| `fm-{stage}-pre-signup`     | CognitoStack (v1)             | Cognito PreSignUp trigger                     | default (128 MB) | 10s     | Active  | 3 months      |
+| `fm-{stage}-custom-message` | CognitoStack (v1)             | Cognito CustomMessage trigger                 | default (128 MB) | 10s     | Active  | 3 months      |
+| `fm-{stage}-user-sync`      | CognitoStack (v1)             | Cognito PostConfirmation + PostAuthentication | default (128 MB) | 10s     | Active  | 3 months      |
+| `fm-{stage}-notifications`  | MonitoringStack (v3)          | SES alarm email notifications                 | default (128 MB) | 10s     | Active  | 3 months      |
 
 ---
 
@@ -539,13 +565,14 @@ infra/
 │       │   ├── lambda-documents-stack.ts # Documents Lambda + routes
 │       │   ├── lambda-currencies-stack.ts# Currencies Lambda + routes
 │       │   ├── lambda-users-stack.ts     # Users Lambda + routes
+│       │   ├── lambda-exchange-rates-stack.ts # Exchange rates Lambda + EventBridge schedule
 │       │   ├── api-docs-stack.ts         # OpenAPI documentation parts
 │       │   ├── api-docs.ts              # ApiDocumentation helper class
 │       │   └── amplify-hosting-stack.ts  # Amplify web hosting + custom domain
 │       └── v3/
 │           ├── index.ts                  # v3 stack registration (Monitoring)
 │           ├── stacks.ts                 # ActiveStack enum for v3
-│           └── monitoring-stack.ts       # Dashboard, 14 alarms, SNS, EventBridge
+│           └── monitoring-stack.ts       # Dashboard, 15 alarms, SNS, EventBridge
 ├── cdk.json
 └── package.json
 ```

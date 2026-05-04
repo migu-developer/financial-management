@@ -10,16 +10,18 @@ function makeMockDbService(): DatabaseService {
 }
 
 describe('PostgresCurrencyConversionService', () => {
-  it('returns value * rate_to_usd when rate is found', async () => {
+  it('returns value / rate_to_usd when rate is found', async () => {
     const dbService = makeMockDbService();
+    // COP rate: 1 USD = 4000 COP
     (dbService.queryReadOnly as jest.Mock).mockResolvedValue([
-      { rate_to_usd: 0.00024 },
+      { rate_to_usd: 4000 },
     ]);
 
     const service = new PostgresCurrencyConversionService(dbService);
-    const result = await service.convert('cur-1', 50000);
+    // 100,000 COP / 4000 = 25 USD
+    const result = await service.convert('cur-1', 100000);
 
-    expect(result).toBe(12);
+    expect(result).toBe(25);
     expect(dbService.queryReadOnly).toHaveBeenCalledWith(
       expect.stringContaining('v_latest_exchange_rates'),
       ['cur-1'],
@@ -39,7 +41,7 @@ describe('PostgresCurrencyConversionService', () => {
   it('returns 0 when value is 0', async () => {
     const dbService = makeMockDbService();
     (dbService.queryReadOnly as jest.Mock).mockResolvedValue([
-      { rate_to_usd: 0.00024 },
+      { rate_to_usd: 4000 },
     ]);
 
     const service = new PostgresCurrencyConversionService(dbService);
@@ -50,13 +52,15 @@ describe('PostgresCurrencyConversionService', () => {
 
   it('handles fractional rates correctly', async () => {
     const dbService = makeMockDbService();
+    // EUR rate: 1 USD = 0.85 EUR
     (dbService.queryReadOnly as jest.Mock).mockResolvedValue([
-      { rate_to_usd: 1.5 },
+      { rate_to_usd: 0.85 },
     ]);
 
     const service = new PostgresCurrencyConversionService(dbService);
+    // 100 EUR / 0.85 = ~117.65 USD
     const result = await service.convert('cur-1', 100);
 
-    expect(result).toBe(150);
+    expect(result).toBeCloseTo(117.647, 2);
   });
 });
