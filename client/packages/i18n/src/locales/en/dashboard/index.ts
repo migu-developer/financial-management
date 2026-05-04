@@ -44,6 +44,7 @@ export const dashboard = {
     form: {
       name: 'Name',
       namePlaceholder: 'Expense name',
+      date: 'Date',
       value: 'Value',
       valuePlaceholder: '0.00',
       type: 'Type',
@@ -74,6 +75,41 @@ export const dashboard = {
     modal: {
       closeAccessibility: 'Close dialog',
     },
+  },
+  metrics: {
+    title: 'Monthly Summary',
+    income: 'Income',
+    outcome: 'Expenses',
+    balance: 'Balance',
+    transactions: 'Transactions',
+    avgTransaction: 'Avg. per transaction',
+    topExpenses: 'Top Expenses',
+    byCategory: 'By Category',
+    byCurrency: 'By Currency',
+    dailyTrend: 'Daily Trend',
+    noData: 'No transactions in this period',
+    allCategories: 'All categories',
+    allCurrencies: 'All currencies',
+    allTypes: 'All types',
+    filterFrom: 'From',
+    filterTo: 'To',
+    globalCurrency: 'USD',
+    equivalent: '~{{value}} USD',
+    byCategoryUsd: 'By Category (USD)',
+    periodTotal: 'Period total',
+    errors: {
+      loadMetrics: 'Failed to load metrics',
+    },
+  },
+  aiChat: {
+    title: 'AI Assistant',
+    placeholder: 'Describe your expense...',
+    welcomeMessage:
+      'Hi! I can help you log expenses. Tell me what you spent, send a photo of a receipt, or record a voice note.',
+    comingSoon: 'This feature is coming soon',
+    botReply:
+      "Got it! This feature is under development. Soon I'll be able to create expenses from your messages automatically.",
+    send: 'Send',
   },
 } as const;
 

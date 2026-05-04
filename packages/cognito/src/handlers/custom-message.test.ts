@@ -5,17 +5,17 @@ jest.mock('@aws-lambda-powertools/tracer', () => ({
   })),
 }));
 
-import { handler } from './index';
+import { handler } from './custom-message';
 import type {
   CustomMessageTriggerEvent,
   LocaleMessages,
   MessageContent,
-} from './types';
+} from '@custom-message/types';
 import {
   resolveLocale,
   getMessages,
   getEmailHtmlFromS3,
-} from './templates/index';
+} from '@custom-message/templates/index';
 
 jest.mock('@aws-lambda-powertools/logger', () => ({
   Logger: jest.fn(() => ({
@@ -27,7 +27,7 @@ jest.mock('@aws-lambda-powertools/logger', () => ({
   })),
 }));
 
-jest.mock('./templates/index', () => ({
+jest.mock('@custom-message/templates/index', () => ({
   resolveLocale: jest.fn(),
   getMessages: jest.fn(),
   getEmailHtmlFromS3: jest.fn(),

@@ -8,7 +8,7 @@ Receives SNS events triggered by CloudWatch alarms or Amplify deployment status 
 
 ## Exports
 
-This package does not export a public API. It provides a single Lambda `handler` function as the entry point for the SNS-triggered notification Lambda.
+This package does not export a public API. It provides a single Lambda `handler` function in `handlers/notify.ts` as the entry point for the SNS-triggered notification Lambda.
 
 ## Event Flow
 
@@ -115,7 +115,8 @@ The following placeholders in the HTML template are replaced at runtime:
 ```
 packages/notifications/
   src/
-    index.ts                          # Lambda handler (SNS event loop)
+    handlers/
+      notify.ts                       # Lambda handler (CDK entry point, SNS event loop)
     domain/
       types.ts                        # CloudWatchAlarmMessage, AmplifyBuildEvent, SNSEvent, AlertPayload
       alarm-parser.ts                 # parseAlarmMessage(), severity/service resolution

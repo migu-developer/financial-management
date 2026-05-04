@@ -10,4 +10,12 @@ export type {
   Currency,
   ExpenseType,
   ExpenseCategory,
+  MetricsFilters,
+  MetricsSummary,
+  MetricsByCategory,
+  MetricsByType,
+  MetricsByCurrency,
+  MetricsDailyTrend,
+  MetricsTopExpense,
+  MetricsResponse,
 } from './types';

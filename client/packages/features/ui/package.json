@@ -13,8 +13,12 @@
   "dependencies": {
     "@expo/vector-icons": "catalog:",
     "@packages/i18n": "workspace:*",
+    "@packages/models": "workspace:*",
     "@packages/utils": "workspace:*",
-    "libphonenumber-js": "catalog:"
+    "expo-linear-gradient": "catalog:",
+    "libphonenumber-js": "catalog:",
+    "react-native-gifted-charts": "catalog:",
+    "react-native-svg": "catalog:"
   },
   "peerDependencies": {
     "react": "catalog:",

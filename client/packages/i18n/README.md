@@ -14,7 +14,7 @@ Internationalization package for the Financial Management application. Wraps i18
 | Namespace   | Description                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------- |
 | `login`     | Authentication screens (sign-in, sign-up, forgot password, MFA, validation messages)         |
-| `dashboard` | Dashboard screens (expenses, filters, errors, empty states)                                  |
+| `dashboard` | Dashboard screens (expenses, filters, errors, empty states, metrics, aiChat)                 |
 | `landing`   | Landing and legal pages (hero, features, how-it-works, CTA, privacy, terms, contact, footer) |
 | `ui`        | Shared UI components (buttons, labels, theme toggle, language selector)                      |
 

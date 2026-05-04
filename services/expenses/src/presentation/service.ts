@@ -3,6 +3,7 @@ import type { Application } from '@services/expenses/presentation/application';
 import type {
   CreateExpenseInput,
   PatchExpenseInput,
+  MetricsFilters,
 } from '@packages/models/expenses';
 import { GetExpensesByUserUseCase } from '@services/expenses/application/use-cases/get-expenses-by-user.use-case';
 import { GetExpenseByIdUseCase } from '@services/expenses/application/use-cases/get-expense-by-id.use-case';
@@ -12,9 +13,11 @@ import { PatchExpenseUseCase } from '@services/expenses/application/use-cases/pa
 import { DeleteExpenseUseCase } from '@services/expenses/application/use-cases/delete-expense.use-case';
 import { GetExpenseTypesUseCase } from '@services/expenses/application/use-cases/get-expense-types.use-case';
 import { GetExpenseCategoriesUseCase } from '@services/expenses/application/use-cases/get-expense-categories.use-case';
+import { GetMetricsUseCase } from '@services/expenses/application/use-cases/get-metrics.use-case';
 import { PostgresExpenseRepository } from '@services/expenses/infrastructure/repositories/postgres-expense.repository';
 import { PostgresExpenseTypeRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-type.repository';
 import { PostgresExpenseCategoryRepository } from '@services/expenses/infrastructure/repositories/postgres-expense-category.repository';
+import { PostgresCurrencyConversionService } from '@services/expenses/infrastructure/services/postgres-currency-conversion.service';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { parsePaginationParams } from '@packages/models/shared/pagination';
 import { parseExpenseFilters } from '@packages/models/expenses';
@@ -54,7 +57,10 @@ export class ExpensesService extends Service {
       'user_id'
     >;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new CreateExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new CreateExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       input,
       this.app.user.uid,
@@ -90,7 +96,10 @@ export class ExpenseService extends Service {
       'user_id'
     >;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new UpdateExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new UpdateExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       id,
       input,
@@ -110,7 +119,10 @@ export class ExpenseService extends Service {
     const id = this.app.event.pathParameters?.['id'] ?? '';
     const input = JSON.parse(this.app.event.body!) as PatchExpenseInput;
     const repository = new PostgresExpenseRepository(this.app.dbService);
-    const useCase = new PatchExpenseUseCase(repository);
+    const conversionService = new PostgresCurrencyConversionService(
+      this.app.dbService,
+    );
+    const useCase = new PatchExpenseUseCase(repository, conversionService);
     const expense = await useCase.execute(
       id,
       input,
@@ -172,6 +184,73 @@ export class ExpensesCategoriesService extends Service {
     const useCase = new GetExpenseCategoriesUseCase(repository);
     const categories = await useCase.execute();
     return new Response(JSON.stringify({ success: true, data: categories }), {
+      status: HttpCode.SUCCESS,
+    });
+  }
+}
+
+export class ExpensesMetricsService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing expenses metrics GET request',
+      ExpensesMetricsService.name,
+    );
+    const qs = this.app.event.queryStringParameters;
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    const from = qs?.['from'] ?? firstDay.toISOString().split('T')[0] ?? '';
+    const to = qs?.['to'] ?? lastDay.toISOString().split('T')[0] ?? '';
+
+    if (!dateRegex.test(from) || !dateRegex.test(to)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid date format. Use YYYY-MM-DD.',
+        }),
+        { status: HttpCode.BAD_REQUEST },
+      );
+    }
+
+    const currencyId = qs?.['currency_id'];
+    const expenseTypeId = qs?.['expense_type_id'];
+    const expenseCategoryId = qs?.['expense_category_id'];
+
+    if (
+      (currencyId && !uuidRegex.test(currencyId)) ||
+      (expenseTypeId && !uuidRegex.test(expenseTypeId)) ||
+      (expenseCategoryId && !uuidRegex.test(expenseCategoryId))
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid UUID format for filter parameter.',
+        }),
+        { status: HttpCode.BAD_REQUEST },
+      );
+    }
+
+    const filters: MetricsFilters = {
+      from,
+      to,
+      ...(currencyId && { currency_id: currencyId }),
+      ...(expenseTypeId && { expense_type_id: expenseTypeId }),
+      ...(expenseCategoryId && { expense_category_id: expenseCategoryId }),
+    };
+
+    const repository = new PostgresExpenseRepository(this.app.dbService);
+    const useCase = new GetMetricsUseCase(repository);
+    const metrics = await useCase.execute(this.app.user.uid, filters);
+    return new Response(JSON.stringify({ success: true, data: metrics }), {
       status: HttpCode.SUCCESS,
     });
   }

@@ -80,6 +80,7 @@ src/migrations/
   2/0/0/    -> version 2.0.0
   2/0/1/    -> version 2.0.1
   2/1/0/    -> version 2.1.0
+  3/0/0/    -> version 3.0.0
 ```
 
 Each version directory contains:
@@ -100,20 +101,21 @@ The runner tracks applied versions in a `migrations` table and computes SHA-256 
 | `ts`   | `tsScript(path)`       | TypeScript programmatic migration |
 | `seed` | `seedScript(up, down)` | Seed data (same structure as SQL) |
 
-## Current Schema (v2.1.0)
+## Current Schema (v3.0.0)
 
 ### Tables
 
-| Table                 | Description                                                                            |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| `users`               | User profiles (uid, email, name, locale, picture, phone, document, provider)           |
-| `expenses`            | Financial transactions (income/outcome) linked to users, currencies, types, categories |
-| `currencies`          | Currency catalog (code, name, symbol, country)                                         |
-| `expenses_types`      | Expense type catalog (income / outcome)                                                |
-| `expenses_categories` | Optional expense categorization                                                        |
-| `documents`           | Document type catalog                                                                  |
-| `providers`           | Identity provider catalog                                                              |
-| `audit_logs`          | Automatic change history (INSERT/UPDATE/DELETE with old_data/new_data in JSONB)        |
+| Table                 | Description                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `users`               | User profiles (uid, email, name, locale, picture, phone, document, provider)                                          |
+| `expenses`            | Financial transactions with `date` and `global_value` (USD equivalent) columns                                        |
+| `currencies`          | Currency catalog (code, name, symbol, country)                                                                        |
+| `exchange_rates`      | Daily exchange rates per currency (rate_to_usd, rate_date, source) with unique constraint on (currency_id, rate_date) |
+| `expenses_types`      | Expense type catalog (income / outcome)                                                                               |
+| `expenses_categories` | Optional expense categorization                                                                                       |
+| `documents`           | Document type catalog                                                                                                 |
+| `providers`           | Identity provider catalog                                                                                             |
+| `audit_logs`          | Automatic change history (INSERT/UPDATE/DELETE with old_data/new_data in JSONB)                                       |
 
 ### Triggers
 
@@ -129,12 +131,13 @@ RLS is enabled on all tables with two policy sets:
 
 ### Migration History
 
-| Version | Description                                                                 |
-| ------- | --------------------------------------------------------------------------- |
-| `1.0.0` | Create read-only role and user for Lambda access                            |
-| `2.0.0` | Create base schema, tables with RLS, functions, triggers and indexes        |
-| `2.0.1` | Seed initial catalog data (currencies, expense types, providers, documents) |
-| `2.1.0` | Add composite indexes for expenses query performance                        |
+| Version | Description                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| `1.0.0` | Create read-only role and user for Lambda access                                                       |
+| `2.0.0` | Create base schema, tables with RLS, functions, triggers and indexes                                   |
+| `2.0.1` | Seed initial catalog data (currencies, expense types, providers, documents)                            |
+| `2.1.0` | Add composite indexes for expenses query performance                                                   |
+| `3.0.0` | Add `date` and `global_value` columns to expenses; create `exchange_rates` table with latest-rate view |
 
 ## Structure
 
@@ -164,6 +167,7 @@ packages/migrations/
       2/0/0/                        # v2.0.0 - base tables, RLS, triggers
       2/0/1/                        # v2.0.1 - seed data
       2/1/0/                        # v2.1.0 - composite indexes
+      3/0/0/                        # v3.0.0 - expense date/global_value, exchange_rates table
     exports/
       schema.sql                    # Exported DDL (generated by `pnpm export`)
   .env.local                        # Local database connection string

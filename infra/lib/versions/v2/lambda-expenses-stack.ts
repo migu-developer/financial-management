@@ -58,10 +58,10 @@ export class LambdaExpensesStack extends BaseStack {
 
     const lambda = new NodejsFunction(this, `${stackName}-ExpensesFn`, {
       functionName: fnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/expenses/src/index.ts',
+        '../../../node_modules/@services/expenses/src/handlers/get-expenses.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,
@@ -112,6 +112,9 @@ export class LambdaExpensesStack extends BaseStack {
       integration,
       gateway.authWithBody(createModel),
     );
+
+    const metricsResource = expensesResource.addResource('metrics');
+    metricsResource.addMethod('GET', integration, gateway.authOnly());
 
     const singleExpenseResource = expensesResource.addResource('{id}');
     singleExpenseResource.addMethod('GET', integration, gateway.authOnly());

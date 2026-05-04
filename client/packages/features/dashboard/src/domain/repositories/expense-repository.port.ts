@@ -3,6 +3,8 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
   ExpenseFilters,
+  MetricsFilters,
+  MetricsResponse,
   Currency,
   ExpenseType,
   ExpenseCategory,
@@ -33,4 +35,9 @@ export interface ExpenseRepositoryPort {
   listExpenseTypes(): Promise<ExpenseType[]>;
 
   listExpenseCategories(): Promise<ExpenseCategory[]>;
+
+  getMetrics(
+    filters: MetricsFilters,
+    signal?: AbortSignal,
+  ): Promise<MetricsResponse>;
 }

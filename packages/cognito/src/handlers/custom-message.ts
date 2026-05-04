@@ -1,14 +1,14 @@
 import { Logger } from '@aws-lambda-powertools/logger';
-import { Tracer } from '@aws-lambda-powertools/tracer';
+import { TracerServiceImplementation } from '@services/shared/infrastructure/services/TracerServiceImp';
 import { S3Client } from '@aws-sdk/client-s3';
-import type { CustomMessageTriggerEvent } from './types';
+import type { CustomMessageTriggerEvent } from '@custom-message/types';
 
 import {
   resolveLocale,
   getMessages,
   getEmailHtmlFromS3,
   TRIGGER_TO_TEMPLATE,
-} from './templates/index';
+} from '@custom-message/templates/index';
 
 /** Minimal Lambda context shape for addContext (requestId, coldStart, etc.). */
 interface LambdaContext {
@@ -18,14 +18,14 @@ interface LambdaContext {
 }
 
 const logger = new Logger({ serviceName: 'cognito-custom-message' });
-const tracer = new Tracer({ serviceName: 'cognito-custom-message' });
-const s3Client = tracer.captureAWSv3Client(new S3Client({}));
+const tracerService = new TracerServiceImplementation('cognito-custom-message');
+const s3Client = tracerService.captureAWSv3Client(new S3Client({}));
 
 export async function handler(
   event: CustomMessageTriggerEvent,
   context?: LambdaContext,
 ): Promise<CustomMessageTriggerEvent> {
-  tracer.annotateColdStart();
+  tracerService.annotateColdStart();
 
   if (context)
     logger.addContext(

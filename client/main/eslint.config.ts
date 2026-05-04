@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default [
   {
-    ignores: ['dist/*', 'node_modules/'],
+    ignores: ['dist/*', 'node_modules/', '.expo/*'],
   },
   ...(Array.isArray(expoConfig) ? expoConfig : [expoConfig]),
   sharedConfig,

@@ -55,10 +55,10 @@ export class LambdaUsersStack extends BaseStack {
 
     const lambda = new NodejsFunction(this, `${stackName}-UsersFn`, {
       functionName: fnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/users/src/index.ts',
+        '../../../node_modules/@services/users/src/handlers/get-users.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,

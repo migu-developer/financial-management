@@ -3,6 +3,7 @@ import {
   ExpenseService,
   ExpensesTypesService,
   ExpensesCategoriesService,
+  ExpensesMetricsService,
 } from './service';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { ModuleNotFoundError } from '@packages/models/shared/utils/errors';
@@ -98,6 +99,8 @@ const mockExpense = {
   currency_id: 'cur-1',
   expense_type_id: 'type-1',
   expense_category_id: null,
+  date: '2024-01-01',
+  global_value: 12,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   created_by: 'u@test.com',
@@ -209,7 +212,7 @@ describe('ExpensesService', () => {
   it('executePOST returns 200 with created expense', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([mockExpense]),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const response = await new ExpensesService(
@@ -224,7 +227,7 @@ describe('ExpensesService', () => {
   it('executePOST propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('insert failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
       end: jest.fn(),
     };
     await expect(
@@ -267,7 +270,7 @@ describe('ExpenseService — PUT', () => {
     const updatedExpense = { ...mockExpense, name: 'Updated' };
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([updatedExpense]),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const app = makeApp(
@@ -284,7 +287,7 @@ describe('ExpenseService — PUT', () => {
   it('executePUT propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('update failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([]),
       end: jest.fn(),
     };
     const app = makeApp(
@@ -298,7 +301,7 @@ describe('ExpenseService — PUT', () => {
 });
 
 describe('ExpenseService — PATCH', () => {
-  it('executePATCH returns 200 with patched expense', async () => {
+  it('executePATCH returns 200 with patched expense (name only, no conversion)', async () => {
     const patchedExpense = { ...mockExpense, name: 'Patched' };
     const dbService: DatabaseService = {
       query: jest.fn().mockResolvedValue([patchedExpense]),
@@ -314,10 +317,33 @@ describe('ExpenseService — PATCH', () => {
     expect(json.data).toEqual(patchedExpense);
   });
 
+  it('executePATCH recalculates global_value when value is patched', async () => {
+    const patchedExpense = {
+      ...mockExpense,
+      value: 100,
+      global_value: 0.024,
+    };
+    const dbService: DatabaseService = {
+      query: jest.fn().mockResolvedValue([patchedExpense]),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ rate_to_usd: 0.00024 }]),
+      end: jest.fn(),
+    };
+    const body = JSON.stringify({ value: 100 });
+    const app = makeApp({ pathParameters: { id: 'exp-1' }, body }, dbService);
+    const response = await new ExpenseService(app).executePATCH();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+  });
+
   it('executePATCH propagates db errors', async () => {
     const dbService: DatabaseService = {
       query: jest.fn().mockRejectedValue(new Error('patch failed')),
-      queryReadOnly: jest.fn(),
+      queryReadOnly: jest
+        .fn()
+        .mockResolvedValueOnce([mockExpense])
+        .mockResolvedValueOnce([{ rate_to_usd: 0.00024 }]),
       end: jest.fn(),
     };
     const body = JSON.stringify({ value: 100 });
@@ -407,6 +433,143 @@ describe('ExpensesCategoriesService', () => {
     };
     await expect(
       new ExpensesCategoriesService(makeApp({}, dbService)).executeGET(),
+    ).rejects.toThrow('DB error');
+  });
+});
+
+describe('ExpensesMetricsService', () => {
+  const mockRawMetrics = {
+    metrics: {
+      summary: {
+        total_income: '5000',
+        total_outcome: '3000',
+        total_transactions: 10,
+        avg_transaction: '800',
+      },
+      by_category: [
+        {
+          category_id: 'cat-1',
+          category_name: 'Food',
+          total: '1500',
+          count: 5,
+        },
+      ],
+      by_type: [
+        { type_id: 'type-1', type_name: 'income', total: '5000', count: 3 },
+      ],
+      by_currency: [
+        {
+          currency_id: 'cur-1',
+          currency_code: 'USD',
+          total_original: '3000',
+          total_usd: '3000',
+          count: 5,
+        },
+      ],
+      daily_trend: [{ date: '2024-01-01', income: '1000', outcome: '500' }],
+      top_expenses: [
+        {
+          id: 'exp-1',
+          name: 'Rent',
+          global_value: '1200',
+          date: '2024-01-01',
+          category_name: 'Housing',
+          currency_code: 'USD',
+          original_value: '1200',
+        },
+      ],
+    },
+  };
+
+  it('executeGET returns 200 with metrics data', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const app = makeApp(
+      {
+        queryStringParameters: {
+          from: '2024-01-01',
+          to: '2024-01-31',
+        },
+      },
+      dbService,
+    );
+    const response = await new ExpensesMetricsService(app).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+    const json = (await response.json()) as {
+      success: boolean;
+      data: { period: { from: string; to: string } };
+    };
+    expect(json.success).toBe(true);
+    expect(json.data.period).toEqual({
+      from: '2024-01-01',
+      to: '2024-01-31',
+    });
+  });
+
+  it('executeGET defaults date range to current month when not provided', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const response = await new ExpensesMetricsService(
+      makeApp({}, dbService),
+    ).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+    const json = (await response.json()) as {
+      success: boolean;
+      data: { period: { from: string; to: string } };
+    };
+    expect(json.success).toBe(true);
+    expect(json.data.period.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(json.data.period.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('executeGET passes optional filter params to the query', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockRawMetrics]),
+      end: jest.fn(),
+    };
+    const app = makeApp(
+      {
+        queryStringParameters: {
+          from: '2024-01-01',
+          to: '2024-01-31',
+          currency_id: '00000000-0000-0000-0000-000000000001',
+          expense_type_id: '00000000-0000-0000-0000-000000000002',
+          expense_category_id: '00000000-0000-0000-0000-000000000003',
+        },
+      },
+      dbService,
+    );
+    const response = await new ExpensesMetricsService(app).executeGET();
+    expect(response.status).toBe(HttpCode.SUCCESS);
+
+    const calls = (dbService.queryReadOnly as jest.Mock).mock
+      .calls as unknown[][];
+    const sql = calls[0]![0] as string;
+    expect(sql).toContain('e.currency_id');
+    expect(sql).toContain('e.expense_type_id');
+    expect(sql).toContain('e.expense_category_id');
+
+    const params = calls[0]![1] as unknown[];
+    expect(params).toContain('00000000-0000-0000-0000-000000000001');
+    expect(params).toContain('00000000-0000-0000-0000-000000000002');
+    expect(params).toContain('00000000-0000-0000-0000-000000000003');
+  });
+
+  it('executeGET propagates db errors', async () => {
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockRejectedValue(new Error('DB error')),
+      end: jest.fn(),
+    };
+    await expect(
+      new ExpensesMetricsService(makeApp({}, dbService)).executeGET(),
     ).rejects.toThrow('DB error');
   });
 });

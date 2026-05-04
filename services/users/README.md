@@ -27,7 +27,7 @@ The service follows a layered Domain-Driven Design architecture.
 
 ### Presentation Layer
 
-- **`index.ts`** -- Lambda handler entry point. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
+- **`handlers/get-users.ts`** -- Lambda handler. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
 - **`presentation/application.ts`** -- Composes the Application context from the API Gateway event, user profile, logger, and database service. Defines route-to-module mappings.
 - **`presentation/controller.ts`** -- Controller handling GET, POST, and PATCH methods dispatched by route.
 - **`presentation/router.ts`** -- Presentation-level router resolving modules from the Application's route table.
@@ -144,7 +144,14 @@ services/users/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── index.ts                          # Lambda handler entry point
+    ├── handlers/
+    │   └── get-users.ts                  # Lambda handler (CDK entry point)
+    ├── exec/                             # Local test scripts
+    │   ├── create-user.ts
+    │   ├── get-user.ts
+    │   ├── get-user-by-email.ts
+    │   ├── patch-user.ts
+    │   └── update-user-uid.ts
     ├── router.ts                         # Top-level route matching + dispatch
     ├── router.test.ts
     ├── application/
@@ -157,12 +164,6 @@ services/users/
     ├── domain/
     │   └── repositories/
     │       └── user.repository.ts
-    ├── exec/
-    │   ├── create-user.ts
-    │   ├── get-user.ts
-    │   ├── get-user-by-email.ts
-    │   ├── patch-user.ts
-    │   └── update-user-uid.ts
     ├── infrastructure/
     │   └── repositories/
     │       └── postgres-user.repository.ts

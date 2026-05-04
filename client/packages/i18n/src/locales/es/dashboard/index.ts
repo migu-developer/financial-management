@@ -44,6 +44,7 @@ export const dashboard = {
     form: {
       name: 'Nombre',
       namePlaceholder: 'Nombre del gasto',
+      date: 'Fecha',
       value: 'Valor',
       valuePlaceholder: '0.00',
       type: 'Tipo',
@@ -74,6 +75,41 @@ export const dashboard = {
     modal: {
       closeAccessibility: 'Cerrar dialogo',
     },
+  },
+  metrics: {
+    title: 'Resumen Mensual',
+    income: 'Ingresos',
+    outcome: 'Gastos',
+    balance: 'Balance',
+    transactions: 'Transacciones',
+    avgTransaction: 'Promedio por transaccion',
+    topExpenses: 'Gastos Principales',
+    byCategory: 'Por Categoria',
+    byCurrency: 'Por Moneda',
+    dailyTrend: 'Tendencia Diaria',
+    noData: 'Sin transacciones en este periodo',
+    allCategories: 'Todas las categorias',
+    allCurrencies: 'Todas las monedas',
+    allTypes: 'Todos los tipos',
+    filterFrom: 'Desde',
+    filterTo: 'Hasta',
+    globalCurrency: 'USD',
+    equivalent: '~{{value}} USD',
+    byCategoryUsd: 'Por Categoria (USD)',
+    periodTotal: 'Total del periodo',
+    errors: {
+      loadMetrics: 'Error al cargar metricas',
+    },
+  },
+  aiChat: {
+    title: 'Asistente AI',
+    placeholder: 'Describe tu gasto...',
+    welcomeMessage:
+      'Hola! Puedo ayudarte a registrar gastos. Dime en que gastaste, envia una foto del recibo o graba una nota de voz.',
+    comingSoon: 'Esta funcionalidad estara disponible pronto',
+    botReply:
+      'Entendido! Esta funcionalidad esta en desarrollo. Pronto podre crear gastos desde tus mensajes automaticamente.',
+    send: 'Enviar',
   },
 } as const;
 

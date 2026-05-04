@@ -67,9 +67,9 @@ describe('ApiDocsStack', () => {
     expect(mockDeps.getStack).toHaveBeenCalledWith('ApiGateway');
   });
 
-  test('documents all 9 resources', () => {
+  test('documents all 10 resources', () => {
     createStack();
-    expect(mockAddResource).toHaveBeenCalledTimes(9);
+    expect(mockAddResource).toHaveBeenCalledTimes(10);
 
     const paths = mockAddResource.mock.calls.map(
       (c: unknown[]) => (c[0] as { path: string }).path,
@@ -79,6 +79,7 @@ describe('ApiDocsStack', () => {
     expect(paths).toContain('/expenses/{id}');
     expect(paths).toContain('/expenses/types');
     expect(paths).toContain('/expenses/categories');
+    expect(paths).toContain('/expenses/metrics');
     expect(paths).toContain('/users');
     expect(paths).toContain('/users/{id}');
     expect(paths).toContain('/currencies');
@@ -149,11 +150,11 @@ describe('ApiDocsStack', () => {
     expect(methods).toEqual(['GET', 'PATCH']);
   });
 
-  test('creates documentation version 1.0.0', () => {
+  test('creates documentation version 1.0.1', () => {
     createStack();
     expect(mockCreateVersion).toHaveBeenCalledTimes(1);
     expect(mockCreateVersion).toHaveBeenCalledWith(
-      '1.0.0',
+      '1.0.1',
       'Initial API documentation',
     );
   });

@@ -3,6 +3,8 @@ import type {
   CreateExpenseInput,
   PatchExpenseInput,
   ExpenseFilters,
+  MetricsFilters,
+  MetricsResponse,
 } from '@packages/models/expenses';
 import type {
   PaginationParams,
@@ -21,18 +23,25 @@ export interface ExpenseRepository {
     input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
     createdBy: string,
+    globalValue?: number | null,
   ): Promise<Expense>;
   update(
     id: string,
     input: Omit<CreateExpenseInput, 'user_id'>,
     uid: string,
     modifiedBy: string,
+    globalValue?: number | null,
   ): Promise<Expense>;
   patch(
     id: string,
     input: PatchExpenseInput,
     uid: string,
     modifiedBy: string,
+    globalValue?: number | null,
   ): Promise<Expense>;
   deleteByIdAndUserUid(id: string, uid: string): Promise<void>;
+  getMetrics(
+    uid: string,
+    filters: MetricsFilters,
+  ): Promise<Omit<MetricsResponse, 'period'>>;
 }

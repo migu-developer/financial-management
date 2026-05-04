@@ -45,10 +45,10 @@ export class LambdaCurrenciesStack extends BaseStack {
 
     const lambda = new NodejsFunction(this, `${stackName}-CurrenciesFn`, {
       functionName: fnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@services/currencies/src/index.ts',
+        '../../../node_modules/@services/currencies/src/handlers/get-currencies.ts',
       ),
       bundling: {
         format: OutputFormat.ESM,

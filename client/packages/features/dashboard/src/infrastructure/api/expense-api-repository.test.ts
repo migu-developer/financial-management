@@ -4,6 +4,7 @@ import type {
   Currency,
   ExpenseType,
   ExpenseCategory,
+  MetricsResponse,
 } from '@packages/models/expenses';
 import { ExpenseApiRepository } from './expense-api-repository';
 
@@ -17,6 +18,8 @@ const mockExpense: Expense = {
   expense_category_id: 'cat-1',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
+  date: '2026-01-01',
+  global_value: 50,
   created_by: null,
   modified_by: null,
 };
@@ -230,6 +233,80 @@ describe('ExpenseApiRepository', () => {
 
       expect(api.get).toHaveBeenCalledWith('/expenses/categories');
       expect(result).toEqual(categories);
+    });
+  });
+
+  describe('getMetrics', () => {
+    const mockMetrics: MetricsResponse = {
+      period: { from: '2026-01-01', to: '2026-01-31' },
+      summary: {
+        total_income: 5000,
+        total_outcome: 3000,
+        net_balance: 2000,
+        total_transactions: 15,
+        avg_transaction: 333.33,
+      },
+      by_category: [],
+      by_type: [],
+      by_currency: [],
+      daily_trend: [],
+      top_expenses: [],
+    };
+
+    it('calls api.get with /expenses/metrics and required params', async () => {
+      api.get.mockResolvedValue({ success: true, data: mockMetrics });
+
+      const result = await repository.getMetrics({
+        from: '2026-01-01',
+        to: '2026-01-31',
+      });
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/expenses/metrics',
+        { from: '2026-01-01', to: '2026-01-31' },
+        undefined,
+      );
+      expect(result).toEqual(mockMetrics);
+    });
+
+    it('includes optional filter params when provided', async () => {
+      api.get.mockResolvedValue({ success: true, data: mockMetrics });
+
+      await repository.getMetrics({
+        from: '2026-01-01',
+        to: '2026-01-31',
+        currency_id: 'cur-1',
+        expense_type_id: 'type-1',
+        expense_category_id: 'cat-1',
+      });
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/expenses/metrics',
+        {
+          from: '2026-01-01',
+          to: '2026-01-31',
+          currency_id: 'cur-1',
+          expense_type_id: 'type-1',
+          expense_category_id: 'cat-1',
+        },
+        undefined,
+      );
+    });
+
+    it('passes abort signal to api.get', async () => {
+      api.get.mockResolvedValue({ success: true, data: mockMetrics });
+      const controller = new AbortController();
+
+      await repository.getMetrics(
+        { from: '2026-01-01', to: '2026-01-31' },
+        controller.signal,
+      );
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/expenses/metrics',
+        { from: '2026-01-01', to: '2026-01-31' },
+        controller.signal,
+      );
     });
   });
 });

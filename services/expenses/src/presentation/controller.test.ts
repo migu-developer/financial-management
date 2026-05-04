@@ -3,6 +3,7 @@ import {
   ExpenseController,
   ExpensesTypesController,
   ExpensesCategoriesController,
+  ExpensesMetricsController,
 } from './controller';
 import { MethodNotImplementedError } from '@packages/models/shared/utils/errors';
 import { Application } from './application';
@@ -345,6 +346,58 @@ describe('ExpensesTypesController', () => {
 
   it('DELETE throws MethodNotImplementedError', () => {
     expect(() => new ExpensesTypesController(makeApp()).DELETE()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+});
+
+describe('ExpensesMetricsController', () => {
+  it('GET returns a Response', async () => {
+    const mockMetrics = {
+      metrics: {
+        summary: {
+          total_income: 0,
+          total_outcome: 0,
+          total_transactions: 0,
+          avg_transaction: 0,
+        },
+        by_category: [],
+        by_type: [],
+        by_currency: [],
+        daily_trend: [],
+        top_expenses: [],
+      },
+    };
+    const dbService: DatabaseService = {
+      query: jest.fn(),
+      queryReadOnly: jest.fn().mockResolvedValue([mockMetrics]),
+      end: jest.fn(),
+    };
+    await expect(
+      new ExpensesMetricsController(makeApp({}, dbService)).GET(),
+    ).resolves.toBeInstanceOf(Response);
+  });
+
+  it('POST throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesMetricsController(makeApp()).POST()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PUT throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesMetricsController(makeApp()).PUT()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('PATCH throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesMetricsController(makeApp()).PATCH()).toThrow(
+      MethodNotImplementedError,
+    );
+  });
+
+  it('DELETE throws MethodNotImplementedError', () => {
+    expect(() => new ExpensesMetricsController(makeApp()).DELETE()).toThrow(
       MethodNotImplementedError,
     );
   });

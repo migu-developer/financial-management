@@ -7,6 +7,10 @@ const config: Config = {
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: false }],
   },
+  moduleNameMapper: {
+    '^@notifications/(.*)$': '<rootDir>/src/$1',
+    '^@services/shared/(.*)$': '<rootDir>/node_modules/@services/shared/src/$1',
+  },
   moduleFileExtensions: ['ts', 'js', 'json'],
 };
 

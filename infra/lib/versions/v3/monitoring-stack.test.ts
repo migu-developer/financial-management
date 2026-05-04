@@ -23,6 +23,7 @@ jest.mock('aws-cdk-lib', () => {
     Duration: {
       minutes: (m: number) => m * 60,
       seconds: (s: number) => s,
+      hours: (h: number) => h * 3600,
     },
   };
 });
@@ -54,7 +55,7 @@ jest.mock('aws-cdk-lib/aws-sns-subscriptions', () => ({
 }));
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
-  Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Runtime: { NODEJS_24_X: 'nodejs24.x' },
   Tracing: { ACTIVE: 'Active' },
 }));
 
@@ -172,6 +173,10 @@ describe('MonitoringStack', () => {
       expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Errors`);
       expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Throttles`);
     }
+
+    // UpdateRates has errors alarm but no throttle alarm (scheduler, not API)
+    expect(alarmNames).toContain('Monitoring-Lambda-UpdateRates-Errors');
+    expect(alarmNames).not.toContain('Monitoring-Lambda-UpdateRates-Throttles');
   });
 
   test('creates Cognito trigger alarms', () => {
@@ -231,8 +236,8 @@ describe('MonitoringStack', () => {
       defaultProps,
     );
 
-    // 3 API + (4 services × 2 each) + 3 Cognito triggers = 14
-    expect(stack.alarms).toHaveLength(14);
+    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers = 15
+    expect(stack.alarms).toHaveLength(15);
   });
 
   test('stackName follows BaseStack convention', () => {

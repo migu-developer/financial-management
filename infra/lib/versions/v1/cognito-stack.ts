@@ -125,10 +125,10 @@ export class CognitoStack extends BaseStack {
 
     const customMessageFn = new NodejsFunction(this, 'CustomMessageFn', {
       functionName: customMessageFnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@packages/cognito/src/custom-message/index.ts',
+        '../../../node_modules/@packages/cognito/src/handlers/custom-message.ts',
       ),
       handler: 'handler',
       bundling: {
@@ -164,10 +164,10 @@ export class CognitoStack extends BaseStack {
 
     const userSyncFn = new NodejsFunction(this, 'UserSyncFn', {
       functionName: userSyncFnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@packages/cognito/src/user-sync/index.ts',
+        '../../../node_modules/@packages/cognito/src/handlers/user-sync.ts',
       ),
       handler: 'handler',
       bundling: {
@@ -214,10 +214,10 @@ export class CognitoStack extends BaseStack {
 
     const preSignUpFn = new NodejsFunction(this, 'PreSignUpFn', {
       functionName: preSignUpFnName,
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       entry: join(
         __dirname,
-        '../../../node_modules/@packages/cognito/src/pre-signup/index.ts',
+        '../../../node_modules/@packages/cognito/src/handlers/pre-signup.ts',
       ),
       handler: 'handler',
       bundling: {

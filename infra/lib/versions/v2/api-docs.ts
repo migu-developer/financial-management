@@ -20,24 +20,31 @@ export interface DocResource {
 }
 
 export class ApiDocumentation {
-  private partCount = 0;
-
   constructor(
     private readonly scope: Construct,
     private readonly api: RestApi,
     private readonly prefix: string,
   ) {}
 
+  private toStableId(path: string, suffix?: string): string {
+    const sanitized = path
+      .replace(/\//g, '-')
+      .replace(/[{}]/g, '')
+      .replace(/^-/, '');
+    const base = sanitized || 'root';
+    return `${this.prefix}-${base}${suffix ? `-${suffix}` : ''}`;
+  }
+
   addResource(doc: DocResource): void {
-    const partId = `${this.prefix}-Doc-${++this.partCount}`;
-    new CfnDocumentationPart(this.scope, `${partId}-Resource`, {
+    const resourceId = this.toStableId(doc.path, 'Resource');
+    new CfnDocumentationPart(this.scope, resourceId, {
       restApiId: this.api.restApiId,
       location: { type: 'RESOURCE', path: doc.path },
       properties: JSON.stringify({ description: doc.description }),
     });
 
     for (const method of doc.methods) {
-      const methodId = `${partId}-${method.method}`;
+      const methodId = this.toStableId(doc.path, method.method);
       const properties: Record<string, unknown> = {
         description: method.description,
       };

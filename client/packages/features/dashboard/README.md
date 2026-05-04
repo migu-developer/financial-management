@@ -1,6 +1,6 @@
 # @features/dashboard
 
-Dashboard feature package providing expense CRUD operations, cursor-based pagination, filtering, catalog management, and responsive layouts for both web and mobile. Follows Domain-Driven Design with a port/adapter architecture.
+Dashboard feature package providing expense CRUD operations, cursor-based pagination, filtering, catalog management, expense metrics with multi-currency support, and responsive layouts for both web and mobile. Follows Domain-Driven Design with a port/adapter architecture.
 
 ## Screens (pages)
 
@@ -48,28 +48,29 @@ src/
     use-cases/          SignOutUseCase
 
   application/
-    use-cases/          5 use cases (see below)
+    use-cases/          6 use cases (see below)
 
   infrastructure/
     api/                ApiClient (HTTP + retry), ExpenseApiRepository
     auth/               AuthDashboardRepository
 
   presentation/
-    providers/          DashboardProvider, ExpenseProvider
+    providers/          DashboardProvider, ExpenseProvider, MetricsProvider
     pages/              home, expenses
     components/         web/, mobile/, shared/ (templates, molecules)
 ```
 
-## Use cases (6 total)
+## Use cases (7 total)
 
-| Use case               | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| `ListExpensesUseCase`  | Fetch paginated expenses with optional filters          |
-| `CreateExpenseUseCase` | Create a new expense                                    |
-| `UpdateExpenseUseCase` | Full update of an existing expense                      |
-| `DeleteExpenseUseCase` | Delete an expense by ID                                 |
-| `ListCatalogsUseCase`  | Fetch currencies, expense types, and expense categories |
-| `SignOutUseCase`       | Sign out from the dashboard (delegates to auth)         |
+| Use case               | Description                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| `ListExpensesUseCase`  | Fetch paginated expenses with optional filters                |
+| `CreateExpenseUseCase` | Create a new expense                                          |
+| `UpdateExpenseUseCase` | Full update of an existing expense                            |
+| `DeleteExpenseUseCase` | Delete an expense by ID                                       |
+| `ListCatalogsUseCase`  | Fetch currencies, expense types, and expense categories       |
+| `GetMetricsUseCase`    | Fetch aggregated expense metrics for a date range and filters |
+| `SignOutUseCase`       | Sign out from the dashboard (delegates to auth)               |
 
 ## API client
 
@@ -128,6 +129,17 @@ Provides `ExpenseContextValue` via `useExpenses()` hook:
 - CRUD operations (createExpense, updateExpense, deleteExpense)
 - Pagination (loadExpenses, loadMore)
 - Filter management (filters, setFilters)
+
+### MetricsProvider
+
+Provides `MetricsContextValue` via `useMetrics()` hook:
+
+- `metrics: MetricsResponse | null` -- Aggregated metrics data (summary, by category, by type, by currency, daily trend, top expenses)
+- `loading: boolean` -- Loading state
+- `error: string | null` -- Error message
+- `filters: MetricsFilters` -- Current date range and optional category/type/currency filters (defaults to last 30 days)
+- `setFilters(filters)` -- Update filters and re-fetch metrics
+- `refresh()` -- Re-fetch metrics with current filters
 
 ## Dependencies
 

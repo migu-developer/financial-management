@@ -28,6 +28,7 @@
     "@aws-lambda-powertools/logger": "catalog:",
     "@aws-lambda-powertools/tracer": "catalog:",
     "@aws-sdk/client-s3": "catalog:",
-    "@aws-sdk/client-ses": "catalog:"
+    "@aws-sdk/client-ses": "catalog:",
+    "@services/shared": "workspace:*"
   }
 }

@@ -64,10 +64,11 @@ Extend `@packages/config/tsconfig.base.json`. Set paths:
 - `service.ts` -- Orchestrates use-cases, instantiates repositories
 - `router.ts` -- Maps route patterns to controller factories
 
-**Entry point** (`src/index.ts`):
+**Handler** (`src/handlers/get-{name}.ts`):
 
 - Lambda handler function: parses event, creates Application, dispatches via Router
 - Uses `@services/shared` for CORS, error handling, logger, tracer, database
+- CDK `entry:` points to this file (NEVER to `index.ts` or `exec/`)
 
 **Router** (`src/router.ts`):
 
@@ -121,10 +122,14 @@ pnpm infra:cdk synth
 - Use `@services/shared` for cross-cutting concerns (CORS, error handling, database, logger, tracer)
 - Use `@packages/models` for shared schemas and validation
 - Lambda functions use ESM format with source maps and X-Ray tracing
+- Use `TracerServiceImplementation` in handlers for cold start and annotations
+- Use `@trace('SegmentName')` Stage 3 decorator on all repository/service methods
 
 ## Must NOT Do
 
 - Put business logic in the controller or router
 - Import infrastructure directly from use-cases (use repository interfaces)
 - Skip adding the service to monitoring (v3)
+- Use `@tracer.captureMethod()` or `new Tracer()` directly -- use `@trace` decorator
+- Enable `experimentalDecorators` in tsconfig
 - Forget to add the workspace dependency to `infra/package.json`

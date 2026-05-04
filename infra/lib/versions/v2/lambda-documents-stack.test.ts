@@ -51,7 +51,7 @@ jest.mock('aws-cdk-lib', () => {
 });
 
 jest.mock('aws-cdk-lib/aws-lambda', () => ({
-  Runtime: { NODEJS_22_X: 'nodejs22.x' },
+  Runtime: { NODEJS_24_X: 'nodejs24.x' },
   Tracing: { ACTIVE: 'Active' },
 }));
 
@@ -148,7 +148,7 @@ describe('LambdaDocumentsStack', () => {
   });
 
   describe('Lambda function', () => {
-    test('uses Node.js 22 runtime', () => {
+    test('uses Node.js 24 runtime', () => {
       createStack();
       const { NodejsFunction: MockFn } = jest.requireMock<
         Record<string, jest.Mock>
@@ -157,7 +157,7 @@ describe('LambdaDocumentsStack', () => {
         string,
         unknown
       >;
-      expect(fnProps.runtime).toBe('nodejs22.x');
+      expect(fnProps.runtime).toBe('nodejs24.x');
     });
 
     test('receives DATABASE_URL and ALLOWED_ORIGINS env vars', () => {

@@ -1,4 +1,4 @@
-import { handler } from '@services/users/index';
+import { handler } from '@services/users/handlers/get-users';
 import type { APIGatewayProxyEvent } from '@services/shared/domain/interfaces/request';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 import { randomUUID } from 'node:crypto';

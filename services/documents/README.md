@@ -18,7 +18,7 @@ The service follows the same layered Domain-Driven Design architecture as all ot
 
 ### Presentation Layer
 
-- **`index.ts`** -- Lambda handler entry point. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
+- **`handlers/get-documents.ts`** -- Lambda handler. Initializes database, tracer, and logger services at module scope for warm invocation reuse.
 - **`presentation/application.ts`** -- Composes the Application context from the API Gateway event, user profile, logger, and database service. Defines the single route-to-module mapping.
 - **`presentation/controller.ts`** -- Controller handling the GET method for the `/documents` route.
 - **`presentation/router.ts`** -- Presentation-level router resolving modules from the Application's route table.
@@ -118,7 +118,10 @@ services/documents/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── index.ts                          # Lambda handler entry point
+    ├── handlers/
+    │   └── get-documents.ts              # Lambda handler (CDK entry point)
+    ├── exec/                             # Local test scripts
+    │   └── get-documents.ts
     ├── router.ts                         # Top-level route matching + dispatch
     ├── router.test.ts
     ├── application/
@@ -129,8 +132,6 @@ services/documents/
     │   │   └── document.entity.ts
     │   └── repositories/
     │       └── document.repository.ts
-    ├── exec/
-    │   └── get-documents.ts
     ├── infrastructure/
     │   └── repositories/
     │       └── postgres-document.repository.ts

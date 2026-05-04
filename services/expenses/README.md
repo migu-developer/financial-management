@@ -16,6 +16,7 @@ The **Expenses** bounded context owns all expense lifecycle management: creation
 | `PUT`    | `/expenses/{id}`       | Full update of an expense                                 | Cognito Authorizer |
 | `PATCH`  | `/expenses/{id}`       | Partial update of an expense                              | Cognito Authorizer |
 | `DELETE` | `/expenses/{id}`       | Delete an expense                                         | Cognito Authorizer |
+| `GET`    | `/expenses/metrics`    | Aggregated expense metrics for the authenticated user     | Cognito Authorizer |
 | `GET`    | `/expenses/types`      | List all expense types (catalog)                          | Cognito Authorizer |
 | `GET`    | `/expenses/categories` | List all expense categories (catalog)                     | Cognito Authorizer |
 
@@ -29,13 +30,23 @@ The **Expenses** bounded context owns all expense lifecycle management: creation
 | `expense_category_id` | string | Filter by expense category             |
 | `name`                | string | Case-insensitive partial match (ILIKE) |
 
+### Query Parameters (GET /expenses/metrics)
+
+| Parameter             | Type   | Description                                         |
+| --------------------- | ------ | --------------------------------------------------- |
+| `from`                | string | Start date (YYYY-MM-DD). Defaults to first of month |
+| `to`                  | string | End date (YYYY-MM-DD). Defaults to last of month    |
+| `currency_id`         | string | Filter by currency                                  |
+| `expense_type_id`     | string | Filter by expense type                              |
+| `expense_category_id` | string | Filter by expense category                          |
+
 ## Architecture
 
 The service follows a layered Domain-Driven Design architecture with mixin-based controller composition.
 
 ### Presentation Layer
 
-- **`index.ts`** -- Lambda handler entry point. Initializes database, tracer, and logger services at module scope for connection reuse across warm invocations.
+- **`handlers/get-expenses.ts`** -- Lambda handler. Initializes database, tracer, and logger services at module scope for connection reuse across warm invocations.
 - **`presentation/application.ts`** -- Composes the Application context from the API Gateway event, user profile, logger, and database service. Defines route-to-module mappings.
 - **`presentation/controller.ts`** -- Mixin-based controller built from `GetWrapper`, `PostWrapper`, `PutWrapper`, `PatchWrapper`, `DeleteWrapper`. Each mixin handles a single HTTP method.
 - **`presentation/router.ts`** -- Presentation-level router that resolves modules from the Application's route table.
@@ -50,38 +61,46 @@ The service follows a layered Domain-Driven Design architecture with mixin-based
 - **`update-expense.use-case.ts`** -- Full replacement update of an expense.
 - **`patch-expense.use-case.ts`** -- Partial update; only provided fields are modified.
 - **`delete-expense.use-case.ts`** -- Deletes an expense, verified against user ownership.
+- **`get-metrics.use-case.ts`** -- Computes aggregated metrics (summary, by category, by type, by currency, daily trend, top expenses) for a user and date range.
 - **`get-expense-types.use-case.ts`** -- Returns all expense types from the catalog.
 - **`get-expense-categories.use-case.ts`** -- Returns all expense categories from the catalog.
 
 ### Domain Layer
 
-- **`expense.repository.ts`** -- Interface defining the expense repository contract (findAll, findById, create, update, patch, delete, count).
+- **`expense.repository.ts`** -- Interface defining the expense repository contract (findAll, findById, create, update, patch, delete, count, getMetrics).
 - **`expense-category.repository.ts`** -- Interface for the category catalog repository.
 - **`expense-type.repository.ts`** -- Interface for the type catalog repository.
 
+### Domain Services
+
+- **`CurrencyConversionService`** -- Interface for converting expense values to a global currency (USD) using the latest exchange rates. Used by create, update, and patch use cases to compute `global_value`.
+
 ### Infrastructure Layer
 
-- **`postgres-expense.repository.ts`** -- PostgreSQL implementation with X-Ray traced subsegments on every query. Uses write pool for mutations and read-replica pool for reads. Builds dynamic WHERE clauses for filters and cursor-based keyset pagination.
+- **`postgres-expense.repository.ts`** -- PostgreSQL implementation with X-Ray traced subsegments via the `@trace` Stage 3 decorator on every query method. Uses write pool for mutations and read-replica pool for reads. Builds dynamic WHERE clauses for filters, cursor-based keyset pagination, and aggregated metrics queries.
 - **`postgres-expense-type.repository.ts`** -- PostgreSQL implementation for expense type catalog lookups.
 - **`postgres-expense-category.repository.ts`** -- PostgreSQL implementation for expense category catalog lookups.
+- **`postgres-currency-conversion.service.ts`** -- PostgreSQL implementation of `CurrencyConversionService` that looks up the latest exchange rate for a currency and computes the USD-equivalent `global_value`.
 
 ## Domain Entities
 
 ### Expense
 
-| Field                 | Type     | Description                      |
-| --------------------- | -------- | -------------------------------- |
-| `id`                  | `string` | UUID primary key                 |
-| `user_id`             | `string` | FK to users table                |
-| `name`                | `string` | Expense description              |
-| `value`               | `number` | Monetary amount                  |
-| `currency_id`         | `string` | FK to currencies catalog         |
-| `expense_type_id`     | `string` | FK to expense types catalog      |
-| `expense_category_id` | `string` | FK to expense categories catalog |
-| `created_at`          | `string` | ISO timestamp                    |
-| `updated_at`          | `string` | ISO timestamp                    |
-| `created_by`          | `string` | Audit: creator identifier        |
-| `modified_by`         | `string` | Audit: last modifier identifier  |
+| Field                 | Type             | Description                      |
+| --------------------- | ---------------- | -------------------------------- |
+| `id`                  | `string`         | UUID primary key                 |
+| `user_id`             | `string`         | FK to users table                |
+| `name`                | `string`         | Expense description              |
+| `value`               | `number`         | Monetary amount                  |
+| `currency_id`         | `string`         | FK to currencies catalog         |
+| `expense_type_id`     | `string`         | FK to expense types catalog      |
+| `expense_category_id` | `string`         | FK to expense categories catalog |
+| `date`                | `string \| null` | Expense date (YYYY-MM-DD)        |
+| `global_value`        | `number \| null` | USD-equivalent value via TRM     |
+| `created_at`          | `string`         | ISO timestamp                    |
+| `updated_at`          | `string`         | ISO timestamp                    |
+| `created_by`          | `string`         | Audit: creator identifier        |
+| `modified_by`         | `string`         | Audit: last modifier identifier  |
 
 ### ExpenseType
 
@@ -169,7 +188,18 @@ services/expenses/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── index.ts                          # Lambda handler entry point
+    ├── handlers/
+    │   └── get-expenses.ts               # Lambda handler (CDK entry point)
+    ├── exec/                             # Local test scripts
+    │   ├── create-expense.ts
+    │   ├── delete-expense.ts
+    │   ├── get-expense-by-id.ts
+    │   ├── get-expense-categories.ts
+    │   ├── get-expense-types.ts
+    │   ├── get-expenses.ts
+    │   ├── get-metrics.ts
+    │   ├── patch-expense.ts
+    │   └── put-expense.ts
     ├── router.ts                         # Top-level route matching + dispatch
     ├── router.test.ts
     ├── application/
@@ -180,6 +210,7 @@ services/expenses/
     │       ├── get-expense-categories.use-case.ts
     │       ├── get-expense-types.use-case.ts
     │       ├── get-expenses-by-user.use-case.ts
+    │       ├── get-metrics.use-case.ts
     │       ├── patch-expense.use-case.ts
     │       └── update-expense.use-case.ts
     ├── domain/
@@ -187,15 +218,6 @@ services/expenses/
     │       ├── expense.repository.ts
     │       ├── expense-category.repository.ts
     │       └── expense-type.repository.ts
-    ├── exec/
-    │   ├── create-expense.ts
-    │   ├── delete-expense.ts
-    │   ├── get-expense-by-id.ts
-    │   ├── get-expense-categories.ts
-    │   ├── get-expense-types.ts
-    │   ├── get-expenses.ts
-    │   ├── patch-expense.ts
-    │   └── put-expense.ts
     ├── infrastructure/
     │   └── repositories/
     │       ├── postgres-expense.repository.ts
