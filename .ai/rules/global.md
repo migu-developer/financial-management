@@ -82,8 +82,11 @@ pnpm format:fix
 ## pnpm Catalog
 
 Shared dependency versions are pinned in `pnpm-workspace.yaml` under `catalog:`.
-When adding dependencies to any workspace, use `"catalog:"` as the version
-specifier so versions stay unified across the monorepo.
+When adding ANY new dependency to ANY workspace:
+
+1. First add the version to `catalog:` in `pnpm-workspace.yaml`
+2. Then reference it as `"catalog:"` in the package.json
+   NEVER add a version directly in a package.json — always go through the catalog.
 
 Key catalog versions:
 

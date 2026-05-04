@@ -91,6 +91,16 @@ pnpm --filter @client/main test
   an atom in `@features/ui` before being used in any feature. If it does not
   exist, create it first. NEVER inline a generic input directly in a feature.
 
+## Loading States — Skeleton Loaders
+
+- Every page/section that fetches data MUST show a skeleton loader during
+  initial load. NEVER show a blank screen, a spinner alone, or "Loading...".
+- Use the `Skeleton` atom from `@features/ui` as the building block.
+- Skeleton loaders MUST mimic the layout of the final content (same card
+  sizes, same row counts, same spacing) so the UI doesn't shift on load.
+- Pattern: `if (loading && !data)` → show skeleton, not a spinner.
+- Consistent across all features: expenses list, dashboard metrics, etc.
+
 ## Testing Conventions
 
 - Test files are **co-located** next to the source: `component.tsx` →
