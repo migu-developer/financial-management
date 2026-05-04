@@ -15,6 +15,9 @@ export interface ChatInputProps {
   onCamera: () => void;
   onMic: () => void;
   placeholder: string;
+  cameraLabel?: string;
+  micLabel?: string;
+  sendLabel?: string;
 }
 
 export function ChatInput({
@@ -24,6 +27,9 @@ export function ChatInput({
   onCamera,
   onMic,
   placeholder,
+  cameraLabel = 'Camera',
+  micLabel = 'Microphone',
+  sendLabel = 'Send',
 }: ChatInputProps) {
   const { colorScheme } = useThemeActions();
   const isDark = colorScheme === ColorScheme.DARK;
@@ -48,7 +54,7 @@ export function ChatInput({
       <TouchableOpacity
         onPress={onCamera}
         accessibilityRole="button"
-        accessibilityLabel="Camera"
+        accessibilityLabel={cameraLabel}
         style={{ padding: space.s4 }}
       >
         <MaterialCommunityIcons
@@ -61,7 +67,7 @@ export function ChatInput({
       <TouchableOpacity
         onPress={onMic}
         accessibilityRole="button"
-        accessibilityLabel="Microphone"
+        accessibilityLabel={micLabel}
         style={{ padding: space.s4 }}
       >
         <MaterialCommunityIcons
@@ -83,7 +89,7 @@ export function ChatInput({
         onPress={onSend}
         disabled={!value.trim()}
         accessibilityRole="button"
-        accessibilityLabel="Send"
+        accessibilityLabel={sendLabel}
         style={{
           padding: space.xs,
           borderRadius: space.xl,

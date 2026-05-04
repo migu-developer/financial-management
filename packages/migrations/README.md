@@ -131,13 +131,13 @@ RLS is enabled on all tables with two policy sets:
 
 ### Migration History
 
-| Version | Description                                                                                                                     |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `1.0.0` | Create read-only role and user for Lambda access                                                                                |
-| `2.0.0` | Create base schema, tables with RLS, functions, triggers and indexes                                                            |
-| `2.0.1` | Seed initial catalog data (currencies, expense types, providers, documents)                                                     |
-| `2.1.0` | Add composite indexes for expenses query performance                                                                            |
-| `3.0.0` | Add `date` and `global_value` columns to expenses; create `exchange_rates` table with latest-rate view; backfill existing dates |
+| Version | Description                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| `1.0.0` | Create read-only role and user for Lambda access                                                       |
+| `2.0.0` | Create base schema, tables with RLS, functions, triggers and indexes                                   |
+| `2.0.1` | Seed initial catalog data (currencies, expense types, providers, documents)                            |
+| `2.1.0` | Add composite indexes for expenses query performance                                                   |
+| `3.0.0` | Add `date` and `global_value` columns to expenses; create `exchange_rates` table with latest-rate view |
 
 ## Structure
 

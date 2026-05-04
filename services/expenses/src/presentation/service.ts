@@ -204,19 +204,47 @@ export class ExpensesMetricsService extends Service {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const from = qs?.['from'] ?? firstDay.toISOString().split('T')[0] ?? '';
     const to = qs?.['to'] ?? lastDay.toISOString().split('T')[0] ?? '';
+
+    if (!dateRegex.test(from) || !dateRegex.test(to)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid date format. Use YYYY-MM-DD.',
+        }),
+        { status: HttpCode.BAD_REQUEST },
+      );
+    }
+
+    const currencyId = qs?.['currency_id'];
+    const expenseTypeId = qs?.['expense_type_id'];
+    const expenseCategoryId = qs?.['expense_category_id'];
+
+    if (
+      (currencyId && !uuidRegex.test(currencyId)) ||
+      (expenseTypeId && !uuidRegex.test(expenseTypeId)) ||
+      (expenseCategoryId && !uuidRegex.test(expenseCategoryId))
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'Invalid UUID format for filter parameter.',
+        }),
+        { status: HttpCode.BAD_REQUEST },
+      );
+    }
 
     const filters: MetricsFilters = {
       from,
       to,
-      ...(qs?.['currency_id'] && { currency_id: qs['currency_id'] }),
-      ...(qs?.['expense_type_id'] && {
-        expense_type_id: qs['expense_type_id'],
-      }),
-      ...(qs?.['expense_category_id'] && {
-        expense_category_id: qs['expense_category_id'],
-      }),
+      ...(currencyId && { currency_id: currencyId }),
+      ...(expenseTypeId && { expense_type_id: expenseTypeId }),
+      ...(expenseCategoryId && { expense_category_id: expenseCategoryId }),
     };
 
     const repository = new PostgresExpenseRepository(this.app.dbService);

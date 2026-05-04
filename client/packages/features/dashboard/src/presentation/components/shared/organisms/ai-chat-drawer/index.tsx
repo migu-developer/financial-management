@@ -235,6 +235,9 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
           onCamera={handleCamera}
           onMic={handleMic}
           placeholder={t('aiChat.placeholder')}
+          cameraLabel={t('aiChat.cameraLabel', { defaultValue: 'Camera' })}
+          micLabel={t('aiChat.micLabel', { defaultValue: 'Microphone' })}
+          sendLabel={t('aiChat.send')}
         />
       </Animated.View>
     </View>
