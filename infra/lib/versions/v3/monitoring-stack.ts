@@ -540,11 +540,14 @@ export class MonitoringStack extends BaseStack {
       }),
     );
 
-    // ── SNS Topic Policy (allow EventBridge to publish) ──
+    // ── SNS Topic Policy (allow EventBridge and CloudWatch Alarms to publish) ──
     this.alertTopic.addToResourcePolicy(
       new PolicyStatement({
         actions: ['sns:Publish'],
-        principals: [new ServicePrincipal('events.amazonaws.com')],
+        principals: [
+          new ServicePrincipal('events.amazonaws.com'),
+          new ServicePrincipal('cloudwatch.amazonaws.com'),
+        ],
         resources: [this.alertTopic.topicArn],
         conditions: {
           StringEquals: { 'AWS:SourceAccount': this.account },
