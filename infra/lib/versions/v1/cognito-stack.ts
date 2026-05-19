@@ -74,6 +74,7 @@ export interface CognitoStackProps extends BaseStackProps {
   // SES Email
   readonly sesFromEmail: string;
   readonly sesReplyTo: string;
+  readonly sesVerifiedDomain?: string;
   // SNS SMS
   readonly snsRegion: string;
   readonly snsMonthlySpendLimit: string;
@@ -267,6 +268,7 @@ export class CognitoStack extends BaseStack {
         fromName: 'Financial Management',
         replyTo: props.sesReplyTo,
         sesRegion: props.snsRegion,
+        sesVerifiedDomain: props.sesVerifiedDomain,
       }),
       removalPolicy,
     });

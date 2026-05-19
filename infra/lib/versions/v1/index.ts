@@ -54,6 +54,7 @@ const createAuthStack: NamedStackFactory = {
           .map((u) => u.trim()),
         sesFromEmail: process.env.SES_FROM_EMAIL ?? '',
         sesReplyTo: process.env.SES_REPLY_TO ?? '',
+        sesVerifiedDomain: process.env.SES_VERIFIED_DOMAIN || undefined,
         snsRegion: process.env.AWS_REGION ?? '',
         snsMonthlySpendLimit: process.env.SNS_MONTHLY_SPEND_LIMIT ?? '1',
         smsBlockedCountries: (process.env.SMS_BLOCKED_COUNTRIES ?? '')

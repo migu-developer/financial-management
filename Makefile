@@ -87,6 +87,14 @@ setup-production: ## Setup production environment
 	@direnv allow
 	$(call log_success,Production environment setup complete! 🎉)
 
+.PHONY: ai-bootstrap
+ai-bootstrap: ## Bootstrap AI documentation
+	$(call log_info,Installing AI skills...)
+	pnpm ai:skills
+	$(call log_info,Syncing AI documentation...)
+	pnpm ai:setup
+	$(call log_success,AI bootstrap complete! 🎉)
+
 .PHONY: lint
 lint: ## Run ESLint
 	pnpm lint

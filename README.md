@@ -99,6 +99,8 @@ financial-management/
 git clone https://github.com/migu-developer/financial-management.git
 cd financial-management
 pnpm install
+pnpm ai:skills   # optional: ecosystem skills from skills-lock.json
+pnpm ai:setup    # optional: sync project AI docs from .ai/
 cp config/.env.local.example config/.env.local   # edit with your values
 direnv allow
 pnpm supabase:start && pnpm migrations:migrate
