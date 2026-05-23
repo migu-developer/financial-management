@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-pnpm monorepo (pnpm@10.29.3) with Turborepo orchestration.
+pnpm monorepo (pnpm@11.1.1) with Turborepo orchestration.
 Node.js >= 24, TypeScript 5.9+.
 
 Workspaces: `client/*`, `client/packages/*`, `client/packages/features/*`,

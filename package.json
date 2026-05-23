@@ -32,6 +32,7 @@
     "migrations:create-migration": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts create-migration",
     "migrations:export": "tsx --tsconfig packages/migrations/tsconfig.json packages/migrations/src/cli.ts export",
     "ai:setup": "bash .ai/setup.sh --all",
+    "ai:skills": "skills experimental_install",
     "ai:test": "bash .ai/setup.test.sh"
   },
   "devDependencies": {
@@ -41,12 +42,13 @@
     "@packages/config": "workspace:*",
     "husky": "catalog:",
     "prettier": "catalog:",
+    "skills": "catalog:",
     "turbo": "catalog:",
     "ts-node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   },
-  "packageManager": "pnpm@10.29.3",
+  "packageManager": "pnpm@11.1.1",
   "engines": {
     "node": ">=24"
   }

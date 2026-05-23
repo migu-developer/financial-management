@@ -89,7 +89,7 @@ financial-management/
 ## Prerequisites
 
 - **Node.js** >= 24
-- **pnpm** >= 10.29 (`corepack enable && corepack prepare pnpm@latest --activate`)
+- **pnpm** 11 (`corepack enable && corepack prepare pnpm@11.1.1 --activate`)
 - **AWS CLI** v2 (for deployment)
 - **Docker** (for local Supabase)
 
@@ -99,6 +99,8 @@ financial-management/
 git clone https://github.com/migu-developer/financial-management.git
 cd financial-management
 pnpm install
+pnpm ai:skills   # optional: ecosystem skills from skills-lock.json
+pnpm ai:setup    # optional: sync project AI docs from .ai/
 cp config/.env.local.example config/.env.local   # edit with your values
 direnv allow
 pnpm supabase:start && pnpm migrations:migrate
