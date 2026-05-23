@@ -30,8 +30,8 @@ catalog:
   '@types/jest': ^30.0.0
   '@types/node': ^25.5.2
   '@types/pg': ^8.20.0
-  '@types/react': ~19.1.10
-  '@types/react-dom': ~19.1.1
+  '@types/react': ~19.1.17
+  '@types/react-dom': ~19.1.11
   amazon-cognito-identity-js: ^6.3.16
   aws-cdk: ^2.1121.0
   aws-cdk-lib: ^2.250.0

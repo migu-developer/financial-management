@@ -87,7 +87,10 @@ Managed via the [`skills`](https://www.npmjs.com/package/skills) CLI (`skills@^1
   repository (similar to `pnpm-lock.yaml`).
 - Running `pnpm ai:skills` (alias for `skills experimental_install`) restores
   all skills declared in `skills-lock.json` by downloading them and symlinking
-  into the appropriate agent directories (`.claude/skills-ai/`, `.codex/skills/`).
+  into the ecosystem skill directories (e.g., `.agents/skills/` for Codex).
+  This is separate from project skills, which are authored under `.ai/skills/`
+  and distributed by `pnpm ai:setup` into provider-specific directories
+  (`.claude/skills/` for Claude Code, `.agents/skills/` for Codex).
 
 **Currently installed ecosystem skills:**
 

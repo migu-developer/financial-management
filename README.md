@@ -89,7 +89,7 @@ financial-management/
 ## Prerequisites
 
 - **Node.js** >= 24
-- **pnpm** >= 10.29 (`corepack enable && corepack prepare pnpm@latest --activate`)
+- **pnpm** 11 (`corepack enable && corepack prepare pnpm@11.1.1 --activate`)
 - **AWS CLI** v2 (for deployment)
 - **Docker** (for local Supabase)
 
