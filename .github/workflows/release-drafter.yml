@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: release-drafter/release-drafter@v7.2.1
+      - uses: release-drafter/release-drafter@v7.3.1
         with:
           config-name: release-drafter.yml
         env:
