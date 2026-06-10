@@ -55,6 +55,11 @@ export { CurrencyDistribution } from './shared/molecules/currency-distribution';
 export type { CurrencyDistributionProps } from './shared/molecules/currency-distribution';
 export { MetricsFilterBar } from './shared/molecules/metrics-filter-bar';
 export type { MetricsFilterBarProps } from './shared/molecules/metrics-filter-bar';
+export { QuickFilterChips } from './shared/molecules/quick-filter-chips';
+export type {
+  QuickFilterChipsProps,
+  QuickFilterChipOption,
+} from './shared/molecules/quick-filter-chips';
 export { FloatingActionButton } from './shared/atoms/floating-action-button';
 export { ChatBubble } from './shared/atoms/chat-bubble';
 export type { ChatBubbleProps } from './shared/atoms/chat-bubble';

@@ -93,6 +93,11 @@ export const dashboard = {
     allTypes: 'All types',
     filterFrom: 'From',
     filterTo: 'To',
+    quickRanges: {
+      currentMonth: 'This month',
+      pastMonth: 'Last month',
+      lastThreeMonths: 'Last 3 months',
+    },
     globalCurrency: 'USD',
     equivalent: '~{{value}} USD',
     byCategoryUsd: 'By Category (USD)',

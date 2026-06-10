@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useTranslation } from '@packages/i18n';
@@ -10,7 +10,14 @@ import {
   DailyTrendChart,
   TopExpensesList,
   CurrencyDistribution,
+  QuickFilterChips,
 } from '@features/ui';
+import {
+  getQuickRange,
+  matchQuickRange,
+  QUICK_RANGE_OPTIONS,
+  type QuickRangeOption,
+} from '@features/dashboard/domain/utils/quick-date-ranges';
 import { useMetrics } from '@features/dashboard/presentation/providers/metrics-provider';
 import {
   DashboardSkeleton,
@@ -26,6 +33,25 @@ export function DashboardTemplate() {
 
   const handleOpenChat = useCallback(() => setChatOpen(true), []);
   const handleCloseChat = useCallback(() => setChatOpen(false), []);
+
+  // Quick range presets (issue #35). Selection is DERIVED from the current
+  // from/to filters, so editing a DateInput manually deselects every chip.
+  const quickRangeOptions = useMemo(
+    () =>
+      QUICK_RANGE_OPTIONS.map((value) => ({
+        value,
+        label: t(`metrics.quickRanges.${value}`),
+      })),
+    [t],
+  );
+  const selectedQuickRange = matchQuickRange(filters.from, filters.to);
+  const handleQuickRange = useCallback(
+    (option: QuickRangeOption) => {
+      const { from, to } = getQuickRange(option);
+      setFilters({ ...filters, from, to });
+    },
+    [filters, setFilters],
+  );
 
   if (loading && !metrics) {
     return <DashboardSkeleton />;
@@ -51,6 +77,14 @@ export function DashboardTemplate() {
         <Text className="text-slate-900 dark:text-white font-bold text-2xl mb-4">
           {t('metrics.title')}
         </Text>
+
+        <View className="mb-3">
+          <QuickFilterChips
+            options={quickRangeOptions}
+            selected={selectedQuickRange}
+            onSelect={handleQuickRange}
+          />
+        </View>
 
         <View className="flex-row gap-3 mb-4">
           <View className="flex-1">
