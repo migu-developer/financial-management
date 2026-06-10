@@ -5,16 +5,11 @@ import type {
   MetricsFilters,
   MetricsResponse,
 } from '@packages/models/expenses';
+import type { ExtractedQueryFilters } from '@packages/prompts/chat/contracts';
 import type { CatalogLookupRepository } from '@services/chat/infrastructure/repositories/catalog-lookup.repository';
+import { toCatalogExpenseTypeName } from '@services/chat/domain/utils/expense-type-synonyms';
 
-export interface ExtractedQueryFilters {
-  expenseTypeName?: string;
-  expenseCategoryName?: string;
-  currencyCode?: string;
-  from?: string;
-  to?: string;
-  name?: string;
-}
+export type { ExtractedQueryFilters };
 
 export interface ExecuteQueryInput {
   uid: string;
@@ -105,7 +100,7 @@ export class ExecuteQueryUseCase {
 
     if (filters.expenseTypeName) {
       const id = await this.catalogLookup.findExpenseTypeIdByName(
-        filters.expenseTypeName,
+        toCatalogExpenseTypeName(filters.expenseTypeName),
       );
       if (id) resolved.expense_type_id = id;
     }

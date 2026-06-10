@@ -5,6 +5,7 @@ import type {
   WorkflowStarterService,
 } from '@services/chat/domain/services/workflow-starter.service';
 import { DataNotDefinedError } from '@packages/models/shared/utils/errors';
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 /**
  * AWS Step Functions adapter for `WorkflowStarterService`.
@@ -20,6 +21,7 @@ export class SfnWorkflowStarter implements WorkflowStarterService {
     private readonly client: SFNClient = new SFNClient({}),
   ) {}
 
+  @trace('Sfn:startExecution')
   async start(input: StartChatWorkflowInput): Promise<StartChatWorkflowResult> {
     if (!this.stateMachineArn) {
       throw new DataNotDefinedError(

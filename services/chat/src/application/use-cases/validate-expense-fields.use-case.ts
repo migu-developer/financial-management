@@ -1,17 +1,8 @@
+import type { ExtractedExpenseFields } from '@packages/prompts/chat/contracts';
 import type { CatalogLookupRepository } from '@services/chat/infrastructure/repositories/catalog-lookup.repository';
+import { toCatalogExpenseTypeName } from '@services/chat/domain/utils/expense-type-synonyms';
 
-/**
- * Raw fields as Nova Lite extracted them — names/codes instead of IDs.
- * Any field can be missing.
- */
-export interface ExtractedExpenseFields {
-  name?: string;
-  value?: number;
-  currencyCode?: string;
-  expenseTypeName?: string;
-  categoryName?: string;
-  date?: string;
-}
+export type { ExtractedExpenseFields };
 
 /**
  * Same fields with catalog IDs resolved (so the create use case can be
@@ -41,21 +32,6 @@ const FRIENDLY_LABELS = {
   expense_type: 'tipo (ingreso o egreso)',
   date: 'fecha',
 } as const;
-
-/**
- * The expenses_types catalog stores English names (income/outcome) but the
- * extraction prompts speak Spanish (ingreso/egreso). Map synonyms to the
- * catalog name before lookup; unknown values pass through unchanged.
- */
-const EXPENSE_TYPE_SYNONYMS: Record<string, string> = {
-  ingreso: 'income',
-  egreso: 'outcome',
-  gasto: 'outcome',
-};
-
-function toCatalogExpenseTypeName(name: string): string {
-  return EXPENSE_TYPE_SYNONYMS[name.trim().toLowerCase()] ?? name;
-}
 
 /**
  * Validates the AI-extracted fields:

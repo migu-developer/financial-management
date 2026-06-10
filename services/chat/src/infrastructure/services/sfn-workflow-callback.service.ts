@@ -3,6 +3,7 @@ import type {
   WorkflowCallbackPayload,
   WorkflowCallbackService,
 } from '@services/chat/domain/services/workflow-callback.service';
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 /**
  * AWS Step Functions adapter for `WorkflowCallbackService`.
@@ -12,6 +13,7 @@ import type {
 export class SfnWorkflowCallback implements WorkflowCallbackService {
   constructor(private readonly client: SFNClient = new SFNClient({})) {}
 
+  @trace('Sfn:sendTaskSuccess')
   async resume(
     taskToken: string,
     payload: WorkflowCallbackPayload,

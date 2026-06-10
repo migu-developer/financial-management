@@ -6,6 +6,7 @@ import type {
   ChatEventPayload,
   EventPublisherService,
 } from '@services/chat/domain/services/event-publisher.service';
+import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 /**
  * Publishes events to the AppSync Events HTTP endpoint with SigV4 IAM auth.
@@ -33,6 +34,7 @@ export class AppSyncEventPublisher implements EventPublisherService {
     });
   }
 
+  @trace('AppSync:publish')
   async publish(channel: string, payload: ChatEventPayload): Promise<void> {
     if (!this.httpDns) {
       throw new Error(
