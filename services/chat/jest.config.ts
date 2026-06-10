@@ -11,6 +11,8 @@ const config: Config = {
   moduleNameMapper: {
     '^@services/chat/(.*)$': '<rootDir>/src/$1',
     '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
+    '^@packages/prompts/(.*)$':
+      '<rootDir>/node_modules/@packages/prompts/src/$1',
     '^@services/expenses/(.*)$':
       '<rootDir>/node_modules/@services/expenses/src/$1',
     '^@services/shared/(.*)$': '<rootDir>/node_modules/@services/shared/src/$1',

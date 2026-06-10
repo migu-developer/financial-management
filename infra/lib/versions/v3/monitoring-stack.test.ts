@@ -236,8 +236,11 @@ describe('MonitoringStack', () => {
       defaultProps,
     );
 
-    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers = 15
-    expect(stack.alarms).toHaveLength(15);
+    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers
+    //   = 15
+    // + (6 chat Lambdas × 2 each: error + throttle) = 12
+    // Total = 27
+    expect(stack.alarms).toHaveLength(27);
   });
 
   test('stackName follows BaseStack convention', () => {

@@ -20,6 +20,7 @@
     "@aws-sdk/protocol-http": "catalog:",
     "@aws-sdk/signature-v4": "catalog:",
     "@packages/models": "workspace:*",
+    "@packages/prompts": "workspace:*",
     "@services/expenses": "workspace:*",
     "@services/shared": "workspace:*"
   },

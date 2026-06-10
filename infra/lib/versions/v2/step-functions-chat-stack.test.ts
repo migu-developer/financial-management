@@ -87,6 +87,7 @@ const mockStateMachineCtor = jest
 
 class MockChain {
   next = mockStateMachineNext;
+  addRetry = jest.fn().mockReturnThis();
 }
 
 jest.mock('aws-cdk-lib/aws-stepfunctions', () => ({

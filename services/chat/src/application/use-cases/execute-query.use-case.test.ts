@@ -104,7 +104,8 @@ describe('ExecuteQueryUseCase', () => {
         today: TODAY,
       });
 
-      expect(catalog.findExpenseTypeIdByName).toHaveBeenCalledWith('egreso');
+      // Spanish synonym mapped to the English catalog name before lookup.
+      expect(catalog.findExpenseTypeIdByName).toHaveBeenCalledWith('outcome');
       expect(catalog.findCategoryIdByName).toHaveBeenCalledWith('comida');
       const filters = (repo.getMetrics.mock.calls[0]?.[1] ?? {}) as Record<
         string,
