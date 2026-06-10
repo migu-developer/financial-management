@@ -6,6 +6,7 @@ import {
   DashboardWebLayout,
   DashboardMobileLayout,
 } from '@features/dashboard';
+import { ChatProvider } from '@features/dashboard/presentation/providers/chat-provider';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
 import { useCallback, useMemo } from 'react';
@@ -14,6 +15,22 @@ const NAVIGATE_MAP: Record<string, string> = {
   home: ROUTES.dashboard.home,
   expenses: ROUTES.dashboard.expenses,
 };
+
+export function requireEnv(value: string | undefined): string {
+  if (!value) {
+    throw new Error('Environment variable is not configured.');
+  }
+  return value;
+}
+
+// Read once at module load — values are baked into the bundle by Expo.
+const API_BASE_URL = requireEnv(process.env.EXPO_PUBLIC_API_URL);
+const APPSYNC_REALTIME_DNS = requireEnv(
+  process.env.EXPO_PUBLIC_APPSYNC_REALTIME_DNS,
+);
+const APPSYNC_CHAT_NAMESPACE = requireEnv(
+  process.env.EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE,
+);
 
 export default function DashboardLayout() {
   const { session, loading, user, signOut } = useAuth();
@@ -29,20 +46,40 @@ export default function DashboardLayout() {
     [router],
   );
 
+  const getToken = useCallback(async () => {
+    return session?.idToken ?? null;
+  }, [session]);
+
   if (!loading && !session) {
     return <Redirect href={ROUTES.authLogin as never} />;
   }
 
-  const dashboardUser = user
-    ? { userId: user.userId, fullname: user.fullname, email: user.email }
-    : null;
+  // The dashboard templates always render the AI chat drawer, and the drawer
+  // calls `useChatContext()` at mount. Wait for the authenticated user before
+  // rendering anything that could hit that hook.
+  if (!user) {
+    return null;
+  }
 
+  const dashboardUser = {
+    userId: user.userId,
+    fullname: user.fullname,
+    email: user.email,
+  };
   const Layout = platformIsWeb ? DashboardWebLayout : DashboardMobileLayout;
 
   return (
     <DashboardProvider user={dashboardUser} onSignOut={signOut}>
       <Layout onNavigate={handleNavigate}>
-        <Stack screenOptions={{ headerShown: false }} />
+        <ChatProvider
+          apiBaseUrl={API_BASE_URL}
+          getToken={getToken}
+          userId={user.userId}
+          appSyncRealtimeDns={APPSYNC_REALTIME_DNS}
+          appSyncNamespace={APPSYNC_CHAT_NAMESPACE}
+        >
+          <Stack screenOptions={{ headerShown: false }} />
+        </ChatProvider>
       </Layout>
     </DashboardProvider>
   );

@@ -7,3 +7,6 @@ process.env.EXPO_PUBLIC_COGNITO_DOMAIN =
 process.env.EXPO_PUBLIC_COGNITO_REGION = 'us-east-1';
 process.env.EXPO_PUBLIC_API_URL =
   'https://test.execute-api.us-east-1.amazonaws.com/dev';
+process.env.EXPO_PUBLIC_APPSYNC_REALTIME_DNS =
+  'test.appsync-realtime-api.us-east-1.amazonaws.com';
+process.env.EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE = 'chat';
