@@ -13,13 +13,18 @@ import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { getUserProfile } from '@packages/models/users/utils';
 import { SfnWorkflowStarter } from '@services/chat/infrastructure/services/sfn-workflow-starter.service';
 import { SfnWorkflowCallback } from '@services/chat/infrastructure/services/sfn-workflow-callback.service';
+import { SFNClient } from '@aws-sdk/client-sfn';
 
 const dbService = new PostgresDatabaseService();
 const tracerService = new TracerServiceImplementation('chat-service');
+// X-Ray-instrumented SFN client: StartExecution / SendTaskSuccess show up as
+// subsegments in the trace.
+const sfnClient = tracerService.captureAWSv3Client(new SFNClient({}));
 const workflowStarter = new SfnWorkflowStarter(
   process.env['CHAT_STATE_MACHINE_ARN'] ?? '',
+  sfnClient,
 );
-const workflowCallback = new SfnWorkflowCallback();
+const workflowCallback = new SfnWorkflowCallback(sfnClient);
 
 export const handler = async (event: APIGatewayProxyEvent) => {
   let response: APIGatewayProxyResult | undefined = undefined;

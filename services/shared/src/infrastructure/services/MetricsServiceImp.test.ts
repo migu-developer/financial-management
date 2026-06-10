@@ -37,7 +37,11 @@ describe('MetricsServiceImplementation', () => {
   it('durationMs() adds a Milliseconds metric', () => {
     const service = new MetricsServiceImplementation('chat');
     service.durationMs('QueryTime', 123);
-    expect(mockAddMetric).toHaveBeenCalledWith('QueryTime', 'Milliseconds', 123);
+    expect(mockAddMetric).toHaveBeenCalledWith(
+      'QueryTime',
+      'Milliseconds',
+      123,
+    );
   });
 
   it('publish() flushes stored metrics', () => {
