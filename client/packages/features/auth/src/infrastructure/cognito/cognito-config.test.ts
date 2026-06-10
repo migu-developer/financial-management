@@ -27,7 +27,7 @@ describe('cognitoConfig', () => {
   it('throws when region is absent', async () => {
     delete process.env.EXPO_PUBLIC_COGNITO_REGION;
     await expect(import('./cognito-config')).rejects.toThrow(
-      'Missing required environment variable: EXPO_PUBLIC_COGNITO_REGION',
+      'Environment variable EXPO_PUBLIC_COGNITO_REGION is not configured.',
     );
   });
 
@@ -39,21 +39,21 @@ describe('cognitoConfig', () => {
   it('throws on missing EXPO_PUBLIC_USER_POOL_ID', async () => {
     delete process.env.EXPO_PUBLIC_USER_POOL_ID;
     await expect(import('./cognito-config')).rejects.toThrow(
-      'Missing required environment variable: EXPO_PUBLIC_USER_POOL_ID',
+      'Environment variable EXPO_PUBLIC_USER_POOL_ID is not configured.',
     );
   });
 
   it('throws on missing EXPO_PUBLIC_USER_POOL_CLIENT_ID', async () => {
     delete process.env.EXPO_PUBLIC_USER_POOL_CLIENT_ID;
     await expect(import('./cognito-config')).rejects.toThrow(
-      'Missing required environment variable: EXPO_PUBLIC_USER_POOL_CLIENT_ID',
+      'Environment variable EXPO_PUBLIC_USER_POOL_CLIENT_ID is not configured.',
     );
   });
 
   it('throws on missing EXPO_PUBLIC_COGNITO_DOMAIN', async () => {
     delete process.env.EXPO_PUBLIC_COGNITO_DOMAIN;
     await expect(import('./cognito-config')).rejects.toThrow(
-      'Missing required environment variable: EXPO_PUBLIC_COGNITO_DOMAIN',
+      'Environment variable EXPO_PUBLIC_COGNITO_DOMAIN is not configured.',
     );
   });
 });

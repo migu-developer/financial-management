@@ -7,6 +7,7 @@ import {
   DashboardMobileLayout,
 } from '@features/dashboard';
 import { ChatProvider } from '@features/dashboard/presentation/providers/chat-provider';
+import { requireEnv } from '@packages/models/shared/utils/require-env';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
 import { useCallback, useMemo } from 'react';
@@ -16,20 +17,18 @@ const NAVIGATE_MAP: Record<string, string> = {
   expenses: ROUTES.dashboard.expenses,
 };
 
-export function requireEnv(value: string | undefined): string {
-  if (!value) {
-    throw new Error('Environment variable is not configured.');
-  }
-  return value;
-}
-
 // Read once at module load — values are baked into the bundle by Expo.
-const API_BASE_URL = requireEnv(process.env.EXPO_PUBLIC_API_URL);
+const API_BASE_URL = requireEnv(
+  process.env.EXPO_PUBLIC_API_URL,
+  'EXPO_PUBLIC_API_URL',
+);
 const APPSYNC_REALTIME_DNS = requireEnv(
   process.env.EXPO_PUBLIC_APPSYNC_REALTIME_DNS,
+  'EXPO_PUBLIC_APPSYNC_REALTIME_DNS',
 );
 const APPSYNC_CHAT_NAMESPACE = requireEnv(
   process.env.EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE,
+  'EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE',
 );
 
 export default function DashboardLayout() {

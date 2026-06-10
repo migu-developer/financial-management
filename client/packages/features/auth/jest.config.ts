@@ -8,6 +8,7 @@ const config: Config = {
     '^.+\\.tsx?$': ['ts-jest', { useESM: false, tsconfig: { jsx: 'react' } }],
   },
   moduleNameMapper: {
+    '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
     '^@packages/i18n$': '<rootDir>/../../i18n/src/index.ts',
     '^@packages/i18n/(.*)$': '<rootDir>/../../i18n/src/$1',
     '^@packages/utils$': '<rootDir>/../../utils/src/index.ts',

@@ -1,4 +1,5 @@
-import mod, { requireEnv } from '@/app/dashboard/_layout';
+import mod from '@/app/dashboard/_layout';
+import { requireEnv } from '@packages/models/shared/utils/require-env';
 import { useAuth } from '@features/auth';
 import { ROUTES } from '@/utils/route';
 
@@ -34,19 +35,19 @@ describe('DashboardLayout screen (app/dashboard/_layout)', () => {
     });
   });
 
-  describe('requireEnv', () => {
-    it('throws an error if the environment variable is not configured', () => {
-      expect(() => requireEnv(undefined)).toThrow(
-        'Environment variable is not configured.',
+  describe('requireEnv (shared from @packages/models)', () => {
+    it('throws naming the variable when not configured', () => {
+      expect(() => requireEnv(undefined, 'EXPO_PUBLIC_API_URL')).toThrow(
+        'Environment variable EXPO_PUBLIC_API_URL is not configured.',
       );
     });
   });
 
   describe('API_BASE_URL', () => {
     it('is defined if the environment variable is configured', () => {
-      expect(requireEnv(process.env.EXPO_PUBLIC_API_URL)).toBe(
-        'https://example.com',
-      );
+      expect(
+        requireEnv(process.env.EXPO_PUBLIC_API_URL, 'EXPO_PUBLIC_API_URL'),
+      ).toBe('https://example.com');
     });
   });
 });
