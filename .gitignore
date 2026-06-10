@@ -66,3 +66,6 @@ GEMINI.md
 
 # Pnpm
 .pnpm-store/
+
+# Docs ignore
+docs/ignore/
