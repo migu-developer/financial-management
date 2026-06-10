@@ -44,18 +44,21 @@ A full-stack application with:
                                        +-----------------+
 ```
 
+> The AI chat adds an asynchronous path: `POST /chat` → Chat Lambda → Step Functions (Bedrock Nova/Claude, Human-in-the-Loop) → AppSync Events WebSocket back to the client. See [AI Chat flow](docs/ai-chat-flow.md).
+
 ## Tech Stack
 
-| Layer             | Technology                                                                     |
-| ----------------- | ------------------------------------------------------------------------------ |
-| **Client**        | React Native 0.81, Expo 54, NativeWind (Tailwind), TypeScript                  |
-| **Backend**       | AWS Lambda (Node.js 22), API Gateway REST, PostgreSQL (Supabase)               |
-| **Auth**          | AWS Cognito (User Pool + Identity Pool), Google/Facebook/Apple/Microsoft OAuth |
-| **Infra**         | AWS CDK (TypeScript), CloudFormation, multi-region (us-east-1, us-east-2)      |
-| **Observability** | CloudWatch (dashboard + 14 alarms), X-Ray tracing, EventBridge, SNS alerts     |
-| **Email**         | React Email templates, SES, S3-based template storage                          |
-| **CI/CD**         | GitHub Actions (OIDC auth), Turbo, pnpm workspaces                             |
-| **Database**      | PostgreSQL 17, semantic versioning migrations, RLS policies, audit logging     |
+| Layer             | Technology                                                                      |
+| ----------------- | ------------------------------------------------------------------------------- |
+| **Client**        | React Native 0.81, Expo 54, NativeWind (Tailwind), TypeScript                   |
+| **Backend**       | AWS Lambda (Node.js 24), API Gateway REST, PostgreSQL (Supabase)                |
+| **AI**            | Amazon Bedrock (Nova Micro/Lite + Claude Haiku), Step Functions, AppSync Events |
+| **Auth**          | AWS Cognito (User Pool + Identity Pool), Google/Facebook/Apple/Microsoft OAuth  |
+| **Infra**         | AWS CDK (TypeScript), CloudFormation, multi-region (us-east-1, us-east-2)       |
+| **Observability** | CloudWatch (dashboard + 31 alarms), EMF metrics, X-Ray tracing, SNS alerts      |
+| **Email**         | React Email templates, SES, S3-based template storage                           |
+| **CI/CD**         | GitHub Actions (OIDC auth), Turbo, pnpm workspaces                              |
+| **Database**      | PostgreSQL 17, semantic versioning migrations, RLS policies, audit logging      |
 
 ## Monorepo Structure
 
@@ -65,17 +68,19 @@ financial-management/
 │   ├── main/                        # Expo app (web + mobile)
 │   └── packages/features/           # auth, dashboard, landing, ui, i18n, utils
 ├── services/                        # Backend Lambda services
+│   ├── chat/                        # AI chat (Step Functions + Bedrock + HITL)
 │   ├── expenses/                    # CRUD + filters + pagination
 │   ├── documents/                   # Document types catalog
 │   ├── currencies/                  # Currency catalog
 │   ├── users/                       # User profile management
-│   └── shared/                      # Database, logging, tracing, CORS
+│   └── shared/                      # Database, logging, tracing, metrics, CORS
 ├── packages/                        # Shared packages
 │   ├── cognito/                     # Cognito Lambda triggers
 │   ├── config/                      # ESLint, Prettier, TSConfig
 │   ├── migrations/                  # PostgreSQL schema migrations
 │   ├── models/                      # Domain types, schemas, validation
 │   ├── notifications/               # CloudWatch alarm alerts
+│   ├── prompts/                     # AI prompts + Bedrock model routing
 │   ├── supabase/                    # Local development
 │   └── transactional/               # React Email templates
 ├── infra/                           # AWS CDK (v1 Auth, v2 API, v3 Monitoring)
@@ -113,13 +118,14 @@ pnpm dev
 
 ### Architecture Flows
 
-| Document                                                         | Description                                                    |
-| ---------------------------------------------------------------- | -------------------------------------------------------------- |
-| [Authentication and Registration](docs/auth-register-flow.md)    | Cognito signup, social providers, MFA, email templates via S3  |
-| [Post-Authentication Requests](docs/post-authentication-flow.md) | JWT validation, API Gateway routing, DDD Lambda architecture   |
-| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 14 alarms, SNS alert pipeline, X-Ray     |
-| [Amplify Hosting](docs/amplify-hosting-flow.md)                  | Web deployment, GitHub integration, SPA routing, custom domain |
-| [API Documentation](docs/api-docs-flow.md)                       | OpenAPI docs generation, export, versioning via API Gateway    |
+| Document                                                         | Description                                                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [Authentication and Registration](docs/auth-register-flow.md)    | Cognito signup, social providers, MFA, email templates via S3                         |
+| [Post-Authentication Requests](docs/post-authentication-flow.md) | JWT validation, API Gateway routing, DDD Lambda architecture                          |
+| [AI Chat](docs/ai-chat-flow.md)                                  | Conversational expenses: Step Functions + Bedrock + AppSync Events, Human-in-the-Loop |
+| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 31 alarms, EMF metrics, SNS alert pipeline, X-Ray               |
+| [Amplify Hosting](docs/amplify-hosting-flow.md)                  | Web deployment, GitHub integration, SPA routing, custom domain                        |
+| [API Documentation](docs/api-docs-flow.md)                       | OpenAPI docs generation, export, versioning via API Gateway                           |
 
 ### Operations
 
@@ -147,6 +153,7 @@ pnpm dev
 
 | Module                   | Description                                  | README                                                |
 | ------------------------ | -------------------------------------------- | ----------------------------------------------------- |
+| **@services/chat**       | AI conversational expenses (Bedrock + SFN)   | [services/chat/](services/chat/README.md)             |
 | **@services/expenses**   | Expense CRUD API with pagination and filters | [services/expenses/](services/expenses/README.md)     |
 | **@services/documents**  | Document types catalog API                   | [services/documents/](services/documents/README.md)   |
 | **@services/currencies** | Currency catalog API                         | [services/currencies/](services/currencies/README.md) |
@@ -155,15 +162,16 @@ pnpm dev
 
 ### Shared Packages
 
-| Module                      | Description                                 | README                                                      |
-| --------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
-| **@packages/cognito**       | Cognito Lambda triggers (auth, sync, email) | [packages/cognito/](packages/cognito/README.md)             |
-| **@packages/config**        | Shared ESLint, Prettier, TypeScript configs | [packages/config/](packages/config/README.md)               |
-| **@packages/migrations**    | PostgreSQL migration runner                 | [packages/migrations/](packages/migrations/README.md)       |
-| **@packages/models**        | Domain types, Zod schemas, error classes    | [packages/models/](packages/models/README.md)               |
-| **@packages/notifications** | CloudWatch alarm parser + SES email         | [packages/notifications/](packages/notifications/README.md) |
-| **@packages/supabase**      | Local Supabase development config           | [packages/supabase/](packages/supabase/README.md)           |
-| **@packages/transactional** | React Email templates (7 Cognito + 1 alert) | [packages/transactional/](packages/transactional/README.md) |
+| Module                      | Description                                  | README                                                      |
+| --------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| **@packages/cognito**       | Cognito Lambda triggers (auth, sync, email)  | [packages/cognito/](packages/cognito/README.md)             |
+| **@packages/config**        | Shared ESLint, Prettier, TypeScript configs  | [packages/config/](packages/config/README.md)               |
+| **@packages/migrations**    | PostgreSQL migration runner                  | [packages/migrations/](packages/migrations/README.md)       |
+| **@packages/models**        | Domain types, Zod schemas, error classes     | [packages/models/](packages/models/README.md)               |
+| **@packages/notifications** | CloudWatch alarm parser + SES email          | [packages/notifications/](packages/notifications/README.md) |
+| **@packages/prompts**       | AI prompts, Bedrock model routing, contracts | [packages/prompts/](packages/prompts/README.md)             |
+| **@packages/supabase**      | Local Supabase development config            | [packages/supabase/](packages/supabase/README.md)           |
+| **@packages/transactional** | React Email templates (7 Cognito + 1 alert)  | [packages/transactional/](packages/transactional/README.md) |
 
 ### Infrastructure
 

@@ -50,6 +50,11 @@ All CI/CD runs on GitHub Actions with OIDC authentication (no static AWS keys).
 
 Production deploys are triggered by creating a GitHub release (non-pre-release).
 
+> GitHub Environments are `staging` (= dev account) and `production`. The
+> `ALERT_EMAIL_TO` / `ALERT_EMAIL_FROM` values live as environment-level
+> **variables** (not repo secrets) — `deploy-infra.yml` reads them as
+> `vars.ALERT_EMAIL_*`.
+
 ## Manual Deployment
 
 ```bash
