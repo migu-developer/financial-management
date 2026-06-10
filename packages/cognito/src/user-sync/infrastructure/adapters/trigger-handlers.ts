@@ -48,7 +48,13 @@ export const TRIGGER_HANDLERS: Partial<
     if (isSocial) {
       const existing = await dbPort.findByEmail(email);
       if (existing) {
-        actions.push('skipped');
+        if (existing.uid !== uid) {
+          await dbPort.updateUid(email, uid, email);
+          await dbPort.patch(uid, mapToPatchInput(attrs), email);
+          actions.push('uid-migrated');
+        } else {
+          actions.push('skipped');
+        }
       } else {
         await dbPort.create(mapToCreateInput(attrs), email);
         actions.push('created');

@@ -110,6 +110,10 @@ export const dashboard = {
     botReply:
       "Got it! This feature is under development. Soon I'll be able to create expenses from your messages automatically.",
     send: 'Send',
+    processing: 'Processing...',
+    error: 'Something went wrong. Please try again.',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
   },
 } as const;
 

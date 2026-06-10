@@ -17,6 +17,7 @@ dist
 
 # AWS CDK
 cdk.out
+cdk-outputs.json
 
 # Testing
 coverage

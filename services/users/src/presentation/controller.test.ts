@@ -210,7 +210,7 @@ describe('UserController', () => {
           resourceId: 'res-1',
           resourcePath: '/users/{id}',
         },
-      } as APIGatewayProxyEvent,
+      },
       logger: makeMockLogger(),
       user: makeUser(),
       dbService,
