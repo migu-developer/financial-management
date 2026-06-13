@@ -117,7 +117,9 @@ describe('AmplifyHostingStack', () => {
       },
     );
 
-    expect(mockImportFromVersion).toHaveBeenCalledTimes(5);
+    // 5 cross-version imports from v1 (Cognito + Assets) + 3 from v2
+    // (AppSync Events: realtime DNS, http DNS, chat namespace).
+    expect(mockImportFromVersion).toHaveBeenCalledTimes(8);
 
     expect(mockImportFromVersion).toHaveBeenCalledWith(
       expect.anything(),
@@ -148,6 +150,24 @@ describe('AmplifyHostingStack', () => {
       'v1',
       'Auth',
       'CognitoDomain',
+    );
+    expect(mockImportFromVersion).toHaveBeenCalledWith(
+      expect.anything(),
+      'v2',
+      'AppSyncEvents',
+      'RealtimeDns',
+    );
+    expect(mockImportFromVersion).toHaveBeenCalledWith(
+      expect.anything(),
+      'v2',
+      'AppSyncEvents',
+      'HttpDns',
+    );
+    expect(mockImportFromVersion).toHaveBeenCalledWith(
+      expect.anything(),
+      'v2',
+      'AppSyncEvents',
+      'ChatNamespaceName',
     );
   });
 
@@ -256,6 +276,41 @@ describe('AmplifyHostingStack', () => {
       expect.objectContaining({
         branchName: 'develop',
       }),
+    );
+  });
+
+  test('passes AppSync Events env vars to the Amplify app build environment', () => {
+    const app = { node: { tryGetContext: jest.fn(), children: [] } };
+    (CfnApp as unknown as jest.Mock).mockClear();
+    new AmplifyHostingStack(
+      app as unknown as Construct,
+      'AmplifyHostingStack',
+      {
+        version: 'v2',
+        stackName: 'AmplifyHosting',
+        description: 'Amplify Hosting for client app',
+        repository: 'https://github.com/org/repo',
+        accessTokenName: 'github-migudev-token',
+        platform: 'WEB',
+        stage: 'DEVELOPMENT',
+        defaultBranchName: 'develop',
+        enableAutoBuild: false,
+        appRoot: 'client/main',
+        assetsBucketUrl: 'https://example.com',
+        applicationUrl: 'https://example.com',
+      },
+    );
+
+    const callProps = (CfnApp as unknown as jest.Mock).mock.calls[0]![2] as {
+      environmentVariables: { name: string; value: string }[];
+    };
+    const envNames = callProps.environmentVariables.map((e) => e.name);
+    expect(envNames).toEqual(
+      expect.arrayContaining([
+        'APPSYNC_REALTIME_DNS',
+        'APPSYNC_HTTP_DNS',
+        'APPSYNC_CHAT_NAMESPACE',
+      ]),
     );
   });
 

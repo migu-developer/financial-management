@@ -15,7 +15,8 @@
       "@config/*": ["lib/config/*"],
       "@core/*": ["lib/core/*"],
       "@versions/*": ["lib/versions/*"],
-      "@packages/models/*": ["node_modules/@packages/models/src/*"]
+      "@packages/models/*": ["node_modules/@packages/models/src/*"],
+      "@packages/prompts/*": ["node_modules/@packages/prompts/src/*"]
     },
     "noImplicitAny": true,
     "strictNullChecks": true,

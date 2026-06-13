@@ -1,6 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
-  Alert,
   Animated,
   Dimensions,
   Text,
@@ -14,7 +19,8 @@ import { isWeb } from '@packages/utils';
 
 import { ChatInput } from '@features/ui/components/shared/atoms/chat-input';
 import { ChatMessageList } from '@features/ui/components/shared/molecules/chat-message-list';
-import type { ChatMessage } from '@features/ui/components/shared/molecules/chat-message-list';
+import type { ChatMessage as UiChatMessage } from '@features/ui/components/shared/molecules/chat-message-list';
+import { ChatPreviewActions } from '@features/ui/components/shared/molecules/chat-preview-actions';
 import {
   generic,
   neutral,
@@ -31,9 +37,21 @@ import {
 } from '@features/ui/utils/spacing';
 import { fontWeight as fontWeightTokens } from '@features/ui/utils/typography';
 
-interface AIChatDrawerProps {
+import type { ChatEvent } from '@features/dashboard/domain/services/chat-event';
+import { AppSyncEventsClient } from '@features/dashboard/infrastructure/realtime/appsync-events-client';
+import { useChatContext } from '@features/dashboard/presentation/providers/chat-provider';
+
+export interface AIChatDrawerProps {
   visible: boolean;
   onClose: () => void;
+}
+
+interface InternalMessage extends UiChatMessage {
+  taskToken?: string;
+  /** True until a Confirm/Cancel decision is taken. */
+  pending?: boolean;
+  /** True after the user chose Confirm or Cancel. */
+  resolved?: boolean;
 }
 
 function formatTimestamp(): string {
@@ -44,6 +62,13 @@ function formatTimestamp(): string {
 }
 
 export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
+  const {
+    userId,
+    chatRepository,
+    appSyncRealtimeDns,
+    appSyncNamespace,
+    getAuthToken,
+  } = useChatContext();
   const { t } = useTranslation('dashboard');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -52,11 +77,13 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
   const drawerWidth = isPlatformWeb
     ? 380
     : Dimensions.get('window').width * 0.85;
-
   const slideAnim = useRef(new Animated.Value(drawerWidth)).current;
 
   const [inputText, setInputText] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [isWaitingForAssistant, setIsWaitingForAssistant] = useState(false);
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [messages, setMessages] = useState<InternalMessage[]>(() => [
     {
       id: 'welcome',
       message: t('aiChat.welcomeMessage'),
@@ -65,15 +92,18 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     },
   ]);
 
-  const slideIn = useCallback(() => {
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [slideAnim]);
+  // ── Animation ─────────────────────────────────────────────
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [visible, slideAnim]);
 
-  const slideOut = useCallback(() => {
+  const handleClose = useCallback(() => {
     Animated.timing(slideAnim, {
       toValue: drawerWidth,
       duration: 250,
@@ -81,48 +111,102 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     }).start(() => onClose());
   }, [slideAnim, drawerWidth, onClose]);
 
-  React.useEffect(() => {
-    if (visible) {
-      slideIn();
-    }
-  }, [visible, slideIn]);
+  // ── Real-time subscription ────────────────────────────────
+  useEffect(() => {
+    if (!visible) return undefined;
 
-  const handleSend = useCallback(() => {
+    const client = new AppSyncEventsClient({
+      realtimeDns: appSyncRealtimeDns,
+      namespace: appSyncNamespace,
+      channelPath: `${userId}/responses`,
+      getToken: getAuthToken,
+      onError: (err) => {
+        console.warn('AppSync events error', err);
+        setErrorBanner(t('aiChat.error'));
+      },
+    });
+
+    const onEvent = (event: ChatEvent) => {
+      setIsWaitingForAssistant(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: event.messageId,
+          message: event.content,
+          timestamp: formatTimestamp(),
+          isUser: false,
+          ...(event.type === 'preview_pending' && {
+            taskToken: event.taskToken,
+            pending: true,
+          }),
+        },
+      ]);
+    };
+
+    client.subscribe(onEvent).catch((err) => {
+      console.warn('AppSync subscribe failed', err);
+      setErrorBanner(t('aiChat.error'));
+    });
+
+    return () => {
+      client.close();
+    };
+  }, [visible, appSyncRealtimeDns, appSyncNamespace, userId, getAuthToken, t]);
+
+  // ── Send message ──────────────────────────────────────────
+  const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
-    const userMessage: ChatMessage = {
+    setErrorBanner(null);
+    const userMessage: InternalMessage = {
       id: `user-${Date.now()}`,
       message: trimmed,
       timestamp: formatTimestamp(),
       isUser: true,
     };
-
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
+    setIsWaitingForAssistant(true);
 
-    setTimeout(() => {
-      const botReply: ChatMessage = {
-        id: `bot-${Date.now()}`,
-        message: t('aiChat.botReply'),
-        timestamp: formatTimestamp(),
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, botReply]);
-    }, 800);
-  }, [inputText, t]);
+    try {
+      const ack = await chatRepository.sendMessage({
+        ...(sessionId !== undefined && { sessionId }),
+        content: trimmed,
+      });
+      if (!sessionId) setSessionId(ack.sessionId);
+    } catch (err) {
+      console.warn('Failed to send chat message', err);
+      setErrorBanner(t('aiChat.error'));
+      setIsWaitingForAssistant(false);
+    }
+  }, [inputText, sessionId, chatRepository, t]);
 
-  const handleCamera = useCallback(() => {
-    Alert.alert(t('aiChat.comingSoon'));
-  }, [t]);
-
-  const handleMic = useCallback(() => {
-    Alert.alert(t('aiChat.comingSoon'));
-  }, [t]);
-
-  const handleClose = useCallback(() => {
-    slideOut();
-  }, [slideOut]);
+  // ── Human-in-the-Loop confirm / cancel ────────────────────
+  const handlePreviewDecision = useCallback(
+    async (messageId: string, taskToken: string, confirmed: boolean) => {
+      // Optimistically mark as resolved so the buttons can't be tapped twice.
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, pending: false, resolved: true } : m,
+        ),
+      );
+      try {
+        await chatRepository.confirmExpense({ taskToken, confirmed });
+        setIsWaitingForAssistant(true);
+      } catch (err) {
+        console.warn('Failed to confirm expense', err);
+        setErrorBanner(t('aiChat.error'));
+        // Roll the message back to pending so the user can retry.
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, pending: true, resolved: false } : m,
+          ),
+        );
+      }
+    },
+    [chatRepository, t],
+  );
 
   if (!visible) return null;
 
@@ -135,6 +219,14 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     ? textTokens.dark.primary
     : textTokens.light.primary;
   const closeIconColor = isDark ? neutral[400] : neutral[500];
+  const mutedColor = isDark ? textTokens.dark.muted : textTokens.light.muted;
+  const errorColor = isDark
+    ? textTokens.dark.primary
+    : textTokens.light.primary;
+
+  // Append preview action rows immediately after their parent message.
+  // Tracks pending messages so we render the confirm/cancel buttons inline.
+  const pendingPreviews = messages.filter((m) => m.pending && m.taskToken);
 
   return (
     <View
@@ -152,10 +244,7 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
       <TouchableOpacity
         activeOpacity={1}
         onPress={handleClose}
-        style={{
-          flex: 1,
-          backgroundColor: rgba.black50,
-        }}
+        style={{ flex: 1, backgroundColor: rgba.black50 }}
         accessibilityRole="button"
         accessibilityLabel="Close drawer"
       />
@@ -225,15 +314,56 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
         {/* Messages */}
         <View style={{ flex: 1 }}>
           <ChatMessageList messages={messages} />
+
+          {/* HITL action rows, one per pending preview message */}
+          {pendingPreviews.map((p) => (
+            <ChatPreviewActions
+              key={`actions-${p.id}`}
+              confirmLabel={t('aiChat.confirm')}
+              cancelLabel={t('aiChat.cancel')}
+              onConfirm={() =>
+                void handlePreviewDecision(p.id, p.taskToken!, true)
+              }
+              onCancel={() =>
+                void handlePreviewDecision(p.id, p.taskToken!, false)
+              }
+            />
+          ))}
+
+          {isWaitingForAssistant && (
+            <Text
+              style={{
+                color: mutedColor,
+                fontSize: fontSizeScale.xs,
+                marginHorizontal: space.md,
+                marginVertical: space.xs,
+              }}
+            >
+              {t('aiChat.processing')}
+            </Text>
+          )}
+
+          {errorBanner !== null && (
+            <Text
+              style={{
+                color: errorColor,
+                fontSize: fontSizeScale.xs,
+                marginHorizontal: space.md,
+                marginVertical: space.xs,
+              }}
+            >
+              {errorBanner}
+            </Text>
+          )}
         </View>
 
-        {/* Input */}
+        {/* Input — camera + mic are placeholders until Phase 2 (multimedia). */}
         <ChatInput
           value={inputText}
           onChangeText={setInputText}
-          onSend={handleSend}
-          onCamera={handleCamera}
-          onMic={handleMic}
+          onSend={() => void handleSend()}
+          onCamera={() => undefined}
+          onMic={() => undefined}
           placeholder={t('aiChat.placeholder')}
           cameraLabel={t('aiChat.cameraLabel', { defaultValue: 'Camera' })}
           micLabel={t('aiChat.micLabel', { defaultValue: 'Microphone' })}

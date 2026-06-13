@@ -196,6 +196,84 @@ export class MonitoringStack extends BaseStack {
         period: Duration.hours(24),
         includeThrottleAlarm: false,
       },
+      // ── AI Chat Lambdas (Phase 1) ───────────────────────
+      // The chat handler is on the synchronous path (API Gateway) and must
+      // ACK in under a second, so we alarm at the first error within a
+      // minute. The Step Function task Lambdas run in background — slightly
+      // higher tolerance to avoid noisy alarms during the LLM cold-starts.
+      ChatHandler: {
+        fnName: importFromVersion(this, 'v2', 'LambdaChat', 'FunctionName'),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(1),
+        includeThrottleAlarm: true,
+      },
+      ChatExecuteQuery: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'ExecuteQueryFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+        includeThrottleAlarm: true,
+      },
+      ChatValidateFields: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'ValidateFieldsFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+        includeThrottleAlarm: true,
+      },
+      ChatCreateExpense: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'CreateExpenseFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+        includeThrottleAlarm: true,
+      },
+      ChatSaveAndPublish: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'SaveAndPublishFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+        includeThrottleAlarm: true,
+      },
+      ChatSavePreview: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'SavePreviewFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+        includeThrottleAlarm: true,
+      },
     };
 
     const cognitoTriggers: Record<string, string> = {
@@ -332,6 +410,115 @@ export class MonitoringStack extends BaseStack {
       alarm.addAlarmAction(snsAction);
       this.alarms.push(alarm);
     }
+
+    // ── Step Functions Alarms (AI Chat workflow) ───────────
+    // The chat Lambdas alarm individually, but a Bedrock failure or a state
+    // machine timeout kills the conversation without touching any Lambda —
+    // alarm on the workflow itself.
+    const chatStateMachineArn = importFromVersion(
+      this,
+      'v2',
+      'StepFunctionsChat',
+      'StateMachineArn',
+    );
+
+    const chatWorkflowMetric = (metricName: string) =>
+      new Metric({
+        namespace: 'AWS/States',
+        metricName,
+        dimensionsMap: { StateMachineArn: chatStateMachineArn },
+        statistic: 'Sum',
+        period: Duration.minutes(5),
+      });
+
+    const chatExecutionsFailedAlarm = new Alarm(
+      this,
+      `${stackName}-ChatWorkflowFailedAlarm`,
+      {
+        alarmName: `${stackName}-ChatWorkflow-ExecutionsFailed`,
+        alarmDescription: 'AI Chat state machine executions are failing',
+        metric: chatWorkflowMetric('ExecutionsFailed'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    chatExecutionsFailedAlarm.addAlarmAction(snsAction);
+    this.alarms.push(chatExecutionsFailedAlarm);
+
+    const chatExecutionsTimedOutAlarm = new Alarm(
+      this,
+      `${stackName}-ChatWorkflowTimedOutAlarm`,
+      {
+        alarmName: `${stackName}-ChatWorkflow-ExecutionsTimedOut`,
+        alarmDescription:
+          'AI Chat state machine executions timed out (30 min limit — likely stuck HITL confirmations)',
+        metric: chatWorkflowMetric('ExecutionsTimedOut'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    chatExecutionsTimedOutAlarm.addAlarmAction(snsAction);
+    this.alarms.push(chatExecutionsTimedOutAlarm);
+
+    // ── AppSync Events Alarms (AI Chat realtime delivery) ──
+    // Metric names/dimensions verified against CloudWatch list-metrics for
+    // the deployed Event API (namespace AWS/AppSync, dimension EventAPIId).
+    const eventApiId = importFromVersion(
+      this,
+      'v2',
+      'AppSyncEvents',
+      'EventApiId',
+    );
+
+    const appSyncEventsMetric = (metricName: string) =>
+      new Metric({
+        namespace: 'AWS/AppSync',
+        metricName,
+        dimensionsMap: { EventAPIId: eventApiId },
+        statistic: 'Sum',
+        period: Duration.minutes(5),
+      });
+
+    const appSync5xxAlarm = new Alarm(
+      this,
+      `${stackName}-AppSyncEvents5xxAlarm`,
+      {
+        alarmName: `${stackName}-AppSyncEvents-5xx-Errors`,
+        alarmDescription: 'AppSync Events API server errors',
+        metric: appSyncEventsMetric('5XXError'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    appSync5xxAlarm.addAlarmAction(snsAction);
+    this.alarms.push(appSync5xxAlarm);
+
+    const appSyncFailedEventsAlarm = new Alarm(
+      this,
+      `${stackName}-AppSyncEventsFailedAlarm`,
+      {
+        alarmName: `${stackName}-AppSyncEvents-FailedEvents`,
+        alarmDescription:
+          'AppSync Events failed to deliver published events to subscribers',
+        metric: appSyncEventsMetric('FailedEvents'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    appSyncFailedEventsAlarm.addAlarmAction(snsAction);
+    this.alarms.push(appSyncFailedEventsAlarm);
 
     // ── Dashboard ──────────────────────────────────────────
     this.dashboard = new Dashboard(this, `${stackName}-Dashboard`, {
@@ -537,6 +724,41 @@ export class MonitoringStack extends BaseStack {
           amplifyMetric('Latency', 'p90'),
         ],
         width: 8,
+      }),
+    );
+
+    // AI Chat Workflow section
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## AI Chat Workflow (Step Functions)',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Executions',
+        left: [
+          chatWorkflowMetric('ExecutionsStarted'),
+          chatWorkflowMetric('ExecutionsSucceeded'),
+          chatWorkflowMetric('ExecutionsFailed'),
+          chatWorkflowMetric('ExecutionsTimedOut'),
+        ],
+        width: 12,
+      }),
+      new GraphWidget({
+        title: 'Execution Time (p90)',
+        left: [
+          new Metric({
+            namespace: 'AWS/States',
+            metricName: 'ExecutionTime',
+            dimensionsMap: { StateMachineArn: chatStateMachineArn },
+            statistic: 'p90',
+            period: Duration.minutes(5),
+          }),
+        ],
+        width: 12,
       }),
     );
 

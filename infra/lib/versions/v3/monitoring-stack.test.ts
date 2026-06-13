@@ -236,8 +236,34 @@ describe('MonitoringStack', () => {
       defaultProps,
     );
 
-    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers = 15
-    expect(stack.alarms).toHaveLength(15);
+    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers
+    //   = 15
+    // + (6 chat Lambdas × 2 each: error + throttle) = 12
+    // + 2 chat Step Functions (ExecutionsFailed + ExecutionsTimedOut)
+    // + 2 AppSync Events (5XXError + FailedEvents)
+    // Total = 31
+    expect(stack.alarms).toHaveLength(31);
+  });
+
+  test('creates AI chat workflow and AppSync Events alarms', () => {
+    const { Alarm: MockAlarm } = jest.requireMock(
+      'aws-cdk-lib/aws-cloudwatch',
+    ) as { Alarm: jest.Mock };
+    MockAlarm.mockClear();
+
+    new MonitoringStack(
+      app as unknown as Construct,
+      'MonitoringStack',
+      defaultProps,
+    );
+
+    const alarmNames = MockAlarm.mock.calls.map(
+      (c: unknown[]) => (c[2] as Record<string, unknown>).alarmName as string,
+    );
+    expect(alarmNames).toContain('Monitoring-ChatWorkflow-ExecutionsFailed');
+    expect(alarmNames).toContain('Monitoring-ChatWorkflow-ExecutionsTimedOut');
+    expect(alarmNames).toContain('Monitoring-AppSyncEvents-5xx-Errors');
+    expect(alarmNames).toContain('Monitoring-AppSyncEvents-FailedEvents');
   });
 
   test('stackName follows BaseStack convention', () => {

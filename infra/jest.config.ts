@@ -13,6 +13,8 @@ const config: Config = {
     '^@core/(.*)$': '<rootDir>/lib/core/$1',
     '^@versions/(.*)$': '<rootDir>/lib/versions/$1',
     '^@packages/models/(.*)$': '<rootDir>/node_modules/@packages/models/src/$1',
+    '^@packages/prompts/(.*)$':
+      '<rootDir>/node_modules/@packages/prompts/src/$1',
   },
 };
 

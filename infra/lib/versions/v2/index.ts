@@ -4,11 +4,14 @@ import type { Construct } from 'constructs';
 import { fullStackResource } from '@config/entry-config';
 import { ActiveStack } from './stacks';
 import { ApiGatewayStack } from './api-gateway-stack';
+import { AppSyncEventsStack } from './appsync-events-stack';
 import { LambdaExpensesStack } from './lambda-expenses-stack';
 import { LambdaDocumentsStack } from './lambda-documents-stack';
 import { LambdaCurrenciesStack } from './lambda-currencies-stack';
 import { LambdaUsersStack } from './lambda-users-stack';
 import { LambdaExchangeRatesStack } from './lambda-exchange-rates-stack';
+import { LambdaChatStack } from './lambda-chat-stack';
+import { StepFunctionsChatStack } from './step-functions-chat-stack';
 import { ApiDocsStack } from './api-docs-stack';
 
 const createApiGatewayStack: NamedStackFactory = {
@@ -167,6 +170,62 @@ const createLambdaExchangeRatesStack: NamedStackFactory = {
     ),
 };
 
+const createLambdaChatStack: NamedStackFactory = {
+  name: 'LambdaChat',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new LambdaChatStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.LAMBDA_CHAT}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.LAMBDA_CHAT),
+        deps,
+        description:
+          'Lambda for AI chat: POST /chat and POST /chat/confirm (HITL callback)',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+        stage: process.env.STAGE ?? 'dev',
+      },
+    ),
+};
+
+const createStepFunctionsChatStack: NamedStackFactory = {
+  name: 'StepFunctionsChat',
+  create: (scope: Construct, version: string) =>
+    new StepFunctionsChatStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.STEP_FUNCTIONS_CHAT}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.STEP_FUNCTIONS_CHAT),
+        description:
+          'ChatProcess Standard state machine: orchestrates Bedrock + business Lambdas with HITL confirmation',
+        databaseUrl: process.env.DATABASE_URL ?? '',
+        databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
+        stage: process.env.STAGE ?? 'dev',
+      },
+    ),
+};
+
+const createAppSyncEventsStack: NamedStackFactory = {
+  name: 'AppSyncEvents',
+  create: (scope: Construct, version: string) =>
+    new AppSyncEventsStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.APPSYNC_EVENTS}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.APPSYNC_EVENTS),
+        description:
+          'AppSync Events API for real-time chat responses (WebSocket) with Cognito + IAM auth',
+        stage: process.env.STAGE ?? 'dev',
+      },
+    ),
+};
+
 const createApiDocsStack: NamedStackFactory = {
   name: 'ApiDocs',
   create: (scope: Construct, version: string, deps: StackDeps) =>
@@ -186,8 +245,9 @@ const createApiDocsStack: NamedStackFactory = {
 // 1. ApiGateway first (lambdas depend on it, includes certificate + custom domain)
 // 2. Lambda stacks (add resources to the API)
 // 3. LambdaExchangeRates (standalone Lambda + EventBridge schedule, no API Gateway)
-// 4. ApiDocs (documents the fully-built API)
-// 5. AmplifyHosting last (references the API URL)
+// 4. AppSyncEvents (standalone — imports Cognito UserPool from v1)
+// 5. ApiDocs (documents the fully-built API)
+// 6. AmplifyHosting last (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,
@@ -195,6 +255,9 @@ export const v2Stacks: NamedStackFactory[] = [
   createLambdaCurrenciesStack,
   createLambdaUsersStack,
   createLambdaExchangeRatesStack,
+  createAppSyncEventsStack,
+  createStepFunctionsChatStack,
+  createLambdaChatStack,
   createApiDocsStack,
   createAmplifyHostingStack,
 ];

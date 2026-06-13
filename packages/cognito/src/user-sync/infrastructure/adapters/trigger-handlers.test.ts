@@ -157,9 +157,11 @@ describe('TRIGGER_HANDLERS', () => {
       expect(action).toBe('created');
     });
 
-    it('skips DB write when native already exists', async () => {
+    it('skips DB write when existing user has same uid', async () => {
       const deps = makeDeps({
-        findByEmail: jest.fn().mockResolvedValue(mockUser),
+        findByEmail: jest
+          .fn()
+          .mockResolvedValue({ ...mockUser, uid: 'social-sub' }),
       });
       const event = buildEvent(
         'PostConfirmation_ConfirmSignUp',
@@ -171,6 +173,29 @@ describe('TRIGGER_HANDLERS', () => {
       expect(deps.dbPort.create).not.toHaveBeenCalled();
       expect(deps.dbPort.updateUid).not.toHaveBeenCalled();
       expect(action).toBe('skipped');
+    });
+
+    it('migrates uid when existing user has different uid (pool migration)', async () => {
+      const deps = makeDeps({
+        findByEmail: jest
+          .fn()
+          .mockResolvedValue({ ...mockUser, uid: 'old-pool-sub' }),
+      });
+      const event = buildEvent(
+        'PostConfirmation_ConfirmSignUp',
+        'Google_111',
+        'new-pool-sub',
+      );
+      const action = await handle(event, deps);
+
+      expect(deps.dbPort.updateUid).toHaveBeenCalledWith(
+        'test@example.com',
+        'new-pool-sub',
+        'test@example.com',
+      );
+      expect(deps.dbPort.patch).toHaveBeenCalled();
+      expect(deps.dbPort.create).not.toHaveBeenCalled();
+      expect(action).toBe('uid-migrated');
     });
   });
 

@@ -8,8 +8,20 @@ const baseArgs = {
   packageJsonPath: null,
 };
 
-// Default config: no APP_VARIANT set → production values
+// Default config: no APP_VARIANT set → production values.
+// The developer's shell may export APP_VARIANT (local dev builds), which
+// would flip every "default → production" assertion — clear it first and
+// restore it when the suite finishes.
+const shellAppVariant = process.env.APP_VARIANT;
+delete process.env.APP_VARIANT;
+
 const config = appConfigFn(baseArgs);
+
+afterAll(() => {
+  if (shellAppVariant !== undefined) {
+    process.env.APP_VARIANT = shellAppVariant;
+  }
+});
 
 describe('app.config', () => {
   describe('getAppId', () => {
@@ -40,7 +52,7 @@ describe('app.config', () => {
       delete process.env.APP_VARIANT;
       expect(getAppId()).toBe('com.migudev.prod.financialmanagement.app');
 
-      process.env.APP_VARIANT = original;
+      if (original !== undefined) process.env.APP_VARIANT = original;
     });
   });
 
@@ -68,7 +80,7 @@ describe('app.config', () => {
       delete process.env.APP_VARIANT;
       expect(getAppName()).toBe('Financial Management');
 
-      process.env.APP_VARIANT = original;
+      if (original !== undefined) process.env.APP_VARIANT = original;
     });
   });
 

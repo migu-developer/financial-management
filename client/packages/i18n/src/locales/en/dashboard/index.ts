@@ -93,6 +93,11 @@ export const dashboard = {
     allTypes: 'All types',
     filterFrom: 'From',
     filterTo: 'To',
+    quickRanges: {
+      currentMonth: 'This month',
+      pastMonth: 'Last month',
+      lastThreeMonths: 'Last 3 months',
+    },
     globalCurrency: 'USD',
     equivalent: '~{{value}} USD',
     byCategoryUsd: 'By Category (USD)',
@@ -110,6 +115,10 @@ export const dashboard = {
     botReply:
       "Got it! This feature is under development. Soon I'll be able to create expenses from your messages automatically.",
     send: 'Send',
+    processing: 'Processing...',
+    error: 'Something went wrong. Please try again.',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
   },
 } as const;
 

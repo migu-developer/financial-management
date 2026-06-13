@@ -1,0 +1,43 @@
+{
+  "name": "@services/chat",
+  "version": "1.0.0",
+  "description": "Chat service for the AI-powered conversational expense interface",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest",
+    "test:integration": "jest --config src/test/jest.config.ts --runInBand",
+    "execute": "for f in src/exec/*.ts; do tsx \"$f\"; done",
+    "run:file": "tsx"
+  },
+  "dependencies": {
+    "@aws-crypto/sha256-js": "catalog:",
+    "@aws-lambda-powertools/logger": "catalog:",
+    "@aws-lambda-powertools/tracer": "catalog:",
+    "@aws-sdk/client-sfn": "catalog:",
+    "@aws-sdk/credential-provider-node": "catalog:",
+    "@aws-sdk/protocol-http": "catalog:",
+    "@aws-sdk/signature-v4": "catalog:",
+    "@packages/models": "workspace:*",
+    "@packages/prompts": "workspace:*",
+    "@services/expenses": "workspace:*",
+    "@services/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@packages/config": "workspace:*",
+    "@types/pg": "catalog:",
+    "@types/jest": "catalog:",
+    "dotenv": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  },
+  "keywords": [],
+  "author": "Miguel Angel Gutierrez Maya",
+  "license": "ISC",
+  "packageManager": "pnpm@11.1.1"
+}

@@ -4,7 +4,7 @@
 
 ## Overview
 
-The monitoring stack (v3) provides a CloudWatch dashboard with 6 widget sections, 14 alarms covering API Gateway, Lambda, and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete.
+The monitoring stack (v3) provides a CloudWatch dashboard with widget sections for every subsystem, 31 alarms covering API Gateway, Lambda (services + AI chat), Step Functions, AppSync Events and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete. The chat Lambdas also emit business metrics in EMF format (namespace `FinancialManagement`).
 
 ## Alert Flow
 
@@ -34,20 +34,20 @@ Email (formatted HTML alert)
 
 ## CloudWatch Dashboard
 
-The dashboard has 6 widget sections:
+Dashboard sections:
 
-| Section            | Metrics                                                         |
-| ------------------ | --------------------------------------------------------------- |
-| API Gateway        | 5xx errors, 4xx errors, latency (p50, p90, p99), request count  |
-| Lambda: Expenses   | Invocations, errors, duration, throttles, concurrent executions |
-| Lambda: Documents  | Same metrics as above                                           |
-| Lambda: Currencies | Same metrics as above                                           |
-| Lambda: Users      | Same metrics as above                                           |
-| Cognito Triggers   | Errors for pre-signup, custom-message, user-sync Lambdas        |
+| Section          | Metrics                                                                                                                                                     |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API Gateway      | 5xx errors, 4xx errors, latency (p50, p90, p99), request count                                                                                              |
+| Lambda Services  | Invocations, errors, duration, throttles for every service AND chat Lambda (expenses, documents, currencies, users, chat handler + 5 chat workflow Lambdas) |
+| Cognito Triggers | Errors for pre-signup, custom-message, user-sync Lambdas                                                                                                    |
+| AI Chat Workflow | Step Functions executions (started/succeeded/failed/timed out) + execution time p90                                                                         |
+| Amplify Hosting  | Requests, 4xx/5xx errors, latency                                                                                                                           |
+| Alarm Status     | Live status of every alarm                                                                                                                                  |
 
 Additionally, a **Logs Insights** widget queries Lambda error logs across all service functions.
 
-## Alarms (14 total)
+## Alarms (31 total)
 
 ### API Gateway alarms (3)
 
@@ -57,14 +57,32 @@ Additionally, a **Logs Insights** widget queries Lambda error logs across all se
 | API 4xx Errors  | `4XXError`      | >= 10      | 5 min  | 1            |
 | API Latency p99 | `Latency` (p99) | >= 5000 ms | 5 min  | 2            |
 
-### Lambda alarms (8)
+### Lambda alarms (21)
 
-Each of the 4 services (expenses, documents, currencies, users) has 2 alarms:
+Each API-facing service (expenses, documents, currencies, users) and each AI chat Lambda (chat handler, execute-query, validate-fields, create-expense, save-and-publish, save-preview) has 2 alarms; the UpdateRates scheduler has errors only:
 
 | Alarm               | Metric      | Threshold | Period | Eval Periods |
 | ------------------- | ----------- | --------- | ------ | ------------ |
 | {Service} Errors    | `Errors`    | >= 1      | 5 min  | 1            |
 | {Service} Throttles | `Throttles` | >= 1      | 5 min  | 1            |
+
+### AI Chat workflow alarms (2)
+
+| Alarm                           | Namespace    | Metric               | Threshold |
+| ------------------------------- | ------------ | -------------------- | --------- |
+| ChatWorkflow-ExecutionsFailed   | `AWS/States` | `ExecutionsFailed`   | >= 1      |
+| ChatWorkflow-ExecutionsTimedOut | `AWS/States` | `ExecutionsTimedOut` | >= 1      |
+
+A Bedrock failure or a stuck HITL confirmation kills the conversation without touching any Lambda — these alarms watch the workflow itself.
+
+### AppSync Events alarms (2)
+
+| Alarm                      | Namespace     | Metric         | Threshold |
+| -------------------------- | ------------- | -------------- | --------- |
+| AppSyncEvents-5xx-Errors   | `AWS/AppSync` | `5XXError`     | >= 1      |
+| AppSyncEvents-FailedEvents | `AWS/AppSync` | `FailedEvents` | >= 1      |
+
+Dimension is `EventAPIId` (verified against the metrics the deployed Event API actually emits).
 
 ### Cognito trigger alarms (3)
 
@@ -73,6 +91,19 @@ Each of the 4 services (expenses, documents, currencies, users) has 2 alarms:
 | Pre-Signup Errors     | `fm-{stage}-pre-signup`     | `Errors` | >= 1      |
 | Custom-Message Errors | `fm-{stage}-custom-message` | `Errors` | >= 1      |
 | User-Sync Errors      | `fm-{stage}-user-sync`      | `Errors` | >= 1      |
+
+## Business Metrics (EMF)
+
+Chat Lambdas emit Embedded Metric Format counters through `MetricsServiceImplementation` (`@services/shared`) — no API calls or extra IAM, CloudWatch converts the structured log lines into metrics:
+
+| Metric                          | Emitted by            | Meaning                          |
+| ------------------------------- | --------------------- | -------------------------------- |
+| `ChatQueryExecuted`             | chat-execute-query    | NL query answered                |
+| `ChatPreviewRequested`          | chat-save-preview     | HITL preview shown (SF paused)   |
+| `ChatExpenseCreated`            | chat-create-expense   | Expense created via chat         |
+| `ChatAssistantMessagePublished` | chat-save-and-publish | Message delivered over WebSocket |
+
+Namespace: `FinancialManagement`, dimension `service=chat`.
 
 ## Notification Lambda
 

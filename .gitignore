@@ -17,6 +17,7 @@ dist
 
 # AWS CDK
 cdk.out
+cdk-outputs.json
 
 # Testing
 coverage
@@ -65,3 +66,6 @@ GEMINI.md
 
 # Pnpm
 .pnpm-store/
+
+# Docs ignore
+docs/ignore/

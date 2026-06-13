@@ -109,6 +109,27 @@ export class AmplifyHostingStack extends BaseStack {
       | ApiGatewayStack
       | undefined;
 
+    // AppSync Events (real-time chat) endpoints — produced by the
+    // AppSyncEventsStack in the same v2 version.
+    const appSyncRealtimeDns = importFromVersion(
+      this,
+      version,
+      'AppSyncEvents',
+      'RealtimeDns',
+    );
+    const appSyncHttpDns = importFromVersion(
+      this,
+      version,
+      'AppSyncEvents',
+      'HttpDns',
+    );
+    const appSyncChatNamespace = importFromVersion(
+      this,
+      version,
+      'AppSyncEvents',
+      'ChatNamespaceName',
+    );
+
     const envVars: CfnApp.EnvironmentVariableProperty[] = [
       { name: 'AMPLIFY_MONOREPO_APP_ROOT', value: props.appRoot },
       { name: 'USER_POOL_ID', value: userPoolId },
@@ -123,6 +144,9 @@ export class AmplifyHostingStack extends BaseStack {
         name: 'API_URL',
         value: apiGatewayStack?.customApiUrl ?? apiGatewayStack?.api.url ?? '',
       },
+      { name: 'APPSYNC_REALTIME_DNS', value: appSyncRealtimeDns },
+      { name: 'APPSYNC_HTTP_DNS', value: appSyncHttpDns },
+      { name: 'APPSYNC_CHAT_NAMESPACE', value: appSyncChatNamespace },
     ];
 
     /** SPA rewrite: non-file requests serve index.html for client-side routing (React Native web). */

@@ -153,6 +153,13 @@ describe('en/dashboard namespace', () => {
       expect(dashboard.metrics).toHaveProperty('equivalent');
       expect(dashboard.metrics).toHaveProperty('byCategoryUsd');
       expect(dashboard.metrics).toHaveProperty('periodTotal');
+      expect(dashboard.metrics).toHaveProperty('quickRanges');
+    });
+
+    it('has all quick range presets (issue #35)', () => {
+      expect(dashboard.metrics.quickRanges).toHaveProperty('currentMonth');
+      expect(dashboard.metrics.quickRanges).toHaveProperty('pastMonth');
+      expect(dashboard.metrics.quickRanges).toHaveProperty('lastThreeMonths');
     });
 
     it('all top-level metrics values are non-empty strings', () => {
