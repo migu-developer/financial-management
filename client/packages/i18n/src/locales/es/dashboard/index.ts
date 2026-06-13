@@ -110,13 +110,13 @@ export const dashboard = {
     title: 'Asistente AI',
     placeholder: 'Describe tu gasto...',
     welcomeMessage:
-      'Hola! Puedo ayudarte a registrar gastos. Dime en que gastaste, envia una foto del recibo o graba una nota de voz.',
-    comingSoon: 'Esta funcionalidad estara disponible pronto',
+      '¡Hola! Puedo ayudarte a registrar gastos. Dime en qué gastaste, envía una foto del recibo o graba una nota de voz.',
+    comingSoon: 'Esta funcionalidad estará disponible pronto',
     botReply:
-      'Entendido! Esta funcionalidad esta en desarrollo. Pronto podre crear gastos desde tus mensajes automaticamente.',
+      '¡Entendido! Esta funcionalidad está en desarrollo. Pronto podré crear gastos desde tus mensajes automáticamente.',
     send: 'Enviar',
     processing: 'Procesando...',
-    error: 'Hubo un problema. Intentalo de nuevo.',
+    error: 'Hubo un problema. Inténtalo de nuevo.',
     confirm: 'Confirmar',
     cancel: 'Cancelar',
   },

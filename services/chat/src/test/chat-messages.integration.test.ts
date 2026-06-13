@@ -181,5 +181,38 @@ describe('PostgresChatMessageRepository — integration', () => {
         ),
       ).rejects.toThrow('Failed to update chat message task token status');
     });
+
+    it('only the first transition wins (guards against double-resume)', async () => {
+      const created = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview',
+          task_token: 'tok-1',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+
+      // First caller transitions pending -> confirmed.
+      const first = await repo.updateTaskTokenStatus(
+        created.id,
+        userA.uid,
+        'confirmed',
+        userA.email,
+      );
+      expect(first.task_token_status).toBe('confirmed');
+
+      // Second caller finds the row no longer pending -> 0 rows -> throws,
+      // so the use case never reaches a second SendTaskSuccess.
+      await expect(
+        repo.updateTaskTokenStatus(
+          created.id,
+          userA.uid,
+          'cancelled',
+          userA.email,
+        ),
+      ).rejects.toThrow('Failed to update chat message task token status');
+    });
   });
 });

@@ -75,6 +75,10 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     status: ChatMessageTaskTokenStatus,
     modifiedBy: string,
   ): Promise<ChatMessage> {
+    // The `task_token_status = 'pending'` guard makes the transition atomic:
+    // two concurrent /chat/confirm calls can both pass findPendingByTaskToken,
+    // but only the first UPDATE matches a pending row. The loser gets 0 rows
+    // (throws below) and never reaches SendTaskSuccess — no double-resume.
     const rows = await this.dbService.query<ChatMessage>(
       `UPDATE financial_management.chat_messages m
        SET task_token_status = $3, modified_by = $4
@@ -84,6 +88,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
          AND m.session_id = s.id
          AND s.user_id = u.id
          AND u.uid = $2
+         AND m.task_token_status = 'pending'
        RETURNING ${RETURNING_COLUMNS.split(',')
          .map((c) => `m.${c.trim()}`)
          .join(', ')}`,

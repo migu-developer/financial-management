@@ -81,7 +81,9 @@ export class ChatService extends Service {
           executionArn: result.execution.executionArn,
         },
       }),
-      { status: HttpCode.SUCCESS },
+      // 202 Accepted: the message was accepted for async processing; the real
+      // answer arrives later over the AppSync Events WebSocket.
+      { status: HttpCode.ACCEPTED },
     );
   }
 }
