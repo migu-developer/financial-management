@@ -206,7 +206,7 @@ export class StepFunctionsChatStack extends BaseStack {
       model: novaMicro,
       body: novaBody(
         PROMPTS.intent.system,
-        '$.content',
+        "States.Format('Historial de la conversación: {} === Último mensaje del usuario: {}', $.history, $.content)",
         PROMPTS.intent.maxTokens,
       ),
       resultSelector: {
@@ -225,7 +225,7 @@ export class StepFunctionsChatStack extends BaseStack {
       model: novaLite,
       body: novaBody(
         PROMPTS.extractSqlParams.system,
-        "States.Format('Fecha actual: {}. Mensaje: {}', $$.Execution.StartTime, $.content)",
+        "States.Format('Fecha actual: {}. Historial: {} === Mensaje actual: {}', $$.Execution.StartTime, $.history, $.content)",
         PROMPTS.extractSqlParams.maxTokens,
       ),
       resultSelector: {
@@ -265,7 +265,7 @@ export class StepFunctionsChatStack extends BaseStack {
       model: novaLite,
       body: novaBody(
         PROMPTS.extractExpenseFields.system,
-        "States.Format('Fecha actual: {}. Mensaje: {}', $$.Execution.StartTime, $.content)",
+        "States.Format('Fecha actual: {}. Historial: {} === Mensaje actual: {}', $$.Execution.StartTime, $.history, $.content)",
         PROMPTS.extractExpenseFields.maxTokens,
       ),
       resultSelector: {
@@ -362,7 +362,7 @@ export class StepFunctionsChatStack extends BaseStack {
         model: claudeHaiku,
         body: claudeBody(
           PROMPTS.clarification.system,
-          "States.Format('Faltan estos campos: {}. Mensaje original: {}', States.JsonToString($.validation.missing), $.content)",
+          "States.Format('Faltan estos campos: {}. Monedas disponibles: {}. Mensaje original: {}', States.JsonToString($.validation.missing), States.JsonToString($.validation.availableCurrencies), $.content)",
           PROMPTS.clarification.maxTokens,
           PROMPTS.clarification.temperature,
         ),

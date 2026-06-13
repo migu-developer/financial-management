@@ -7,6 +7,7 @@ import type { EventPublisherService } from '@services/chat/domain/services/event
 function makeMessageRepo(): jest.Mocked<ChatMessageRepository> {
   return {
     create: jest.fn(),
+    findRecentBySession: jest.fn(),
     findPendingByTaskToken: jest.fn(),
     updateTaskTokenStatus: jest.fn(),
   };

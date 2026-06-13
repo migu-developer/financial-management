@@ -23,6 +23,13 @@ export interface ValidateExpenseFieldsResult {
   fields?: ResolvedExpenseFields;
   /** When `complete` is false, the friendly names of what is missing. */
   missing: string[];
+  /**
+   * Valid currency codes from the catalog. Present (possibly empty) whenever
+   * `complete` is false, so the clarification prompt can offer the real
+   * options instead of suggesting an unsupported one (e.g. USD). Populated
+   * only when `moneda` is among the missing fields; `[]` otherwise.
+   */
+  availableCurrencies?: string[];
 }
 
 const FRIENDLY_LABELS = {
@@ -80,7 +87,16 @@ export class ValidateExpenseFieldsUseCase {
     }
 
     if (missing.length > 0) {
-      return { complete: false, missing };
+      // Surface the catalog currencies only when the currency is what's
+      // missing, so the prompt can offer real options (and never re-suggest an
+      // unsupported one like USD). Otherwise return an empty array — this
+      // avoids a needless query while keeping the field always present, which
+      // the Step Functions `States.JsonToString($.validation.availableCurrencies)`
+      // reference requires.
+      const availableCurrencies = missing.includes(FRIENDLY_LABELS.currency)
+        ? await this.catalogLookup.listCurrencyCodes()
+        : [];
+      return { complete: false, missing, availableCurrencies };
     }
 
     const fields: ResolvedExpenseFields = {

@@ -11,6 +11,7 @@ const INPUT = {
   userId: 'uid-1',
   userEmail: 'a@b.c',
   content: 'Hola',
+  history: '',
 };
 
 describe('SfnWorkflowStarter', () => {

@@ -15,4 +15,8 @@ Ejemplos:
 "Mostrame mis gastos de mayo" → QUERY
 "Compré un teclado por 80 USD" → CREATE
 "Hola, ¿qué podés hacer?" → UNKNOWN
+Si se te provee historial de la conversación, interpretá el ÚLTIMO mensaje del usuario EN CONTEXTO:
+- Si el asistente venía pidiendo datos para registrar un gasto y el usuario responde con un dato (una moneda, un monto, una fecha, "sí", "hagámoslo en USD", "en dólares"), la intención sigue siendo CREATE.
+- Si el usuario venía consultando y hace una pregunta de seguimiento ("¿y el mes pasado?", "¿y en comida?"), la intención sigue siendo QUERY.
+- Sólo usá UNKNOWN cuando, incluso con el contexto, el mensaje no encaje en consultar ni registrar.
 Respondé sólo con la palabra, sin explicación, sin puntuación, sin comillas.`;

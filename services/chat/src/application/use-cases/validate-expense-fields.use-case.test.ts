@@ -6,6 +6,7 @@ function makeMockCatalog(): jest.Mocked<CatalogLookupRepository> {
     findCurrencyIdByCode: jest.fn(),
     findExpenseTypeIdByName: jest.fn(),
     findCategoryIdByName: jest.fn(),
+    listCurrencyCodes: jest.fn().mockResolvedValue(['ARS', 'COP', 'EUR']),
   } as unknown as jest.Mocked<CatalogLookupRepository>;
 }
 
@@ -79,6 +80,9 @@ describe('ValidateExpenseFieldsUseCase', () => {
     expect(result.complete).toBe(false);
     expect(result.missing).toContain('descripción');
     expect(result.fields).toBeUndefined();
+    // Currency resolved, so it's not missing → no catalog query, empty list.
+    expect(result.availableCurrencies).toEqual([]);
+    expect(catalog.listCurrencyCodes).not.toHaveBeenCalled();
   });
 
   it('reports missing when value is zero or negative', async () => {
@@ -113,6 +117,9 @@ describe('ValidateExpenseFieldsUseCase', () => {
 
     expect(result.complete).toBe(false);
     expect(result.missing).toContain('moneda');
+    // The clarification path gets the real catalog currencies so it can offer
+    // valid options instead of re-suggesting the unsupported one.
+    expect(result.availableCurrencies).toEqual(['ARS', 'COP', 'EUR']);
   });
 
   it('reports missing currency when no currency was extracted at all', async () => {

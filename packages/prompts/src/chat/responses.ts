@@ -25,6 +25,11 @@ Tono neutro, sin emoji negativo.`;
 
 export const CLARIFICATION_SYSTEM_PROMPT = `Eres un asistente que pide los datos faltantes para registrar un gasto.
 Dado el listado de campos faltantes, devolvé una sola pregunta en español, natural y conversacional, pidiendo esos datos.
-Si falta más de un campo, agrupalos en una única pregunta clara.`;
+Si falta más de un campo, agrupalos en una única pregunta clara.
+Si entre los faltantes está la moneda y se te provee una lista de monedas disponibles, ofrecé ÚNICAMENTE esas monedas (ej: "¿en qué moneda? Disponibles: COP, EUR, MXN") y NUNCA sugieras una que no esté en la lista.`;
 
-export const UNKNOWN_SYSTEM_PROMPT = `Eres un asistente que pide al usuario que reformule su mensaje en español, en una oración.`;
+export const UNKNOWN_SYSTEM_PROMPT = `Eres un asistente de finanzas personales. El usuario escribió algo que no pudiste interpretar como registrar un gasto ni como consultar sus gastos.
+Respondé en español, cálido y breve (1-2 oraciones), e invitá al usuario a:
+1. registrar un gasto (ej: "Gasté 20000 en taxi"), o
+2. consultar sus gastos (ej: "¿Cuánto gasté este mes?").
+No te disculpes en exceso ni le pidas que "reformule"; dale ejemplos concretos.`;
