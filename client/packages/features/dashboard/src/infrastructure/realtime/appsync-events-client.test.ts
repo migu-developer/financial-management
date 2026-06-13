@@ -8,14 +8,14 @@ import type { ChatEvent } from '@features/dashboard/domain/services/chat-event';
 class StubSocket {
   static last: StubSocket | undefined;
   url: string;
-  protocols?: string;
+  protocols?: string | string[];
   onopen: ((this: WebSocket, ev: Event) => unknown) | null = null;
   onclose: ((this: WebSocket, ev: CloseEvent) => unknown) | null = null;
   onerror: ((this: WebSocket, ev: Event) => unknown) | null = null;
   onmessage: ((this: WebSocket, ev: MessageEvent) => unknown) | null = null;
   sent: string[] = [];
 
-  constructor(url: string | URL, protocols?: string) {
+  constructor(url: string | URL, protocols?: string | string[]) {
     this.url = String(url);
     this.protocols = protocols;
     StubSocket.last = this;
@@ -71,7 +71,27 @@ describe('AppSyncEventsClient', () => {
     expect(ws).toBeDefined();
     expect(ws.url).toContain('wss://');
     expect(ws.url).toContain('/event/realtime');
-    expect(ws.protocols).toBe('aws-appsync-event-ws');
+    // Auth must NOT be in the query string (that's the legacy GraphQL protocol).
+    expect(ws.url).not.toContain('?header=');
+
+    // Events API carries auth in the subprotocols: the constant marker plus
+    // `header-<base64url(auth)>`.
+    const protocols = ws.protocols as string[];
+    expect(Array.isArray(protocols)).toBe(true);
+    expect(protocols[0]).toBe('aws-appsync-event-ws');
+    expect(protocols[1]).toMatch(/^header-/);
+    const decoded = JSON.parse(
+      Buffer.from(
+        protocols[1]!
+          .replace('header-', '')
+          .replace(/-/g, '+')
+          .replace(/_/g, '/'),
+        'base64',
+      ).toString('utf-8'),
+    ) as Record<string, string>;
+    expect(decoded.Authorization).toBe('mock-id-token');
+    // host must be the HTTP endpoint domain, not the realtime one.
+    expect(decoded.host).toBe('example.appsync-api.us-east-1.amazonaws.com');
 
     ws.simulateOpen();
     expect(JSON.parse(ws.sent[0]!)).toEqual({ type: 'connection_init' });
@@ -81,7 +101,7 @@ describe('AppSyncEventsClient', () => {
     expect(subscribeMsg.type).toBe('subscribe');
     expect(subscribeMsg.channel).toBe('/chat/user-1/responses');
     expect(subscribeMsg.authorization).toEqual(
-      expect.objectContaining({ authorization: 'mock-id-token' }),
+      expect.objectContaining({ Authorization: 'mock-id-token' }),
     );
 
     ws.simulateMessage({ type: 'subscribe_success' });
