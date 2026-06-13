@@ -83,6 +83,8 @@ describe('ValidateExpenseFieldsUseCase', () => {
     // Currency resolved, so it's not missing → no catalog query, empty list.
     expect(result.availableCurrencies).toEqual([]);
     expect(catalog.listCurrencyCodes).not.toHaveBeenCalled();
+    // A supported currency was given, so nothing is flagged as unsupported.
+    expect(result.unsupportedCurrency).toBe('');
   });
 
   it('reports missing when value is zero or negative', async () => {
@@ -120,6 +122,9 @@ describe('ValidateExpenseFieldsUseCase', () => {
     // The clarification path gets the real catalog currencies so it can offer
     // valid options instead of re-suggesting the unsupported one.
     expect(result.availableCurrencies).toEqual(['ARS', 'COP', 'EUR']);
+    // The unsupported code the user gave is surfaced so the clarification can
+    // name it explicitly instead of acting as if no currency was provided.
+    expect(result.unsupportedCurrency).toBe('XYZ');
   });
 
   it('reports missing currency when no currency was extracted at all', async () => {

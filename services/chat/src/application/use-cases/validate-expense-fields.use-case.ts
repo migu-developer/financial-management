@@ -30,6 +30,13 @@ export interface ValidateExpenseFieldsResult {
    * only when `moneda` is among the missing fields; `[]` otherwise.
    */
   availableCurrencies?: string[];
+  /**
+   * The currency code the user provided that the catalog doesn't support
+   * (e.g. "USD"), so the clarification can name it explicitly instead of
+   * acting as if no currency was given. Present (possibly '') when
+   * `complete` is false; '' when no currency was given or it resolved.
+   */
+  unsupportedCurrency?: string;
 }
 
 const FRIENDLY_LABELS = {
@@ -68,6 +75,9 @@ export class ValidateExpenseFieldsUseCase {
       );
     }
     if (!currencyId) missing.push(FRIENDLY_LABELS.currency);
+    // A currency the user named but the catalog doesn't support (e.g. USD).
+    const unsupportedCurrency =
+      extracted.currencyCode && !currencyId ? extracted.currencyCode : '';
 
     let expenseTypeId: string | null = null;
     if (extracted.expenseTypeName) {
@@ -96,7 +106,12 @@ export class ValidateExpenseFieldsUseCase {
       const availableCurrencies = missing.includes(FRIENDLY_LABELS.currency)
         ? await this.catalogLookup.listCurrencyCodes()
         : [];
-      return { complete: false, missing, availableCurrencies };
+      return {
+        complete: false,
+        missing,
+        availableCurrencies,
+        unsupportedCurrency,
+      };
     }
 
     const fields: ResolvedExpenseFields = {
