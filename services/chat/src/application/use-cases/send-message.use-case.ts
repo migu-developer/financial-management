@@ -24,6 +24,31 @@ export interface SendMessageResult {
   execution: StartChatWorkflowResult;
 }
 
+/** How many prior messages to feed the LLM as conversation context. */
+const HISTORY_LIMIT = 10;
+/** Cap each message in the history to keep the workflow input small. */
+const HISTORY_CONTENT_MAX = 500;
+
+const ROLE_LABEL: Record<string, string> = {
+  user: 'Usuario',
+  assistant: 'Asistente',
+  system: 'Sistema',
+};
+
+/**
+ * Formats recent messages (oldest → newest) into a compact transcript the
+ * intent/extraction prompts can reason over. Returns '' when there's none.
+ */
+export function formatHistory(messages: ChatMessage[]): string {
+  return messages
+    .map((m) => {
+      const label = ROLE_LABEL[m.role] ?? m.role;
+      const content = m.content.slice(0, HISTORY_CONTENT_MAX);
+      return `${label}: ${content}`;
+    })
+    .join('\n');
+}
+
 /**
  * Persists the user's message and starts the async chat workflow.
  *
@@ -51,6 +76,15 @@ export class SendMessageUseCase {
   ): Promise<SendMessageResult> {
     const session = await this.resolveSession(input.sessionId, uid, userEmail);
 
+    // Load prior turns BEFORE persisting the current message so the history
+    // is context for it (not including it).
+    const priorMessages = await this.messageRepository.findRecentBySession(
+      session.id,
+      uid,
+      HISTORY_LIMIT,
+    );
+    const history = formatHistory(priorMessages);
+
     const userMessage = await this.messageRepository.create(
       {
         session_id: session.id,
@@ -70,6 +104,7 @@ export class SendMessageUseCase {
       userId: uid,
       userEmail,
       content: input.content,
+      history,
       ...(input.attachmentS3Key !== undefined && {
         attachmentS3Key: input.attachmentS3Key,
       }),

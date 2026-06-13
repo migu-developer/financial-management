@@ -16,6 +16,7 @@ function makeMockSessionRepo(): jest.Mocked<ChatSessionRepository> {
 function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
   return {
     create: jest.fn(),
+    findRecentBySession: jest.fn().mockResolvedValue([]),
     findPendingByTaskToken: jest.fn(),
     updateTaskTokenStatus: jest.fn(),
   };
@@ -173,8 +174,46 @@ describe('SendMessageUseCase', () => {
       userId: UID,
       userEmail: EMAIL,
       content: 'Gasté $45 en la cena',
+      history: '',
     });
     expect(result.execution).toEqual(mockExecution);
+  });
+
+  it('passes a formatted transcript of prior messages as history', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    sessionRepo.findByIdAndUserUid.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+    // Prior turns (oldest → newest), loaded BEFORE the current message.
+    messageRepo.findRecentBySession.mockResolvedValue([
+      {
+        ...mockUserMessage,
+        role: 'user',
+        content: 'Quiero registrar un gasto de 25',
+      },
+      { ...mockUserMessage, role: 'assistant', content: '¿En qué moneda?' },
+    ]);
+
+    const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+    await useCase.execute(
+      { sessionId: 'session-1', content: 'en COP' },
+      UID,
+      EMAIL,
+    );
+
+    // History is loaded for the session/user, before persisting the new message.
+    expect(messageRepo.findRecentBySession).toHaveBeenCalledWith(
+      'session-1',
+      UID,
+      expect.any(Number),
+    );
+    const startArg = starter.start.mock.calls[0]![0];
+    expect(startArg.history).toBe(
+      'Usuario: Quiero registrar un gasto de 25\nAsistente: ¿En qué moneda?',
+    );
+    expect(startArg.content).toBe('en COP');
   });
 
   it('forwards attachment metadata when present', async () => {

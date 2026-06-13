@@ -19,6 +19,17 @@ export interface ChatMessageRepository {
   ): Promise<ChatMessage>;
 
   /**
+   * Returns the most recent messages of a session (oldest → newest) so the
+   * workflow can give the LLM conversation context for multi-turn flows
+   * (e.g. answering a clarification). Scoped to the owning user.
+   */
+  findRecentBySession(
+    sessionId: string,
+    uid: string,
+    limit: number,
+  ): Promise<ChatMessage[]>;
+
+  /**
    * Finds the assistant message that is currently holding a `pending`
    * task token. Used by the human-in-the-loop confirmation flow to look
    * up the workflow waiting on the user.

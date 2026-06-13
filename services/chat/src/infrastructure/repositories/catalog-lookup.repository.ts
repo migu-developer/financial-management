@@ -12,6 +12,14 @@ import { trace } from '@services/shared/infrastructure/decorators/trace';
 export class CatalogLookupRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
+  @trace('Catalog:listCurrencyCodes')
+  async listCurrencyCodes(): Promise<string[]> {
+    const rows = await this.dbService.queryReadOnly<{ code: string }>(
+      `SELECT code FROM financial_management.currencies ORDER BY code ASC`,
+    );
+    return rows.map((r) => r.code);
+  }
+
   @trace('Catalog:findCurrencyIdByCode')
   async findCurrencyIdByCode(code: string): Promise<string | null> {
     const rows = await this.dbService.queryReadOnly<{ id: string }>(

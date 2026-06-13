@@ -21,6 +21,27 @@ const RETURNING_COLUMNS = `id, session_id, role, content, attachment_s3_key, att
 export class PostgresChatMessageRepository implements ChatMessageRepository {
   constructor(private readonly dbService: DatabaseService) {}
 
+  @trace('ChatMessage:findRecentBySession')
+  async findRecentBySession(
+    sessionId: string,
+    uid: string,
+    limit: number,
+  ): Promise<ChatMessage[]> {
+    // Newest-first in SQL (so LIMIT keeps the latest), then reversed to
+    // chronological order for the LLM. Scoped to the owning user.
+    const rows = await this.dbService.queryReadOnly<ChatMessage>(
+      `SELECT ${MESSAGE_COLUMNS}
+       FROM financial_management.chat_messages m
+       JOIN financial_management.chat_sessions s ON m.session_id = s.id
+       JOIN financial_management.users u ON s.user_id = u.id
+       WHERE m.session_id = $1 AND u.uid = $2
+       ORDER BY m.created_at DESC
+       LIMIT $3`,
+      [sessionId, uid, limit],
+    );
+    return rows.reverse();
+  }
+
   @trace('ChatMessage:create')
   async create(
     input: CreateChatMessageInput,

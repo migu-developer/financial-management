@@ -41,6 +41,46 @@ afterAll(async () => {
 });
 
 describe('PostgresChatMessageRepository — integration', () => {
+  describe('findRecentBySession', () => {
+    it('returns messages oldest → newest, scoped to the owning user', async () => {
+      await repo.create(
+        { session_id: session.id, role: 'user', content: 'primero' },
+        userA.email,
+      );
+      await repo.create(
+        { session_id: session.id, role: 'assistant', content: 'segundo' },
+        userA.email,
+      );
+      await repo.create(
+        { session_id: session.id, role: 'user', content: 'tercero' },
+        userA.email,
+      );
+
+      const recent = await repo.findRecentBySession(session.id, userA.uid, 10);
+      expect(recent.map((m) => m.content)).toEqual([
+        'primero',
+        'segundo',
+        'tercero',
+      ]);
+
+      // Another user cannot read this session's history.
+      expect(await repo.findRecentBySession(session.id, userB.uid, 10)).toEqual(
+        [],
+      );
+    });
+
+    it('keeps only the latest `limit` messages (still chronological)', async () => {
+      for (const c of ['m1', 'm2', 'm3', 'm4']) {
+        await repo.create(
+          { session_id: session.id, role: 'user', content: c },
+          userA.email,
+        );
+      }
+      const recent = await repo.findRecentBySession(session.id, userA.uid, 2);
+      expect(recent.map((m) => m.content)).toEqual(['m3', 'm4']);
+    });
+  });
+
   describe('create', () => {
     it('creates a user message with generated fields', async () => {
       const message = await repo.create(

@@ -24,6 +24,7 @@ Dada la frase del usuario y la fecha actual, devolvé un OBJETO JSON con esta fo
 }
 - "metrics" si pregunta por totales, sumas, promedios, "cuánto"; "list" si pide un listado o detalle.
 - Resolvé fechas relativas usando la fecha actual provista (mes pasado, esta semana, hoy, ayer).
+- Si se te provee historial, resolvé preguntas de seguimiento en contexto (ej: tras "¿cuánto gasté este mes?", un "¿y el mes pasado?" hereda el tipo de consulta y ajusta sólo las fechas).
 - Omití campos que no aparezcan. Devolvé ÚNICAMENTE el JSON, sin markdown ni comentarios.`;
 
 export const EXTRACT_EXPENSE_FIELDS_SYSTEM_PROMPT = `Eres un extractor de campos para crear un gasto.
@@ -36,5 +37,6 @@ Dada la frase del usuario, devolvé un OBJETO JSON con esta forma:
   "categoryName": string opcional (categoría libre),
   "date": string opcional ISO (YYYY-MM-DD sólo si el mensaje menciona una fecha; resolvé fechas relativas con la fecha actual provista)
 }
-- Omití campos que no aparezcan en el mensaje.
+- Si se te provee historial de la conversación, FUSIONÁ los datos: combiná lo que el usuario ya dio en mensajes anteriores con lo que aporta el mensaje actual. Ej: si antes dijo "gasto de 25 USD, egreso" y ahora responde "hagámoslo en COP", devolvé { "value": 25, "currencyCode": "COP", "expenseTypeName": "egreso", ... }.
+- Omití campos que no aparezcan ni en el mensaje ni en el historial.
 - Devolvé ÚNICAMENTE el JSON, sin markdown ni explicación.`;
