@@ -13,6 +13,7 @@ import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { getUserProfile } from '@packages/models/users/utils';
 import { SfnWorkflowStarter } from '@services/chat/infrastructure/services/sfn-workflow-starter.service';
 import { SfnWorkflowCallback } from '@services/chat/infrastructure/services/sfn-workflow-callback.service';
+import { requireEnv } from '@packages/models/shared/utils/require-env';
 import { SFNClient } from '@aws-sdk/client-sfn';
 
 const dbService = new PostgresDatabaseService();
@@ -21,7 +22,7 @@ const tracerService = new TracerServiceImplementation('chat-service');
 // subsegments in the trace.
 const sfnClient = tracerService.captureAWSv3Client(new SFNClient({}));
 const workflowStarter = new SfnWorkflowStarter(
-  process.env['CHAT_STATE_MACHINE_ARN'] ?? '',
+  requireEnv(process.env['CHAT_STATE_MACHINE_ARN'], 'CHAT_STATE_MACHINE_ARN'),
   sfnClient,
 );
 const workflowCallback = new SfnWorkflowCallback(sfnClient);
