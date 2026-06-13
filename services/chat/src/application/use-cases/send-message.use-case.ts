@@ -43,7 +43,12 @@ export function formatHistory(messages: ChatMessage[]): string {
   return messages
     .map((m) => {
       const label = ROLE_LABEL[m.role] ?? m.role;
-      const content = m.content.slice(0, HISTORY_CONTENT_MAX);
+      // Collapse newlines/whitespace so a multi-line message can't break the
+      // line-based "Role: ..." transcript structure the LLM reads.
+      const content = m.content
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, HISTORY_CONTENT_MAX);
       return `${label}: ${content}`;
     })
     .join('\n');

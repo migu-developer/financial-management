@@ -80,6 +80,9 @@ describe('ValidateExpenseFieldsUseCase', () => {
     expect(result.complete).toBe(false);
     expect(result.missing).toContain('descripción');
     expect(result.fields).toBeUndefined();
+    // Currency resolved, so it's not missing → no catalog query, empty list.
+    expect(result.availableCurrencies).toEqual([]);
+    expect(catalog.listCurrencyCodes).not.toHaveBeenCalled();
   });
 
   it('reports missing when value is zero or negative', async () => {

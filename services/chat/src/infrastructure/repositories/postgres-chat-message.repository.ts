@@ -35,7 +35,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
        JOIN financial_management.chat_sessions s ON m.session_id = s.id
        JOIN financial_management.users u ON s.user_id = u.id
        WHERE m.session_id = $1 AND u.uid = $2
-       ORDER BY m.created_at DESC
+       ORDER BY m.created_at DESC, m.id DESC
        LIMIT $3`,
       [sessionId, uid, limit],
     );
