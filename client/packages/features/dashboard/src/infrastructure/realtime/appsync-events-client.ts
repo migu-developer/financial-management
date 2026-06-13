@@ -16,24 +16,25 @@ export interface AppSyncEventsConfig {
 interface InternalMessage {
   type?: string;
   errors?: unknown;
-  event?: string;
+  event?: string | string[];
   id?: string;
 }
 
-const AUTH_HEADER_NAME = 'authorization';
+const EVENT_WS_SUBPROTOCOL = 'aws-appsync-event-ws';
 
 /**
  * Minimal AppSync Events WebSocket client.
  *
- * AppSync Events uses two short-lived JSON messages on top of a single
- * WebSocket:
- *   1. The client opens the socket with an `?header=...&payload=...` query
- *      string carrying a SigV4-style auth header (base64-encoded JSON).
- *   2. The client sends `{type: 'connection_init'}` and waits for `connection_ack`.
- *   3. The client sends a `subscribe` with the channel — server pushes
- *      `data` messages we forward to the listener.
+ * Per the Events API protocol, auth travels in a WebSocket SUBPROTOCOL
+ * (browsers can't set custom headers), NOT in the query string:
+ *   1. Open the socket against the realtime endpoint with two subprotocols:
+ *      `aws-appsync-event-ws` and `header-<base64url(authObject)>`. The auth
+ *      object's `host` MUST be the HTTP endpoint domain (not the realtime one).
+ *   2. Send `{type: 'connection_init'}` and wait for `connection_ack`.
+ *   3. Send a `subscribe` with the channel + the same authorization object —
+ *      the server pushes `data` messages we forward to the listener.
  *
- * @see https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-protocol.html
+ * @see https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-websocket-protocol.html
  */
 export class AppSyncEventsClient {
   private socket: WebSocket | null = null;
@@ -53,16 +54,23 @@ export class AppSyncEventsClient {
       throw new Error('Missing Cognito token for AppSync Events subscription');
     }
 
+    // The auth object's `host` must be the HTTP endpoint domain, even though
+    // we connect to the realtime endpoint. For standard AppSync domains that
+    // means swapping the subdomain; for custom domains both share a host so
+    // the replace is a no-op.
+    const host = this.config.realtimeDns.replace(
+      'appsync-realtime-api',
+      'appsync-api',
+    );
     const authHeader = {
-      host: this.config.realtimeDns,
-      [AUTH_HEADER_NAME]: token,
+      host,
+      Authorization: token,
     };
-    const encodedHeader = base64UrlEncode(JSON.stringify(authHeader));
-    const encodedPayload = base64UrlEncode('{}');
-    const url = `wss://${this.config.realtimeDns}/event/realtime?header=${encodedHeader}&payload=${encodedPayload}`;
+    const url = `wss://${this.config.realtimeDns}/event/realtime`;
+    const authSubprotocol = `header-${base64UrlEncode(JSON.stringify(authHeader))}`;
 
     await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(url, 'aws-appsync-event-ws');
+      const ws = new WebSocket(url, [EVENT_WS_SUBPROTOCOL, authSubprotocol]);
       this.socket = ws;
 
       ws.onopen = () => {
@@ -137,15 +145,18 @@ export class AppSyncEventsClient {
 
   private handleData(parsed: InternalMessage): void {
     if (!this.listener) return;
-    // Event APIs deliver `event` as a stringified JSON payload.
-    const eventStr =
-      typeof parsed.event === 'string' ? parsed.event : undefined;
-    if (!eventStr) return;
-    try {
-      const event = JSON.parse(eventStr) as ChatEvent;
-      this.listener(event);
-    } catch (err) {
-      this.config.onError?.(err);
+    // Event APIs deliver `event` as a stringified JSON payload (or, in batch
+    // deliveries, an array of them). Normalize to an array and forward each.
+    const raw = parsed.event;
+    const eventStrings =
+      typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [];
+    for (const eventStr of eventStrings) {
+      try {
+        const event = JSON.parse(eventStr) as ChatEvent;
+        this.listener(event);
+      } catch (err) {
+        this.config.onError?.(err);
+      }
     }
   }
 }
