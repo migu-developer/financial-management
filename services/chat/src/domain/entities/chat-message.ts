@@ -20,12 +20,16 @@ export type ChatMessageAttachmentType = 'image' | 'audio';
  * - `confirmed`: user accepted the preview; the workflow resumed.
  * - `cancelled`: user rejected the preview; the workflow resumed.
  * - `expired`: the task token timed out (Step Function timeout).
+ * - `superseded`: the user iterated on the preview (sent a new message)
+ *   while it was still pending, so its paused workflow was released
+ *   silently and the client shows only the latest preview.
  */
 export type ChatMessageTaskTokenStatus =
   | 'pending'
   | 'confirmed'
   | 'cancelled'
-  | 'expired';
+  | 'expired'
+  | 'superseded';
 
 /**
  * A chat message persisted in `financial_management.chat_messages`.

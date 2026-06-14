@@ -67,3 +67,5 @@ export { ChatInput } from './shared/atoms/chat-input';
 export type { ChatInputProps } from './shared/atoms/chat-input';
 export { ChatMessageList } from './shared/molecules/chat-message-list';
 export type { ChatMessageListProps } from './shared/molecules/chat-message-list';
+export { TypingIndicator } from './shared/atoms/typing-indicator';
+export type { TypingIndicatorProps } from './shared/atoms/typing-indicator';

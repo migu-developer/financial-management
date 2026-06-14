@@ -4,12 +4,14 @@ import type { ChatSession } from '@services/chat/domain/entities/chat-session';
 import type { ChatMessageRepository } from '@services/chat/domain/repositories/chat-message.repository';
 import type { ChatSessionRepository } from '@services/chat/domain/repositories/chat-session.repository';
 import type { WorkflowStarterService } from '@services/chat/domain/services/workflow-starter.service';
+import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
 
 function makeMockSessionRepo(): jest.Mocked<ChatSessionRepository> {
   return {
     findByIdAndUserUid: jest.fn(),
     create: jest.fn(),
     touchLastMessage: jest.fn(),
+    findByUser: jest.fn(),
   };
 }
 
@@ -18,6 +20,7 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     create: jest.fn(),
     findRecentBySession: jest.fn().mockResolvedValue([]),
     findPendingByTaskToken: jest.fn(),
+    findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
   };
 }
@@ -25,6 +28,12 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
 function makeMockStarter(): jest.Mocked<WorkflowStarterService> {
   return {
     start: jest.fn(),
+  };
+}
+
+function makeMockCallback(): jest.Mocked<WorkflowCallbackService> {
+  return {
+    resume: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -74,7 +83,12 @@ describe('SendMessageUseCase', () => {
       messageRepo.create.mockResolvedValue(mockUserMessage);
       starter.start.mockResolvedValue(mockExecution);
 
-      const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+      const useCase = new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      );
       const result = await useCase.execute(
         { content: 'Gasté $45 en la cena' },
         UID,
@@ -104,7 +118,12 @@ describe('SendMessageUseCase', () => {
       messageRepo.create.mockResolvedValue(mockUserMessage);
       starter.start.mockResolvedValue(mockExecution);
 
-      const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+      const useCase = new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      );
       await useCase.execute(
         { sessionId: 'session-1', content: 'Another message' },
         UID,
@@ -124,7 +143,12 @@ describe('SendMessageUseCase', () => {
       const starter = makeMockStarter();
       sessionRepo.findByIdAndUserUid.mockResolvedValue(null);
 
-      const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+      const useCase = new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      );
 
       await expect(
         useCase.execute(
@@ -147,7 +171,12 @@ describe('SendMessageUseCase', () => {
     messageRepo.create.mockResolvedValue(mockUserMessage);
     starter.start.mockResolvedValue(mockExecution);
 
-    const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      makeMockCallback(),
+    );
     await useCase.execute({ content: 'Hi' }, UID, EMAIL);
 
     expect(sessionRepo.touchLastMessage).toHaveBeenCalledWith('session-1', UID);
@@ -161,7 +190,12 @@ describe('SendMessageUseCase', () => {
     messageRepo.create.mockResolvedValue(mockUserMessage);
     starter.start.mockResolvedValue(mockExecution);
 
-    const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      makeMockCallback(),
+    );
     const result = await useCase.execute(
       { content: 'Gasté $45 en la cena' },
       UID,
@@ -196,7 +230,12 @@ describe('SendMessageUseCase', () => {
       { ...mockUserMessage, role: 'assistant', content: '¿En qué moneda?' },
     ]);
 
-    const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      makeMockCallback(),
+    );
     await useCase.execute(
       { sessionId: 'session-1', content: 'en COP' },
       UID,
@@ -228,7 +267,12 @@ describe('SendMessageUseCase', () => {
     });
     starter.start.mockResolvedValue(mockExecution);
 
-    const useCase = new SendMessageUseCase(sessionRepo, messageRepo, starter);
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      makeMockCallback(),
+    );
     await useCase.execute(
       {
         content: 'Here is the receipt',
@@ -252,5 +296,91 @@ describe('SendMessageUseCase', () => {
         attachmentType: 'image',
       }),
     );
+  });
+
+  it('supersedes pending previews before starting the new workflow', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    const callback = makeMockCallback();
+    sessionRepo.findByIdAndUserUid.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+    messageRepo.findPendingPreviewsBySession.mockResolvedValue([
+      {
+        ...mockUserMessage,
+        id: 'preview-1',
+        role: 'assistant',
+        task_token: 'token-1',
+        task_token_status: 'pending',
+      },
+    ]);
+    messageRepo.updateTaskTokenStatus.mockResolvedValue({
+      ...mockUserMessage,
+      id: 'preview-1',
+      task_token_status: 'superseded',
+    });
+
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      callback,
+    );
+    await useCase.execute(
+      { sessionId: 'session-1', content: 'mejor que sean 50' },
+      UID,
+      EMAIL,
+    );
+
+    expect(messageRepo.updateTaskTokenStatus).toHaveBeenCalledWith(
+      'preview-1',
+      UID,
+      'superseded',
+      EMAIL,
+    );
+    expect(callback.resume).toHaveBeenCalledWith('token-1', {
+      confirmed: false,
+      superseded: true,
+    });
+    // The new workflow still starts after the old preview is released.
+    expect(starter.start).toHaveBeenCalled();
+  });
+
+  it('still sends the message if releasing a stale preview fails', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    const callback = makeMockCallback();
+    sessionRepo.findByIdAndUserUid.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+    messageRepo.findPendingPreviewsBySession.mockResolvedValue([
+      {
+        ...mockUserMessage,
+        id: 'preview-1',
+        role: 'assistant',
+        task_token: 'token-1',
+        task_token_status: 'pending',
+      },
+    ]);
+    // A concurrent confirm already resolved the token: the guarded update
+    // throws, but the new message must still go through.
+    messageRepo.updateTaskTokenStatus.mockRejectedValue(new Error('no rows'));
+
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      callback,
+    );
+    await useCase.execute(
+      { sessionId: 'session-1', content: 'otra cosa' },
+      UID,
+      EMAIL,
+    );
+
+    expect(callback.resume).not.toHaveBeenCalled();
+    expect(starter.start).toHaveBeenCalled();
   });
 });

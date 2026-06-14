@@ -23,6 +23,7 @@ import {
   LogLevel,
   StateMachine,
   StateMachineType,
+  Succeed,
   TaskInput,
 } from 'aws-cdk-lib/aws-stepfunctions';
 import {
@@ -408,7 +409,20 @@ export class StepFunctionsChatStack extends BaseStack {
     );
 
     // ── Choice states ───────────────────────────────────────
+    // When the user iterates on a preview, the send-message use case releases
+    // this paused execution with `{ confirmed: false, superseded: true }`.
+    // End silently: don't create an expense and don't publish a cancellation
+    // (a new preview is already on its way from the iterating message).
+    const supersededSucceed = new Succeed(this, 'PreviewSuperseded');
+
     const confirmedChoice = new Choice(this, 'Confirmed?')
+      .when(
+        Condition.and(
+          Condition.isPresent('$.confirmation.superseded'),
+          Condition.booleanEquals('$.confirmation.superseded', true),
+        ),
+        supersededSucceed,
+      )
       .when(
         Condition.booleanEquals('$.confirmation.confirmed', true),
         createExpense.next(generateConfirmation).next(saveCreatedExpense),

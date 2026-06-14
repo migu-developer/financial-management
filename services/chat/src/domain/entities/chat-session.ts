@@ -21,3 +21,16 @@ export interface ChatSession {
 export interface CreateChatSessionInput {
   metadata?: Record<string, unknown>;
 }
+
+/**
+ * Read model for the sessions list panel (ChatGPT-style sidebar).
+ * `preview` is a snippet of the session's first user message, used as a
+ * human-friendly title. `message_count` lets the client hide empty shells.
+ */
+export interface ChatSessionSummary {
+  id: string;
+  started_at: string;
+  last_message_at: string;
+  preview: string | null;
+  message_count: number;
+}

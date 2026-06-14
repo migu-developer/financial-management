@@ -116,9 +116,18 @@ export const dashboard = {
       '¡Entendido! Esta funcionalidad está en desarrollo. Pronto podré crear gastos desde tus mensajes automáticamente.',
     send: 'Enviar',
     processing: 'Procesando...',
+    typingLabel: 'El asistente está escribiendo',
     error: 'Hubo un problema. Inténtalo de nuevo.',
     confirm: 'Confirmar',
     cancel: 'Cancelar',
+    newChat: 'Nuevo chat',
+    newChatLabel: 'Iniciar un nuevo chat',
+    sessionsTitle: 'Conversaciones',
+    sessionsLabel: 'Ver conversaciones',
+    backLabel: 'Volver',
+    noSessions: 'Aún no tienes conversaciones',
+    untitledSession: 'Conversación',
+    loadingSessions: 'Cargando conversaciones...',
   },
 } as const;
 

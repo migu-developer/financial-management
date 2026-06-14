@@ -132,6 +132,16 @@ export class LambdaChatStack extends BaseStack {
       gateway.authWithBody(passthroughModel),
     );
 
+    // GET /chat/sessions — list the user's sessions for the sidebar.
+    const sessionsResource = chatResource.addResource('sessions');
+    sessionsResource.addMethod('GET', integration, gateway.authOnly());
+
+    // GET /chat/sessions/{id}/messages — restore a session's conversation.
+    const sessionMessagesResource = sessionsResource
+      .addResource('{id}')
+      .addResource('messages');
+    sessionMessagesResource.addMethod('GET', integration, gateway.authOnly());
+
     // ── Cross-version export ────────────────────────────────
     exportForCrossVersion(
       this,

@@ -1,8 +1,8 @@
 import { ChatApiRepository } from './chat-api-repository';
 import type { ApiClient } from './api-client';
 
-function makeApi(): jest.Mocked<Pick<ApiClient, 'post'>> {
-  return { post: jest.fn() };
+function makeApi(): jest.Mocked<Pick<ApiClient, 'post' | 'get'>> {
+  return { post: jest.fn(), get: jest.fn() };
 }
 
 describe('ChatApiRepository', () => {
@@ -72,6 +72,93 @@ describe('ChatApiRepository', () => {
         confirmed: true,
       });
       expect(result).toEqual({ status: 'confirmed', messageId: 'm1' });
+    });
+  });
+
+  describe('listSessions', () => {
+    it('GETs /chat/sessions and maps snake_case → camelCase', async () => {
+      const api = makeApi();
+      api.get.mockResolvedValue({
+        success: true,
+        data: {
+          sessions: [
+            {
+              id: 's1',
+              started_at: '2026-06-01T10:00:00Z',
+              last_message_at: '2026-06-12T10:00:00Z',
+              preview: 'Gasté 50',
+              message_count: 4,
+            },
+          ],
+        },
+      });
+
+      const repo = new ChatApiRepository(api as unknown as ApiClient);
+      const result = await repo.listSessions();
+
+      expect(api.get).toHaveBeenCalledWith('/chat/sessions');
+      expect(result).toEqual([
+        {
+          id: 's1',
+          startedAt: '2026-06-01T10:00:00Z',
+          lastMessageAt: '2026-06-12T10:00:00Z',
+          preview: 'Gasté 50',
+          messageCount: 4,
+        },
+      ]);
+    });
+  });
+
+  describe('getSessionMessages', () => {
+    it('GETs the session messages route and maps the rows', async () => {
+      const api = makeApi();
+      api.get.mockResolvedValue({
+        success: true,
+        data: {
+          sessionId: 's1',
+          messages: [
+            {
+              id: 'm1',
+              role: 'user',
+              content: 'Hola',
+              task_token: null,
+              task_token_status: null,
+              created_at: '2026-06-01T10:00:01Z',
+            },
+            {
+              id: 'm2',
+              role: 'assistant',
+              content: '¿Confirmás?',
+              task_token: 'tok-1',
+              task_token_status: 'pending',
+              created_at: '2026-06-01T10:00:02Z',
+            },
+          ],
+        },
+      });
+
+      const repo = new ChatApiRepository(api as unknown as ApiClient);
+      const result = await repo.getSessionMessages('s1');
+
+      expect(api.get).toHaveBeenCalledWith('/chat/sessions/s1/messages');
+      expect(result).toEqual([
+        {
+          id: 'm1',
+          role: 'user',
+          content: 'Hola',
+          taskToken: null,
+          taskTokenStatus: null,
+          createdAt: '2026-06-01T10:00:01Z',
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: '¿Confirmás?',
+          taskToken: 'tok-1',
+          taskTokenStatus: 'pending',
+          createdAt: '2026-06-01T10:00:02Z',
+        },
+      ]);
     });
   });
 });

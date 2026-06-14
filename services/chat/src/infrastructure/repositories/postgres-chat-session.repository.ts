@@ -1,5 +1,6 @@
 import type {
   ChatSession,
+  ChatSessionSummary,
   CreateChatSessionInput,
 } from '@services/chat/domain/entities/chat-session';
 import type { ChatSessionRepository } from '@services/chat/domain/repositories/chat-session.repository';
@@ -63,6 +64,37 @@ export class PostgresChatSessionRepository implements ChatSessionRepository {
        SET last_message_at = now()
        WHERE id = $1 AND user_id = ${USER_ID_SUBQUERY}$2)`,
       [id, uid],
+    );
+  }
+
+  @trace('ChatSession:findByUser')
+  async findByUser(uid: string, limit: number): Promise<ChatSessionSummary[]> {
+    // `preview` = the first user message (the closest thing to a title).
+    // `message_count` lets the client skip empty shells; we also filter them
+    // out here so a freshly-created-but-unused session never shows up.
+    return this.dbService.queryReadOnly<ChatSessionSummary>(
+      `SELECT
+         s.id,
+         s.started_at,
+         s.last_message_at,
+         (SELECT m.content
+            FROM financial_management.chat_messages m
+            WHERE m.session_id = s.id AND m.role = 'user'
+            ORDER BY m.created_at ASC, m.id ASC
+            LIMIT 1) AS preview,
+         (SELECT count(*)::int
+            FROM financial_management.chat_messages m
+            WHERE m.session_id = s.id) AS message_count
+       FROM financial_management.chat_sessions s
+       JOIN financial_management.users u ON s.user_id = u.id
+       WHERE u.uid = $1
+         AND EXISTS (
+           SELECT 1 FROM financial_management.chat_messages m
+           WHERE m.session_id = s.id
+         )
+       ORDER BY s.last_message_at DESC
+       LIMIT $2`,
+      [uid, limit],
     );
   }
 }

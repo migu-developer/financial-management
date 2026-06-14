@@ -177,6 +177,75 @@ describe('PostgresChatMessageRepository — integration', () => {
     });
   });
 
+  describe('findPendingPreviewsBySession', () => {
+    it('returns only pending previews of the session (oldest → newest)', async () => {
+      const first = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview 1',
+          task_token: 'tok-1',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+      const second = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview 2',
+          task_token: 'tok-2',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+      // A plain user message and an already-confirmed preview must be excluded.
+      await repo.create(
+        { session_id: session.id, role: 'user', content: 'hola' },
+        userA.email,
+      );
+      const confirmed = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview confirmado',
+          task_token: 'tok-3',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+      await repo.updateTaskTokenStatus(
+        confirmed.id,
+        userA.uid,
+        'confirmed',
+        userA.email,
+      );
+
+      const pending = await repo.findPendingPreviewsBySession(
+        session.id,
+        userA.uid,
+      );
+      expect(pending.map((m) => m.id)).toEqual([first.id, second.id]);
+    });
+
+    it('does NOT return previews for another user', async () => {
+      await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview',
+          task_token: 'tok-1',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+
+      expect(
+        await repo.findPendingPreviewsBySession(session.id, userB.uid),
+      ).toEqual([]);
+    });
+  });
+
   describe('updateTaskTokenStatus', () => {
     it('updates the status for the owning user', async () => {
       const created = await repo.create(

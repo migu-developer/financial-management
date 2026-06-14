@@ -104,4 +104,57 @@ describe('PostgresChatSessionRepository — integration', () => {
       expect(delta).toBeGreaterThan(60_000);
     });
   });
+
+  describe('findByUser', () => {
+    const insertMessage = async (
+      sessionId: string,
+      role: string,
+      content: string,
+    ) => {
+      await dbService.query(
+        `INSERT INTO financial_management.chat_messages
+           (session_id, role, content, created_by, modified_by)
+         VALUES ($1, $2, $3, 'test', 'test')`,
+        [sessionId, role, content],
+      );
+    };
+
+    it('lists sessions newest-activity-first with a first-user-message preview', async () => {
+      const older = await repo.create({}, userA.uid, userA.email);
+      await insertMessage(older.id, 'user', '¿Cuánto gasté este mes?');
+      await dbService.query(
+        `UPDATE financial_management.chat_sessions
+         SET last_message_at = now() - interval '1 hour' WHERE id = $1`,
+        [older.id],
+      );
+
+      const newer = await repo.create({}, userA.uid, userA.email);
+      await insertMessage(newer.id, 'user', 'Gasté 50 en el super');
+      await insertMessage(newer.id, 'assistant', 'Listo, lo registré');
+
+      const sessions = await repo.findByUser(userA.uid, 50);
+
+      expect(sessions.map((s) => s.id)).toEqual([newer.id, older.id]);
+      expect(sessions[0]?.preview).toBe('Gasté 50 en el super');
+      expect(sessions[0]?.message_count).toBe(2);
+    });
+
+    it('excludes empty sessions (no messages)', async () => {
+      const empty = await repo.create({}, userA.uid, userA.email);
+      const withMessage = await repo.create({}, userA.uid, userA.email);
+      await insertMessage(withMessage.id, 'user', 'hola');
+
+      const sessions = await repo.findByUser(userA.uid, 50);
+
+      expect(sessions.map((s) => s.id)).toEqual([withMessage.id]);
+      expect(sessions.map((s) => s.id)).not.toContain(empty.id);
+    });
+
+    it("does NOT return another user's sessions", async () => {
+      const sessionB = await repo.create({}, userB.uid, userB.email);
+      await insertMessage(sessionB.id, 'user', 'secreto');
+
+      expect(await repo.findByUser(userA.uid, 50)).toEqual([]);
+    });
+  });
 });

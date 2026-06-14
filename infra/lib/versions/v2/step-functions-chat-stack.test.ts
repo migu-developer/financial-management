@@ -102,6 +102,7 @@ jest.mock('aws-cdk-lib/aws-stepfunctions', () => ({
   DefinitionBody: { fromChainable: jest.fn().mockReturnValue('def-body') },
   LogLevel: { ALL: 'ALL' },
   Pass: jest.fn().mockImplementation(() => new MockChain()),
+  Succeed: jest.fn().mockImplementation(() => new MockChain()),
   Choice: jest.fn().mockImplementation(() => {
     const choiceObj = {
       when: jest.fn().mockReturnThis(),
@@ -114,6 +115,8 @@ jest.mock('aws-cdk-lib/aws-stepfunctions', () => ({
     stringEquals: jest.fn(),
     stringMatches: jest.fn(),
     booleanEquals: jest.fn(),
+    isPresent: jest.fn(),
+    and: jest.fn(),
   },
   JsonPath: { taskToken: 'TASK_TOKEN_PLACEHOLDER' },
   TaskInput: {

@@ -89,6 +89,26 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     return rows[0] ?? null;
   }
 
+  @trace('ChatMessage:findPendingPreviewsBySession')
+  async findPendingPreviewsBySession(
+    sessionId: string,
+    uid: string,
+  ): Promise<ChatMessage[]> {
+    const rows = await this.dbService.queryReadOnly<ChatMessage>(
+      `SELECT ${MESSAGE_COLUMNS}
+       FROM financial_management.chat_messages m
+       JOIN financial_management.chat_sessions s ON m.session_id = s.id
+       JOIN financial_management.users u ON s.user_id = u.id
+       WHERE m.session_id = $1
+         AND u.uid = $2
+         AND m.task_token IS NOT NULL
+         AND m.task_token_status = 'pending'
+       ORDER BY m.created_at ASC, m.id ASC`,
+      [sessionId, uid],
+    );
+    return rows;
+  }
+
   @trace('ChatMessage:updateTaskTokenStatus')
   async updateTaskTokenStatus(
     id: string,

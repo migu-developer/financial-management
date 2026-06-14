@@ -9,6 +9,7 @@ function makeMessageRepo(): jest.Mocked<ChatMessageRepository> {
     create: jest.fn(),
     findRecentBySession: jest.fn(),
     findPendingByTaskToken: jest.fn(),
+    findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
   };
 }
@@ -18,6 +19,7 @@ function makeSessionRepo(): jest.Mocked<ChatSessionRepository> {
     findByIdAndUserUid: jest.fn(),
     create: jest.fn(),
     touchLastMessage: jest.fn(),
+    findByUser: jest.fn(),
   };
 }
 
