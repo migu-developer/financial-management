@@ -73,7 +73,7 @@ describe('ValidateExpenseFieldsUseCase', () => {
 
     const result = await useCase.execute({
       value: 45,
-      currencyCode: 'USD',
+      currencyCode: 'COP',
       expenseTypeName: 'egreso',
     });
 
