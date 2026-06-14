@@ -109,6 +109,14 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
 
   const [inputText, setInputText] = useState('');
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  // Mirror of `sessionId` for the realtime callback: the AppSync subscription
+  // closure is created once and does NOT re-run when the session changes, so
+  // it reads the active session from this ref to filter out events that belong
+  // to other sessions still processing in the background.
+  const sessionIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
   const [view, setView] = useState<DrawerView>('chat');
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -211,6 +219,13 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     });
 
     const onEvent = (event: ChatEvent) => {
+      // The channel (`${userId}/responses`) carries events for ALL of the
+      // user's sessions. Ignore anything that isn't the active conversation
+      // so a background workflow can't leak into the wrong session (and drop
+      // events while there's no active session yet).
+      if (!sessionIdRef.current || event.sessionId !== sessionIdRef.current) {
+        return;
+      }
       setIsWaitingForAssistant(false);
       setMessages((prev) => {
         // A new preview means the user iterated on the previous one: clear
@@ -271,6 +286,10 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
         content: trimmed,
       });
       if (!sessionId) {
+        // Set the ref synchronously (before the state re-render) so the
+        // assistant's reply for this brand-new session passes the onEvent
+        // filter instead of being dropped in the gap before `sessionId` lands.
+        sessionIdRef.current = ack.sessionId;
         setSessionId(ack.sessionId);
         void preferenceStorage.setLastChatSession(userId, ack.sessionId);
       }
