@@ -116,9 +116,18 @@ export const dashboard = {
       "Got it! This feature is under development. Soon I'll be able to create expenses from your messages automatically.",
     send: 'Send',
     processing: 'Processing...',
+    typingLabel: 'Assistant is typing',
     error: 'Something went wrong. Please try again.',
     confirm: 'Confirm',
     cancel: 'Cancel',
+    newChat: 'New chat',
+    newChatLabel: 'Start a new chat',
+    sessionsTitle: 'Chats',
+    sessionsLabel: 'View chats',
+    backLabel: 'Back',
+    noSessions: 'No conversations yet',
+    untitledSession: 'Conversation',
+    loadingSessions: 'Loading conversations...',
   },
 } as const;
 

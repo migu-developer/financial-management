@@ -40,6 +40,17 @@ export interface ChatMessageRepository {
   ): Promise<ChatMessage | null>;
 
   /**
+   * Returns the session's assistant preview messages that are still
+   * `pending` (have a `task_token`). Used when the user iterates on a
+   * preview: each one is superseded so only the latest confirmation
+   * remains actionable. Scoped to the owning user.
+   */
+  findPendingPreviewsBySession(
+    sessionId: string,
+    uid: string,
+  ): Promise<ChatMessage[]>;
+
+  /**
    * Updates the `task_token_status` of a message. Called after the user
    * confirms or cancels (or after timeout reconciliation).
    */

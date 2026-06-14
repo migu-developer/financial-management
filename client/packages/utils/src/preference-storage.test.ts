@@ -3,6 +3,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: jest.fn().mockResolvedValue(null),
     setItem: jest.fn().mockResolvedValue(undefined),
+    removeItem: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -11,6 +12,7 @@ import { preferenceStorage } from './preference-storage';
 
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
 const mockSetItem = AsyncStorage.setItem as jest.Mock;
+const mockRemoveItem = AsyncStorage.removeItem as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -57,5 +59,27 @@ describe('preferenceStorage.setLanguage', () => {
   it('calls AsyncStorage.setItem with the language key and value', async () => {
     await preferenceStorage.setLanguage('es');
     expect(mockSetItem).toHaveBeenCalledWith('pref:language', 'es');
+  });
+});
+
+describe('preferenceStorage chat session', () => {
+  it('reads the per-user last chat session key', async () => {
+    mockGetItem.mockResolvedValue('session-1');
+    const result = await preferenceStorage.getLastChatSession('user-1');
+    expect(mockGetItem).toHaveBeenCalledWith('chat:lastSession:user-1');
+    expect(result).toBe('session-1');
+  });
+
+  it('writes the per-user last chat session key', async () => {
+    await preferenceStorage.setLastChatSession('user-1', 'session-2');
+    expect(mockSetItem).toHaveBeenCalledWith(
+      'chat:lastSession:user-1',
+      'session-2',
+    );
+  });
+
+  it('clears the per-user last chat session key', async () => {
+    await preferenceStorage.clearLastChatSession('user-1');
+    expect(mockRemoveItem).toHaveBeenCalledWith('chat:lastSession:user-1');
   });
 });

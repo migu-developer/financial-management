@@ -17,11 +17,26 @@ jest.mock('./api-gateway-stack', () => ({
 
 const mockChatAddMethod = jest.fn();
 const mockConfirmAddMethod = jest.fn();
+const mockSessionsAddMethod = jest.fn();
+const mockSessionMessagesAddMethod = jest.fn();
 
 const mockConfirmResource = { addMethod: mockConfirmAddMethod };
+const mockSessionMessagesResource = { addMethod: mockSessionMessagesAddMethod };
+const mockSessionIdResource = {
+  addResource: jest.fn().mockReturnValue(mockSessionMessagesResource),
+};
+const mockSessionsResource = {
+  addMethod: mockSessionsAddMethod,
+  addResource: jest.fn().mockReturnValue(mockSessionIdResource),
+};
+
+function chatAddResource(name: string) {
+  return name === 'sessions' ? mockSessionsResource : mockConfirmResource;
+}
+
 const mockChatResource = {
   addMethod: mockChatAddMethod,
-  addResource: jest.fn().mockReturnValue(mockConfirmResource),
+  addResource: jest.fn().mockImplementation(chatAddResource),
 };
 
 const mockModel = { modelId: 'mock-model' };
@@ -29,6 +44,7 @@ const mockAuthWithBody = {
   authorizationType: 'COGNITO',
   requestModels: { 'application/json': mockModel },
 };
+const mockAuthOnly = { authorizationType: 'COGNITO' };
 
 const mockGateway = {
   api: {
@@ -36,6 +52,7 @@ const mockGateway = {
   },
   createModel: jest.fn().mockReturnValue(mockModel),
   authWithBody: jest.fn().mockReturnValue(mockAuthWithBody),
+  authOnly: jest.fn().mockReturnValue(mockAuthOnly),
 };
 
 const mockDeps = { getStack: jest.fn().mockReturnValue(mockGateway) };
@@ -114,10 +131,15 @@ function createStack(overrides: Partial<typeof defaultProps> = {}) {
 describe('LambdaChatStack', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockChatResource.addResource.mockReturnValue(mockConfirmResource);
+    mockChatResource.addResource.mockImplementation(chatAddResource);
+    mockSessionsResource.addResource.mockReturnValue(mockSessionIdResource);
+    mockSessionIdResource.addResource.mockReturnValue(
+      mockSessionMessagesResource,
+    );
     mockGateway.api.root.addResource.mockReturnValue(mockChatResource);
     mockGateway.createModel.mockReturnValue(mockModel);
     mockGateway.authWithBody.mockReturnValue(mockAuthWithBody);
+    mockGateway.authOnly.mockReturnValue(mockAuthOnly);
     mockDeps.getStack.mockReturnValue(mockGateway);
   });
 
@@ -252,7 +274,7 @@ describe('LambdaChatStack', () => {
       expect(methods).toContain('POST');
     });
 
-    test('does not add GET/PUT/PATCH/DELETE methods', () => {
+    test('does not add GET/PUT/PATCH/DELETE methods on /chat or /chat/confirm', () => {
       createStack();
       const allMethods = [
         ...mockChatAddMethod.mock.calls.map((c: unknown[]) => c[0]),
@@ -263,7 +285,43 @@ describe('LambdaChatStack', () => {
       );
     });
 
-    test('both routes use Cognito authorization', () => {
+    test('creates /chat/sessions sub-resource', () => {
+      createStack();
+      expect(mockChatResource.addResource).toHaveBeenCalledWith('sessions');
+    });
+
+    test('creates /chat/sessions/{id}/messages nested resources', () => {
+      createStack();
+      expect(mockSessionsResource.addResource).toHaveBeenCalledWith('{id}');
+      expect(mockSessionIdResource.addResource).toHaveBeenCalledWith(
+        'messages',
+      );
+    });
+
+    test('adds GET on /chat/sessions and /chat/sessions/{id}/messages', () => {
+      createStack();
+      expect(
+        mockSessionsAddMethod.mock.calls.map((c: unknown[]) => c[0]),
+      ).toContain('GET');
+      expect(
+        mockSessionMessagesAddMethod.mock.calls.map((c: unknown[]) => c[0]),
+      ).toContain('GET');
+    });
+
+    test('session routes use Cognito authorization via authOnly', () => {
+      createStack();
+      expect(mockGateway.authOnly).toHaveBeenCalled();
+      const allCalls = [
+        ...(mockSessionsAddMethod.mock.calls as unknown[][]),
+        ...(mockSessionMessagesAddMethod.mock.calls as unknown[][]),
+      ];
+      for (const call of allCalls) {
+        const opts = call[2] as Record<string, unknown>;
+        expect(opts.authorizationType).toBe('COGNITO');
+      }
+    });
+
+    test('both POST routes use Cognito authorization', () => {
       createStack();
       const allCalls = [
         ...(mockChatAddMethod.mock.calls as unknown[][]),

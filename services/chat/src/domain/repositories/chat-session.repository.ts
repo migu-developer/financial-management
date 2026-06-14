@@ -1,5 +1,6 @@
 import type {
   ChatSession,
+  ChatSessionSummary,
   CreateChatSessionInput,
 } from '@services/chat/domain/entities/chat-session';
 
@@ -32,4 +33,11 @@ export interface ChatSessionRepository {
    * Used after a new message is persisted to keep history lists sorted.
    */
   touchLastMessage(id: string, uid: string): Promise<void>;
+
+  /**
+   * Lists the user's sessions for the sidebar, newest activity first.
+   * Only sessions that have at least one message are returned (empty
+   * shells created but never used are skipped). Scoped to the owning user.
+   */
+  findByUser(uid: string, limit: number): Promise<ChatSessionSummary[]>;
 }

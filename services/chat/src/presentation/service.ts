@@ -2,6 +2,8 @@ import { Service } from '@services/chat/types/service';
 import type { Application } from '@services/chat/presentation/application';
 import { SendMessageUseCase } from '@services/chat/application/use-cases/send-message.use-case';
 import { ConfirmPendingExpenseUseCase } from '@services/chat/application/use-cases/confirm-pending-expense.use-case';
+import { ListSessionsUseCase } from '@services/chat/application/use-cases/list-sessions.use-case';
+import { GetSessionMessagesUseCase } from '@services/chat/application/use-cases/get-session-messages.use-case';
 import { PostgresChatSessionRepository } from '@services/chat/infrastructure/repositories/postgres-chat-session.repository';
 import { PostgresChatMessageRepository } from '@services/chat/infrastructure/repositories/postgres-chat-message.repository';
 import { DataNotDefinedError } from '@packages/models/shared/utils/errors';
@@ -54,6 +56,7 @@ export class ChatService extends Service {
       sessionRepository,
       messageRepository,
       this.app.workflowStarter,
+      this.app.workflowCallback,
     );
 
     const result = await useCase.execute(
@@ -140,6 +143,78 @@ export class ChatConfirmService extends Service {
           messageId: result.message.id,
         },
       }),
+      { status: HttpCode.SUCCESS },
+    );
+  }
+}
+
+/**
+ * Service for `GET /chat/sessions`.
+ *
+ * Lists the authenticated user's chat sessions (newest activity first)
+ * so the client can render the sessions sidebar and switch between them.
+ */
+export class ChatSessionsService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing chat sessions GET request',
+      ChatSessionsService.name,
+    );
+
+    const sessionRepository = new PostgresChatSessionRepository(
+      this.app.dbService,
+    );
+    const useCase = new ListSessionsUseCase(sessionRepository);
+
+    const sessions = await useCase.execute(this.app.user.uid);
+
+    return new Response(JSON.stringify({ success: true, data: { sessions } }), {
+      status: HttpCode.SUCCESS,
+    });
+  }
+}
+
+/**
+ * Service for `GET /chat/sessions/{id}/messages`.
+ *
+ * Returns a session's messages (oldest → newest) so the client can
+ * restore the conversation on reload or when switching sessions.
+ */
+export class ChatSessionMessagesService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executeGET(): Promise<Response> {
+    this.app.logger.info(
+      'Executing chat session messages GET request',
+      ChatSessionMessagesService.name,
+    );
+
+    const sessionId = this.app.event.pathParameters?.['id'];
+    if (!sessionId) {
+      throw new DataNotDefinedError('session id is required');
+    }
+
+    const sessionRepository = new PostgresChatSessionRepository(
+      this.app.dbService,
+    );
+    const messageRepository = new PostgresChatMessageRepository(
+      this.app.dbService,
+    );
+    const useCase = new GetSessionMessagesUseCase(
+      sessionRepository,
+      messageRepository,
+    );
+
+    const messages = await useCase.execute(sessionId, this.app.user.uid);
+
+    return new Response(
+      JSON.stringify({ success: true, data: { sessionId, messages } }),
       { status: HttpCode.SUCCESS },
     );
   }

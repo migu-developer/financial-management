@@ -5,6 +5,13 @@
  */
 export interface WorkflowCallbackPayload {
   confirmed: boolean;
+  /**
+   * Set when the preview was released because the user iterated on it
+   * (sent a new message while it was still pending). The Choice state
+   * routes a superseded resume to a silent Succeed — no expense is
+   * created and nothing is published to the client.
+   */
+  superseded?: boolean;
 }
 
 /**

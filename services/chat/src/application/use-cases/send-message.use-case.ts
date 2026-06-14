@@ -9,6 +9,7 @@ import type {
   StartChatWorkflowResult,
   WorkflowStarterService,
 } from '@services/chat/domain/services/workflow-starter.service';
+import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
 import { UnauthorizedError } from '@packages/models/shared/utils/errors';
 
 export interface SendMessageInput {
@@ -72,6 +73,7 @@ export class SendMessageUseCase {
     private readonly sessionRepository: ChatSessionRepository,
     private readonly messageRepository: ChatMessageRepository,
     private readonly workflowStarter: WorkflowStarterService,
+    private readonly workflowCallback: WorkflowCallbackService,
   ) {}
 
   async execute(
@@ -80,6 +82,12 @@ export class SendMessageUseCase {
     userEmail: string,
   ): Promise<SendMessageResult> {
     const session = await this.resolveSession(input.sessionId, uid, userEmail);
+
+    // Sending a new message in a session that still has a pending expense
+    // preview means the user is iterating on it. Release the old preview(s)
+    // silently so only the latest confirmation stays actionable and the
+    // abandoned executions don't fire a false timeout alarm.
+    await this.supersedePendingPreviews(session.id, uid, userEmail);
 
     // Load prior turns BEFORE persisting the current message so the history
     // is context for it (not including it).
@@ -119,6 +127,47 @@ export class SendMessageUseCase {
     });
 
     return { session, userMessage, execution };
+  }
+
+  /**
+   * Marks any still-pending preview in the session as `superseded` and
+   * resumes its paused workflow with `{ confirmed: false, superseded: true }`
+   * so the Choice state ends silently (no expense, no client publish).
+   *
+   * Best-effort per preview: the DB guard makes the status transition atomic
+   * (only `pending` rows flip), and a failed callback for one stale token
+   * must not block the user's new message — the worst case is the old
+   * execution eventually timing out, which is what we already had.
+   */
+  private async supersedePendingPreviews(
+    sessionId: string,
+    uid: string,
+    userEmail: string,
+  ): Promise<void> {
+    const pending = await this.messageRepository.findPendingPreviewsBySession(
+      sessionId,
+      uid,
+    );
+
+    for (const preview of pending) {
+      if (!preview.task_token) continue;
+      try {
+        await this.messageRepository.updateTaskTokenStatus(
+          preview.id,
+          uid,
+          'superseded',
+          userEmail,
+        );
+        await this.workflowCallback.resume(preview.task_token, {
+          confirmed: false,
+          superseded: true,
+        });
+      } catch {
+        // A concurrent confirm/cancel may have already resolved this token,
+        // or the execution may be gone. Skip and continue — the new message
+        // must still go through.
+      }
+    }
   }
 
   private async resolveSession(

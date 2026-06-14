@@ -1,5 +1,8 @@
 import type {
+  ChatHistoryMessage,
   ChatRepositoryPort,
+  ChatSessionSummary,
+  ChatTaskTokenStatus,
   ConfirmExpenseInput,
   ConfirmExpenseResult,
   SendChatMessageAck,
@@ -10,6 +13,25 @@ import type { ApiClient } from './api-client';
 interface ApiResponse<T> {
   success: boolean;
   data: T;
+}
+
+/** Raw session summary as returned by `GET /chat/sessions` (snake_case). */
+interface RawSessionSummary {
+  id: string;
+  started_at: string;
+  last_message_at: string;
+  preview: string | null;
+  message_count: number;
+}
+
+/** Raw message row as returned by the backend (snake_case). */
+interface RawChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  task_token: string | null;
+  task_token_status: ChatTaskTokenStatus | null;
+  created_at: string;
 }
 
 /**
@@ -42,5 +64,33 @@ export class ChatApiRepository implements ChatRepositoryPort {
       { taskToken: input.taskToken, confirmed: input.confirmed },
     );
     return response.data;
+  }
+
+  async listSessions(): Promise<ChatSessionSummary[]> {
+    const response =
+      await this.api.get<ApiResponse<{ sessions: RawSessionSummary[] }>>(
+        '/chat/sessions',
+      );
+    return response.data.sessions.map((s) => ({
+      id: s.id,
+      startedAt: s.started_at,
+      lastMessageAt: s.last_message_at,
+      preview: s.preview,
+      messageCount: s.message_count,
+    }));
+  }
+
+  async getSessionMessages(sessionId: string): Promise<ChatHistoryMessage[]> {
+    const response = await this.api.get<
+      ApiResponse<{ messages: RawChatMessage[] }>
+    >(`/chat/sessions/${encodeURIComponent(sessionId)}/messages`);
+    return response.data.messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      taskToken: m.task_token,
+      taskTokenStatus: m.task_token_status,
+      createdAt: m.created_at,
+    }));
   }
 }
