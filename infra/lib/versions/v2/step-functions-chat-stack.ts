@@ -362,7 +362,7 @@ export class StepFunctionsChatStack extends BaseStack {
         model: claudeHaiku,
         body: claudeBody(
           PROMPTS.clarification.system,
-          "States.Format('Faltan estos campos: {}. Monedas disponibles: {}. Mensaje original: {}', States.JsonToString($.validation.missing), States.JsonToString($.validation.availableCurrencies), $.content)",
+          'States.Format(\'Faltan estos campos: {}. Moneda no soportada: "{}". Monedas disponibles: {}. Mensaje original: {}\', States.JsonToString($.validation.missing), $.validation.unsupportedCurrency, States.JsonToString($.validation.availableCurrencies), $.content)',
           PROMPTS.clarification.maxTokens,
           PROMPTS.clarification.temperature,
         ),
@@ -435,7 +435,7 @@ export class StepFunctionsChatStack extends BaseStack {
       model: claudeHaiku,
       body: claudeBody(
         PROMPTS.unknown.system,
-        "States.Format('Mensaje no entendido: {}', $.content)",
+        "States.Format('Historial: {} === Mensaje no entendido: {}', $.history, $.content)",
         PROMPTS.unknown.maxTokens,
         PROMPTS.unknown.temperature,
       ),

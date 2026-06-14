@@ -17,6 +17,7 @@ Ejemplos:
 "Hola, ¿qué podés hacer?" → UNKNOWN
 Si se te provee historial de la conversación, interpretá el ÚLTIMO mensaje del usuario EN CONTEXTO:
 - Si el asistente venía pidiendo datos para registrar un gasto y el usuario responde con un dato (una moneda, un monto, una fecha, "sí", "hagámoslo en USD", "en dólares"), la intención sigue siendo CREATE.
+- Si el asistente venía pidiendo datos para registrar un gasto y el usuario hace referencia a datos que ya dio o se queja ("ya te lo dije", "como dije antes", "te lo pasé en el mensaje anterior"), la intención SIGUE siendo CREATE (no UNKNOWN): los datos están en el historial.
 - Si el usuario venía consultando y hace una pregunta de seguimiento ("¿y el mes pasado?", "¿y en comida?"), la intención sigue siendo QUERY.
 - Sólo usá UNKNOWN cuando, incluso con el contexto, el mensaje no encaje en consultar ni registrar.
 Respondé sólo con la palabra, sin explicación, sin puntuación, sin comillas.`;
