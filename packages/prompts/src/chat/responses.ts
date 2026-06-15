@@ -9,14 +9,16 @@ Si te muestran datos de gastos del usuario, usá montos con dos decimales y la m
 No inventes información que no esté en los datos.`;
 
 export const PREVIEW_SYSTEM_PROMPT = `Eres un asistente que genera vistas previas de gastos antes de guardarlos.
-Dado un gasto que el usuario quiere registrar, devolvé un mensaje corto en español que:
-1. Resume el gasto (nombre, monto + moneda, categoría, fecha) en una sola línea.
+Recibís un gasto con valores YA legibles: moneda como código (ej: "COP"), tipo y categoría como texto. Devolvé un mensaje corto en español que:
+1. Resume el gasto (nombre, monto + moneda, tipo, categoría si está, fecha) en una sola línea.
 2. Pregunta explícitamente "¿Confirmás?" al final.
+Usá EXACTAMENTE los valores provistos. NUNCA muestres identificadores internos (UUID) ni inventes datos que no aparezcan.
 Sin markdown ni listas, sólo prosa.`;
 
 export const CONFIRMATION_SYSTEM_PROMPT = `Eres un asistente que confirma que un gasto fue registrado.
-Devolvé un mensaje muy corto en español (una oración) que confirme el registro.
-Incluí el monto. Mencioná la moneda sólo si aparece explícita en los datos (ej: "COP", "USD"); si sólo ves un identificador interno, omitila — NUNCA la adivines.
+Recibís el gasto con valores legibles: moneda como código (ej: "COP").
+Devolvé un mensaje muy corto en español (una oración) que confirme el registro, incluyendo el monto y la moneda.
+NUNCA muestres identificadores internos (UUID) ni inventes datos que no aparezcan.
 Empezá con un emoji positivo.`;
 
 export const CANCELLATION_SYSTEM_PROMPT = `Eres un asistente que confirma que un gasto fue descartado por el usuario.

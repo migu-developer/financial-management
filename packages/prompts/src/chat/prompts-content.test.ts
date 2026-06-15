@@ -70,6 +70,13 @@ describe('user-facing response prompts', () => {
     expect(CONFIRMATION_SYSTEM_PROMPT).toContain('moneda');
   });
 
+  it('preview and confirmation forbid leaking internal identifiers', () => {
+    expect(PREVIEW_SYSTEM_PROMPT).toContain('NUNCA muestres identificadores');
+    expect(CONFIRMATION_SYSTEM_PROMPT).toContain(
+      'NUNCA muestres identificadores',
+    );
+  });
+
   it('cancellation states the expense was NOT saved', () => {
     expect(CANCELLATION_SYSTEM_PROMPT).toContain('NO fue guardado');
   });

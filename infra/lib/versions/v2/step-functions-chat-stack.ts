@@ -290,7 +290,9 @@ export class StepFunctionsChatStack extends BaseStack {
       model: claudeHaiku,
       body: claudeBody(
         PROMPTS.preview.system,
-        "States.Format('Gasto a registrar: {}', States.JsonToString($.validation.fields))",
+        // Feed the human-readable `display` (labels/codes), NOT `fields`
+        // (which carries catalog UUIDs that would leak into the message).
+        "States.Format('Gasto a registrar: {}', States.JsonToString($.validation.display))",
         PROMPTS.preview.maxTokens,
         PROMPTS.preview.temperature,
       ),
@@ -346,7 +348,9 @@ export class StepFunctionsChatStack extends BaseStack {
         model: claudeHaiku,
         body: claudeBody(
           PROMPTS.confirmation.system,
-          "States.Format('Gasto registrado: {}', States.JsonToString($.createResult.expense))",
+          // Use the human-readable `display` (labels/codes) instead of the
+          // created row, which carries catalog UUIDs.
+          "States.Format('Gasto registrado: {}', States.JsonToString($.validation.display))",
           PROMPTS.confirmation.maxTokens,
           PROMPTS.confirmation.temperature,
         ),
