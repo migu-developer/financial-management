@@ -10,12 +10,14 @@ import {
   ConfirmDialog,
   FilterBar,
   FilterChip,
+  FloatingActionButton,
 } from '@features/ui/components';
 import { useTranslation } from '@packages/i18n';
 import { useExpenses } from '@features/dashboard/presentation/providers/expense-provider';
 import { ExpenseList } from '@features/dashboard/presentation/components/web/organisms/expense-list';
 import { ExpenseModal } from '@features/dashboard/presentation/components/web/organisms/expense-modal';
 import { ExpenseSummary } from '@features/dashboard/presentation/components/shared/molecules/expense-summary';
+import { AIChatDrawer } from '@features/dashboard/presentation/components/shared/organisms/ai-chat-drawer';
 
 export function ExpensesTemplate() {
   const { t } = useTranslation('dashboard');
@@ -44,6 +46,10 @@ export function ExpensesTemplate() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const handleOpenChat = useCallback(() => setChatOpen(true), []);
+  const handleCloseChat = useCallback(() => setChatOpen(false), []);
 
   const handleSearchChange = useCallback(
     (name: string) => {
@@ -222,6 +228,15 @@ export function ExpensesTemplate() {
         cancelLabel={t('expenses.cancel')}
         loading={deleteLoading}
       />
+
+      {/* Register expenses by chat without leaving this view. ChatProvider is
+          already mounted at the dashboard layout, so no extra wiring needed. */}
+      <FloatingActionButton
+        icon="robot"
+        onPress={handleOpenChat}
+        accessibilityLabel={t('aiChat.openLabel')}
+      />
+      <AIChatDrawer visible={chatOpen} onClose={handleCloseChat} />
     </View>
   );
 }

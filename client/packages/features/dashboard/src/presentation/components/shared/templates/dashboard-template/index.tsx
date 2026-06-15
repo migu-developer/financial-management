@@ -147,7 +147,11 @@ export function DashboardTemplate() {
         )}
       </ScrollView>
 
-      <FloatingActionButton icon="robot" onPress={handleOpenChat} />
+      <FloatingActionButton
+        icon="robot"
+        onPress={handleOpenChat}
+        accessibilityLabel={t('aiChat.openLabel')}
+      />
       <AIChatDrawer visible={chatOpen} onClose={handleCloseChat} />
     </View>
   );

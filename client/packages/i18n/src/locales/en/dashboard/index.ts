@@ -58,6 +58,8 @@ export const dashboard = {
     card: {
       deleteAccessibility: 'Delete expense',
       accessibilityLabel: '{{name}}, {{amount}}',
+      expenseDate: 'Expense date',
+      createdAt: 'Created',
     },
     selector: {
       selectTitle: 'Select {{field}}',
@@ -108,6 +110,7 @@ export const dashboard = {
   },
   aiChat: {
     title: 'AI Assistant',
+    openLabel: 'Open AI assistant',
     placeholder: 'Describe your expense...',
     welcomeMessage:
       'Hi! I can help you log expenses. Tell me what you spent, send a photo of a receipt, or record a voice note.',

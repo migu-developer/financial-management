@@ -58,6 +58,8 @@ export const dashboard = {
     card: {
       deleteAccessibility: 'Eliminar gasto',
       accessibilityLabel: '{{name}}, {{amount}}',
+      expenseDate: 'Fecha del gasto',
+      createdAt: 'Registrado',
     },
     selector: {
       selectTitle: 'Seleccionar {{field}}',
@@ -108,6 +110,7 @@ export const dashboard = {
   },
   aiChat: {
     title: 'Asistente AI',
+    openLabel: 'Abrir asistente de IA',
     placeholder: 'Describe tu gasto...',
     welcomeMessage:
       '¡Hola! Puedo ayudarte a registrar gastos. Dime en qué gastaste, envía una foto del recibo o graba una nota de voz.',
