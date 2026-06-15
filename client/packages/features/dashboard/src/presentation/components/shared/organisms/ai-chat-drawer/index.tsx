@@ -205,6 +205,29 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     }).start(() => onClose());
   }, [slideAnim, drawerWidth, onClose]);
 
+  // After the realtime socket transparently reconnects, backfill the active
+  // session from the DB (AppSync Events doesn't replay messages delivered
+  // while we were offline) and clear any transient error banner. Silent — no
+  // restore skeleton — so it doesn't disrupt an ongoing conversation.
+  const handleRealtimeReconnect = useCallback(() => {
+    setErrorBanner(null);
+    const id = sessionIdRef.current;
+    if (!id) return;
+    chatRepository
+      .getSessionMessages(id)
+      .then((history) => {
+        // The user may have switched sessions while this was in flight —
+        // only apply the backfill if it still matches the active session.
+        if (sessionIdRef.current !== id) return;
+        if (!history.length) return;
+        const mapped = mapHistory(history);
+        setMessages(mapped);
+        const last = mapped[mapped.length - 1];
+        if (last && !last.isUser) setIsWaitingForAssistant(false);
+      })
+      .catch((err) => console.warn('Failed to backfill on reconnect', err));
+  }, [chatRepository, mapHistory]);
+
   // ── Real-time subscription ────────────────────────────────
   useEffect(() => {
     if (!visible) return undefined;
@@ -218,6 +241,7 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
         console.warn('AppSync events error', err);
         setErrorBanner(t('aiChat.error'));
       },
+      onReconnect: handleRealtimeReconnect,
     });
 
     const onEvent = (event: ChatEvent) => {
@@ -264,7 +288,15 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     return () => {
       client.close();
     };
-  }, [visible, appSyncRealtimeDns, appSyncNamespace, userId, getAuthToken, t]);
+  }, [
+    visible,
+    appSyncRealtimeDns,
+    appSyncNamespace,
+    userId,
+    getAuthToken,
+    handleRealtimeReconnect,
+    t,
+  ]);
 
   // ── Send message ──────────────────────────────────────────
   const handleSend = useCallback(async () => {

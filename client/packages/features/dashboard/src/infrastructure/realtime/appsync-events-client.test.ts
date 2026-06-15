@@ -21,11 +21,16 @@ class StubSocket {
     StubSocket.last = this;
   }
 
+  closeCalls = 0;
+
   send(data: string) {
     this.sent.push(data);
   }
   close() {
-    /* no-op */
+    // Mirror a real WebSocket: closing fires `onclose` so the client's
+    // reconnect path runs.
+    this.closeCalls += 1;
+    this.onclose?.call(this as unknown as WebSocket, {} as CloseEvent);
   }
 
   simulateOpen() {
@@ -39,6 +44,16 @@ class StubSocket {
       } as MessageEvent,
     );
   }
+  simulateClose() {
+    this.onclose?.call(this as unknown as WebSocket, {} as CloseEvent);
+  }
+}
+
+/** Drives an open socket through the full handshake to subscribe_success. */
+async function handshake(ws: StubSocket) {
+  ws.simulateOpen();
+  ws.simulateMessage({ type: 'connection_ack' });
+  ws.simulateMessage({ type: 'subscribe_success' });
 }
 
 beforeAll(() => {
@@ -106,6 +121,7 @@ describe('AppSyncEventsClient', () => {
 
     ws.simulateMessage({ type: 'subscribe_success' });
     await expect(subscribePromise).resolves.toBeUndefined();
+    client.close();
   });
 
   it('forwards parsed chat events to the listener', async () => {
@@ -134,6 +150,7 @@ describe('AppSyncEventsClient', () => {
     });
 
     expect(listener).toHaveBeenCalledWith(event);
+    client.close();
   });
 
   it('rejects subscribe() when getToken returns null', async () => {
@@ -164,5 +181,102 @@ describe('AppSyncEventsClient', () => {
 
     ws.simulateMessage({ type: 'error', errors: ['boom'] });
     expect(onError).toHaveBeenCalled();
+    client.close();
+  });
+
+  it('reconnects after an unexpected close and fires onReconnect on re-subscribe', async () => {
+    jest.useFakeTimers();
+    try {
+      const onReconnect = jest.fn();
+      const client = new AppSyncEventsClient({ ...baseConfig, onReconnect });
+      const listener = jest.fn();
+
+      const subscribePromise = client.subscribe(listener);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws1 = StubSocket.last!;
+      await handshake(ws1);
+      await subscribePromise;
+      // First subscribe must NOT be treated as a reconnect.
+      expect(onReconnect).not.toHaveBeenCalled();
+
+      // The socket drops unexpectedly → client schedules a reconnect.
+      ws1.simulateClose();
+      jest.advanceTimersByTime(1000); // first backoff step
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws2 = StubSocket.last!;
+      expect(ws2).not.toBe(ws1);
+      await handshake(ws2);
+
+      // A successful re-subscribe triggers the backfill hook exactly once.
+      expect(onReconnect).toHaveBeenCalledTimes(1);
+
+      client.close();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('forces a reconnect when no keep-alive arrives within the idle window', async () => {
+    jest.useFakeTimers();
+    try {
+      const client = new AppSyncEventsClient({ ...baseConfig });
+      const subscribePromise = client.subscribe(jest.fn());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws1 = StubSocket.last!;
+      ws1.simulateOpen();
+      // Server advertises a 1s idle timeout on connection_ack.
+      ws1.simulateMessage({
+        type: 'connection_ack',
+        connectionTimeoutMs: 1000,
+      });
+      ws1.simulateMessage({ type: 'subscribe_success' });
+      await subscribePromise;
+
+      // No further frames (no keep-alive): advance past idleTimeout + grace.
+      jest.advanceTimersByTime(1000 + 10_000 + 1);
+      expect(ws1.closeCalls).toBeGreaterThan(0); // watchdog closed the socket
+
+      // The close schedules a reconnect; advance the backoff and let it run.
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws2 = StubSocket.last!;
+      expect(ws2).not.toBe(ws1);
+
+      client.close();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not reconnect after an intentional close()', async () => {
+    jest.useFakeTimers();
+    try {
+      const client = new AppSyncEventsClient({ ...baseConfig });
+      const subscribePromise = client.subscribe(jest.fn());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws1 = StubSocket.last!;
+      await handshake(ws1);
+      await subscribePromise;
+
+      client.close();
+      ws1.simulateClose();
+      jest.advanceTimersByTime(5000);
+      await Promise.resolve();
+
+      // No new socket was created after an intentional close.
+      expect(StubSocket.last).toBe(ws1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
