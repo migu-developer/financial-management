@@ -27,7 +27,7 @@ export interface ExpenseDisplayFields {
   value: number;
   /** Currency CODE (e.g. "COP"), never the currency id. */
   currency: string;
-  /** "ingreso" | "egreso" (or the raw catalog name as a fallback). */
+  /** "ingreso" | "egreso" (or the raw extracted value as a fallback). */
   type: string;
   /** Category NAME, present only when it resolved against the catalog. */
   category?: string;
