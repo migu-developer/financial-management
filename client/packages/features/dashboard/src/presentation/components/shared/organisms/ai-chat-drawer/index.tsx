@@ -173,6 +173,8 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
       try {
         const stored = await preferenceStorage.getLastChatSession(userId);
         if (cancelled || !stored) return;
+        // Lock the realtime filter onto the restored session synchronously.
+        sessionIdRef.current = stored;
         setSessionId(stored);
         await loadSessionMessages(stored);
       } catch (err) {
@@ -220,16 +222,14 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
 
     const onEvent = (event: ChatEvent) => {
       // The channel (`${userId}/responses`) carries events for ALL of the
-      // user's sessions. Drop an event ONLY when it definitely belongs to a
-      // DIFFERENT session (both ids present and mismatched) so a background
-      // workflow can't leak into the wrong conversation. Fail open otherwise
-      // (no active session yet, or an event without a sessionId) so the
-      // active conversation's own replies are never silently swallowed.
-      if (
-        sessionIdRef.current &&
-        event.sessionId &&
-        event.sessionId !== sessionIdRef.current
-      ) {
+      // user's sessions, so render an event only when it belongs to the
+      // session the drawer is currently showing. `sessionIdRef` is kept in
+      // sync SYNCHRONOUSLY on every session change (send ack, select, new
+      // chat, restore) — never lagging a render — so the active conversation's
+      // own replies always match, while a background session's events (or any
+      // event while no conversation is active) are dropped. This keeps strict
+      // session isolation without swallowing the active session's replies.
+      if (event.sessionId !== sessionIdRef.current) {
         return;
       }
       setIsWaitingForAssistant(false);
@@ -308,6 +308,9 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
 
   // ── Session management ────────────────────────────────────
   const handleNewChat = useCallback(() => {
+    // Clear the realtime lock synchronously: an empty/new chat owns no
+    // session, so any in-flight background event must NOT render here.
+    sessionIdRef.current = undefined;
     setSessionId(undefined);
     setMessages([buildWelcome()]);
     setErrorBanner(null);
@@ -332,6 +335,8 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
 
   const handleSelectSession = useCallback(
     async (id: string) => {
+      // Lock the realtime filter onto the selected session synchronously.
+      sessionIdRef.current = id;
       setSessionId(id);
       setView('chat');
       setIsWaitingForAssistant(false);
