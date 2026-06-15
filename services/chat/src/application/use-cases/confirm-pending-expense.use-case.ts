@@ -3,8 +3,46 @@ import type { ChatMessageRepository } from '@services/chat/domain/repositories/c
 import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
 import {
   DataNotDefinedError,
+  ModuleError,
   UnauthorizedError,
 } from '@packages/models/shared/utils/errors';
+import { HttpCode } from '@packages/models/shared/utils/http-code';
+
+/**
+ * Step Functions errors that mean the task token is no longer actionable:
+ * the HITL wait already timed out (and was caught) or the token was consumed.
+ */
+const GONE_TOKEN_ERRORS = new Set([
+  'TaskTimedOut',
+  'TaskDoesNotExist',
+  'InvalidToken',
+]);
+
+function isGoneTokenError(error: unknown): boolean {
+  return error instanceof Error && GONE_TOKEN_ERRORS.has(error.name);
+}
+
+/**
+ * Raised when the user confirms/cancels a preview whose wait window already
+ * elapsed. Mapped to a 400 so the client can show "this preview expired"
+ * instead of a generic 500.
+ */
+export class PreviewExpiredError extends ModuleError {
+  constructor(cause?: unknown) {
+    super(
+      { message: 'This expense preview has expired', cause },
+      HttpCode.BAD_REQUEST,
+    );
+  }
+
+  getMessage(): string {
+    return this.params['message'] as string;
+  }
+
+  getCode(): number {
+    return this.code;
+  }
+}
 
 export interface ConfirmPendingExpenseInput {
   taskToken: string;
@@ -55,6 +93,8 @@ export class ConfirmPendingExpenseUseCase {
 
     const nextStatus = input.confirmed ? 'confirmed' : 'cancelled';
 
+    // Claim the row first (pending → decision). The `pending` guard makes this
+    // the atomic lock against a double-resume; the winner owns the row.
     const updated = await this.messageRepository.updateTaskTokenStatus(
       message.id,
       uid,
@@ -62,9 +102,20 @@ export class ConfirmPendingExpenseUseCase {
       userEmail,
     );
 
-    await this.workflowCallback.resume(input.taskToken, {
-      confirmed: input.confirmed,
-    });
+    try {
+      await this.workflowCallback.resume(input.taskToken, {
+        confirmed: input.confirmed,
+      });
+    } catch (error) {
+      if (isGoneTokenError(error)) {
+        // The HITL wait already timed out (token gone): no expense will be
+        // created. Reconcile the row to 'expired' and surface a clean error
+        // instead of the raw SFN failure.
+        await this.messageRepository.markExpired(message.id, uid, userEmail);
+        throw new PreviewExpiredError(error);
+      }
+      throw error;
+    }
 
     return { message: updated };
   }

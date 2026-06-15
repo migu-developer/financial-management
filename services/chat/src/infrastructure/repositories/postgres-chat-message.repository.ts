@@ -142,4 +142,25 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     }
     return rows[0];
   }
+
+  @trace('ChatMessage:markExpired')
+  async markExpired(
+    id: string,
+    uid: string,
+    modifiedBy: string,
+  ): Promise<void> {
+    // No status guard: the caller already claimed this row and only needs to
+    // reconcile it to 'expired' after the task token turned out to be gone.
+    await this.dbService.query(
+      `UPDATE financial_management.chat_messages m
+       SET task_token_status = 'expired', modified_by = $3
+       FROM financial_management.chat_sessions s,
+            financial_management.users u
+       WHERE m.id = $1
+         AND m.session_id = s.id
+         AND s.user_id = u.id
+         AND u.uid = $2`,
+      [id, uid, modifiedBy],
+    );
+  }
 }

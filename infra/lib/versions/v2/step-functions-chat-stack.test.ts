@@ -11,6 +11,7 @@ jest.mock('@utils/cross-version', () => ({
 
 const mockAddToRolePolicy = jest.fn();
 const mockStateMachineNext = jest.fn().mockReturnThis();
+const mockAddCatch = jest.fn().mockReturnThis();
 
 jest.mock('aws-cdk-lib', () => {
   const MockStack = class {
@@ -32,6 +33,7 @@ jest.mock('aws-cdk-lib', () => {
       seconds: (s: number) => s,
       minutes: (m: number) => m * 60,
       hours: (h: number) => h * 3600,
+      days: (d: number) => d * 86400,
     },
   };
 });
@@ -88,6 +90,7 @@ const mockStateMachineCtor = jest
 class MockChain {
   next = mockStateMachineNext;
   addRetry = jest.fn().mockReturnThis();
+  addCatch = mockAddCatch;
 }
 
 jest.mock('aws-cdk-lib/aws-stepfunctions', () => ({
@@ -322,6 +325,24 @@ describe('StepFunctionsChatStack', () => {
       expect(props.integrationPattern).toBe('waitForTaskToken');
       expect(props.payload.obj['taskToken']).toBe('TASK_TOKEN_PLACEHOLDER');
     });
+
+    test('WaitForConfirmation waits up to 7 days for the user decision', () => {
+      createStack();
+      const waitCall = mockLambdaInvokeCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'WaitForConfirmation',
+      );
+      const props = waitCall![1] as { taskTimeout: { seconds: number } };
+      expect(props.taskTimeout.seconds).toBe(7 * 24 * 60 * 60);
+    });
+
+    test('WaitForConfirmation catches States.Timeout to expire gracefully', () => {
+      createStack();
+      const timeoutCatch = mockAddCatch.mock.calls.find((c: unknown[]) => {
+        const opts = c[1] as { errors?: string[] } | undefined;
+        return opts?.errors?.includes('States.Timeout');
+      });
+      expect(timeoutCatch).toBeDefined();
+    });
   });
 
   describe('State machine', () => {
@@ -331,6 +352,14 @@ describe('StepFunctionsChatStack', () => {
         stateMachineType: string;
       };
       expect(props.stateMachineType).toBe('STANDARD');
+    });
+
+    test('uses an 8-day execution timeout (backstop above the 7-day HITL wait)', () => {
+      createStack();
+      const props = mockStateMachineCtor.mock.calls[0]?.[1] as {
+        timeout: number;
+      };
+      expect(props.timeout).toBe(8 * 86400);
     });
 
     test('names the state machine fm-{stage}-chat-process', () => {

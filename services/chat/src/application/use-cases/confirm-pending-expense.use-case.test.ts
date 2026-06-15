@@ -1,4 +1,7 @@
-import { ConfirmPendingExpenseUseCase } from './confirm-pending-expense.use-case';
+import {
+  ConfirmPendingExpenseUseCase,
+  PreviewExpiredError,
+} from './confirm-pending-expense.use-case';
 import type { ChatMessage } from '@services/chat/domain/entities/chat-message';
 import type { ChatMessageRepository } from '@services/chat/domain/repositories/chat-message.repository';
 import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
@@ -10,6 +13,7 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     findPendingByTaskToken: jest.fn(),
     findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
+    markExpired: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -145,5 +149,46 @@ describe('ConfirmPendingExpenseUseCase', () => {
     );
 
     expect(callOrder).toEqual(['updateTaskTokenStatus', 'resume']);
+  });
+
+  it('expires the preview cleanly when the task token is already gone', async () => {
+    const repo = makeMockMessageRepo();
+    const callback = makeMockCallback();
+    repo.findPendingByTaskToken.mockResolvedValue(pendingMessage);
+    repo.updateTaskTokenStatus.mockResolvedValue({
+      ...pendingMessage,
+      task_token_status: 'confirmed',
+    });
+    // SFN rejects the resume because the 7-day HITL wait already timed out.
+    const gone = new Error('Task Timed Out');
+    gone.name = 'TaskTimedOut';
+    callback.resume.mockRejectedValue(gone);
+
+    const useCase = new ConfirmPendingExpenseUseCase(repo, callback);
+
+    await expect(
+      useCase.execute({ taskToken: 'token-abc', confirmed: true }, UID, EMAIL),
+    ).rejects.toThrow(PreviewExpiredError);
+
+    // The row is reconciled to 'expired' and no expense path proceeds.
+    expect(repo.markExpired).toHaveBeenCalledWith('msg-preview-1', UID, EMAIL);
+  });
+
+  it('rethrows unexpected resume errors without expiring the preview', async () => {
+    const repo = makeMockMessageRepo();
+    const callback = makeMockCallback();
+    repo.findPendingByTaskToken.mockResolvedValue(pendingMessage);
+    repo.updateTaskTokenStatus.mockResolvedValue({
+      ...pendingMessage,
+      task_token_status: 'confirmed',
+    });
+    callback.resume.mockRejectedValue(new Error('network blip'));
+
+    const useCase = new ConfirmPendingExpenseUseCase(repo, callback);
+
+    await expect(
+      useCase.execute({ taskToken: 'token-abc', confirmed: true }, UID, EMAIL),
+    ).rejects.toThrow('network blip');
+    expect(repo.markExpired).not.toHaveBeenCalled();
   });
 });
