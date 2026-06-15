@@ -220,10 +220,16 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
 
     const onEvent = (event: ChatEvent) => {
       // The channel (`${userId}/responses`) carries events for ALL of the
-      // user's sessions. Ignore anything that isn't the active conversation
-      // so a background workflow can't leak into the wrong session (and drop
-      // events while there's no active session yet).
-      if (!sessionIdRef.current || event.sessionId !== sessionIdRef.current) {
+      // user's sessions. Drop an event ONLY when it definitely belongs to a
+      // DIFFERENT session (both ids present and mismatched) so a background
+      // workflow can't leak into the wrong conversation. Fail open otherwise
+      // (no active session yet, or an event without a sessionId) so the
+      // active conversation's own replies are never silently swallowed.
+      if (
+        sessionIdRef.current &&
+        event.sessionId &&
+        event.sessionId !== sessionIdRef.current
+      ) {
         return;
       }
       setIsWaitingForAssistant(false);

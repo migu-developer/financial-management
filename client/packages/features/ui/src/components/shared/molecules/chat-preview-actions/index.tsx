@@ -37,6 +37,7 @@ export function ChatPreviewActions({
         flexDirection: 'row',
         gap: space.xs,
         marginTop: space.xs,
+        marginBottom: space.sm,
         marginHorizontal: space.md,
         alignSelf: 'flex-start',
       }}
