@@ -11,6 +11,12 @@ export interface AppSyncEventsConfig {
   getToken: () => Promise<string | null>;
   /** Bubbled up to the caller so it can render an error state. */
   onError?: (error: unknown) => void;
+  /**
+   * Called after the socket transparently re-subscribes following a drop.
+   * The drawer uses it to backfill any messages it missed while offline
+   * (AppSync Events does not replay events delivered during the gap).
+   */
+  onReconnect?: () => void;
 }
 
 interface InternalMessage {
@@ -18,12 +24,18 @@ interface InternalMessage {
   errors?: unknown;
   event?: string | string[];
   id?: string;
+  connectionTimeoutMs?: number;
 }
 
 const EVENT_WS_SUBPROTOCOL = 'aws-appsync-event-ws';
+/** Reconnect backoff: starts here, doubles, capped at MAX. */
+const RECONNECT_BASE_MS = 1_000;
+const RECONNECT_MAX_MS = 30_000;
+/** Fallback idle watchdog if the server doesn't advertise a timeout. */
+const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
 
 /**
- * Minimal AppSync Events WebSocket client.
+ * Minimal AppSync Events WebSocket client with auto-reconnect.
  *
  * Per the Events API protocol, auth travels in a WebSocket SUBPROTOCOL
  * (browsers can't set custom headers), NOT in the query string:
@@ -34,6 +46,12 @@ const EVENT_WS_SUBPROTOCOL = 'aws-appsync-event-ws';
  *   3. Send a `subscribe` with the channel + the same authorization object —
  *      the server pushes `data` messages we forward to the listener.
  *
+ * Long-lived chat sessions outlive a single socket: the connection drops on
+ * network blips, idle timeouts, or Cognito token expiry. This client detects
+ * that (unexpected close OR no keep-alive within the server's timeout) and
+ * transparently reconnects with a FRESH token, then re-subscribes — so the
+ * assistant's replies keep arriving without the user reloading the page.
+ *
  * @see https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-websocket-protocol.html
  */
 export class AppSyncEventsClient {
@@ -41,6 +59,11 @@ export class AppSyncEventsClient {
   private subscriptionId: string | null = null;
   private listener: ((event: ChatEvent) => void) | null = null;
   private closed = false;
+  private hasSubscribedOnce = false;
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS;
 
   constructor(private readonly config: AppSyncEventsConfig) {}
 
@@ -48,76 +71,16 @@ export class AppSyncEventsClient {
   async subscribe(listener: (event: ChatEvent) => void): Promise<void> {
     this.listener = listener;
     this.closed = false;
-
-    const token = await this.config.getToken();
-    if (!token) {
-      throw new Error('Missing Cognito token for AppSync Events subscription');
-    }
-
-    // The auth object's `host` must be the HTTP endpoint domain, even though
-    // we connect to the realtime endpoint. For standard AppSync domains that
-    // means swapping the subdomain; for custom domains both share a host so
-    // the replace is a no-op.
-    const host = this.config.realtimeDns.replace(
-      'appsync-realtime-api',
-      'appsync-api',
-    );
-    const authHeader = {
-      host,
-      Authorization: token,
-    };
-    const url = `wss://${this.config.realtimeDns}/event/realtime`;
-    const authSubprotocol = `header-${base64UrlEncode(JSON.stringify(authHeader))}`;
-
-    await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(url, [EVENT_WS_SUBPROTOCOL, authSubprotocol]);
-      this.socket = ws;
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'connection_init' }));
-      };
-
-      ws.onerror = (err) => {
-        this.config.onError?.(err);
-        reject(err);
-      };
-
-      ws.onmessage = (msgEvent) => {
-        let parsed: InternalMessage;
-        try {
-          parsed = JSON.parse(String(msgEvent.data)) as InternalMessage;
-        } catch {
-          return;
-        }
-
-        if (parsed.type === 'connection_ack') {
-          this.sendSubscribe(authHeader);
-          return;
-        }
-        if (parsed.type === 'subscribe_success') {
-          resolve();
-          return;
-        }
-        if (parsed.type === 'data') {
-          this.handleData(parsed);
-          return;
-        }
-        if (parsed.type === 'error' || parsed.errors) {
-          this.config.onError?.(parsed);
-        }
-      };
-
-      ws.onclose = () => {
-        if (!this.closed) {
-          this.config.onError?.(new Error('AppSync WebSocket closed'));
-        }
-      };
-    });
+    this.reconnectAttempts = 0;
+    this.hasSubscribedOnce = false;
+    await this.connect();
   }
 
   /** Close the socket. Safe to call multiple times. */
   close(): void {
     this.closed = true;
+    this.clearReconnectTimer();
+    this.clearIdleTimer();
     if (this.socket) {
       try {
         this.socket.close();
@@ -128,6 +91,141 @@ export class AppSyncEventsClient {
     }
     this.listener = null;
     this.subscriptionId = null;
+  }
+
+  private connect(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      void (async () => {
+        const token = await this.config.getToken();
+        if (!token) {
+          reject(
+            new Error('Missing Cognito token for AppSync Events subscription'),
+          );
+          return;
+        }
+
+        // The auth object's `host` must be the HTTP endpoint domain, even
+        // though we connect to the realtime endpoint. For standard AppSync
+        // domains that means swapping the subdomain; for custom domains both
+        // share a host so the replace is a no-op.
+        const host = this.config.realtimeDns.replace(
+          'appsync-realtime-api',
+          'appsync-api',
+        );
+        const authHeader = { host, Authorization: token };
+        const url = `wss://${this.config.realtimeDns}/event/realtime`;
+        const authSubprotocol = `header-${base64UrlEncode(
+          JSON.stringify(authHeader),
+        )}`;
+
+        const ws = new WebSocket(url, [EVENT_WS_SUBPROTOCOL, authSubprotocol]);
+        this.socket = ws;
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'connection_init' }));
+        };
+
+        ws.onerror = (err) => {
+          this.config.onError?.(err);
+          reject(err);
+        };
+
+        ws.onmessage = (msgEvent) => {
+          // Any inbound frame (including `ka` keep-alives) proves the link is
+          // alive — reset the idle watchdog.
+          this.resetIdleTimer();
+
+          let parsed: InternalMessage;
+          try {
+            parsed = JSON.parse(String(msgEvent.data)) as InternalMessage;
+          } catch {
+            return;
+          }
+
+          if (parsed.type === 'connection_ack') {
+            if (typeof parsed.connectionTimeoutMs === 'number') {
+              this.idleTimeoutMs = parsed.connectionTimeoutMs;
+            }
+            this.resetIdleTimer();
+            this.sendSubscribe(authHeader);
+            return;
+          }
+          if (parsed.type === 'subscribe_success') {
+            this.reconnectAttempts = 0;
+            const wasReconnect = this.hasSubscribedOnce;
+            this.hasSubscribedOnce = true;
+            resolve();
+            // After a reconnect, replay-from-DB so nothing delivered during
+            // the gap is lost.
+            if (wasReconnect) this.config.onReconnect?.();
+            return;
+          }
+          if (parsed.type === 'data') {
+            this.handleData(parsed);
+            return;
+          }
+          if (parsed.type === 'error' || parsed.errors) {
+            this.config.onError?.(parsed);
+          }
+        };
+
+        ws.onclose = () => {
+          this.clearIdleTimer();
+          if (!this.closed) {
+            // Unexpected drop — reconnect with a fresh token instead of
+            // leaving the chat silently dead.
+            this.scheduleReconnect();
+          }
+        };
+      })().catch((err) => reject(err));
+    });
+  }
+
+  private scheduleReconnect(): void {
+    if (this.closed || this.reconnectTimer) return;
+    const delay = Math.min(
+      RECONNECT_BASE_MS * 2 ** this.reconnectAttempts,
+      RECONNECT_MAX_MS,
+    );
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.closed || !this.listener) return;
+      this.connect().catch((err) => {
+        this.config.onError?.(err);
+        // connect() failed before a socket could emit `close`; retry.
+        this.scheduleReconnect();
+      });
+    }, delay);
+  }
+
+  private resetIdleTimer(): void {
+    this.clearIdleTimer();
+    if (this.closed) return;
+    // Grace beyond the server's keep-alive cadence before declaring the
+    // socket dead and forcing a reconnect.
+    this.idleTimer = setTimeout(() => {
+      if (this.closed) return;
+      try {
+        this.socket?.close();
+      } catch {
+        // best effort — onclose triggers the reconnect
+      }
+    }, this.idleTimeoutMs);
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 
   private sendSubscribe(authHeader: Record<string, string>): void {
