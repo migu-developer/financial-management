@@ -21,11 +21,16 @@ class StubSocket {
     StubSocket.last = this;
   }
 
+  closeCalls = 0;
+
   send(data: string) {
     this.sent.push(data);
   }
   close() {
-    /* no-op */
+    // Mirror a real WebSocket: closing fires `onclose` so the client's
+    // reconnect path runs.
+    this.closeCalls += 1;
+    this.onclose?.call(this as unknown as WebSocket, {} as CloseEvent);
   }
 
   simulateOpen() {
@@ -208,6 +213,42 @@ describe('AppSyncEventsClient', () => {
 
       // A successful re-subscribe triggers the backfill hook exactly once.
       expect(onReconnect).toHaveBeenCalledTimes(1);
+
+      client.close();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('forces a reconnect when no keep-alive arrives within the idle window', async () => {
+    jest.useFakeTimers();
+    try {
+      const client = new AppSyncEventsClient({ ...baseConfig });
+      const subscribePromise = client.subscribe(jest.fn());
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws1 = StubSocket.last!;
+      ws1.simulateOpen();
+      // Server advertises a 1s idle timeout on connection_ack.
+      ws1.simulateMessage({
+        type: 'connection_ack',
+        connectionTimeoutMs: 1000,
+      });
+      ws1.simulateMessage({ type: 'subscribe_success' });
+      await subscribePromise;
+
+      // No further frames (no keep-alive): advance past idleTimeout + grace.
+      jest.advanceTimersByTime(1000 + 10_000 + 1);
+      expect(ws1.closeCalls).toBeGreaterThan(0); // watchdog closed the socket
+
+      // The close schedules a reconnect; advance the backoff and let it run.
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const ws2 = StubSocket.last!;
+      expect(ws2).not.toBe(ws1);
 
       client.close();
     } finally {

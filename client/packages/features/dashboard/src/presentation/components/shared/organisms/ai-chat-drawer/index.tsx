@@ -216,6 +216,9 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     chatRepository
       .getSessionMessages(id)
       .then((history) => {
+        // The user may have switched sessions while this was in flight —
+        // only apply the backfill if it still matches the active session.
+        if (sessionIdRef.current !== id) return;
         if (!history.length) return;
         const mapped = mapHistory(history);
         setMessages(mapped);
