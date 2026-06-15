@@ -11,6 +11,7 @@ function makeMessageRepo(): jest.Mocked<ChatMessageRepository> {
     findPendingByTaskToken: jest.fn(),
     findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
+    markExpired: jest.fn().mockResolvedValue(undefined),
   };
 }
 

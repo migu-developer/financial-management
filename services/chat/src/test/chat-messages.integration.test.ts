@@ -246,6 +246,47 @@ describe('PostgresChatMessageRepository — integration', () => {
     });
   });
 
+  describe('markExpired', () => {
+    it('forces a pending preview to expired regardless of guard', async () => {
+      const created = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview',
+          task_token: 'tok-exp',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+
+      await repo.markExpired(created.id, userA.uid, userA.email);
+
+      const [row] = await repo.findRecentBySession(session.id, userA.uid, 10);
+      expect(row?.task_token_status).toBe('expired');
+      expect(row?.modified_by).toBe(userA.email);
+    });
+
+    it('does NOT expire a message owned by another user', async () => {
+      const created = await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'preview',
+          task_token: 'tok-exp',
+          task_token_status: 'pending',
+        },
+        'chat-workflow',
+      );
+
+      await repo.markExpired(created.id, userB.uid, userB.email);
+
+      // Still pending — the UPDATE matched no row for userB.
+      expect(
+        await repo.findPendingByTaskToken('tok-exp', userA.uid),
+      ).not.toBeNull();
+    });
+  });
+
   describe('updateTaskTokenStatus', () => {
     it('updates the status for the owning user', async () => {
       const created = await repo.create(

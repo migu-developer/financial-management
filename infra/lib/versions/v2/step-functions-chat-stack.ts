@@ -298,6 +298,10 @@ export class StepFunctionsChatStack extends BaseStack {
       resultPath: '$.preview',
     });
 
+    // A preview can wait up to 7 days for the user to Confirm/Cancel — they
+    // may decide today, tomorrow or next week. Step Functions Standard bills
+    // per state transition (not per wait time), so a paused execution costs
+    // nothing while it waits.
     const waitForConfirmation = new LambdaInvoke(this, 'WaitForConfirmation', {
       lambdaFunction: savePreviewFn,
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
@@ -309,7 +313,18 @@ export class StepFunctionsChatStack extends BaseStack {
         taskToken: JsonPath.taskToken,
       }),
       resultPath: '$.confirmation',
-      taskTimeout: { seconds: 24 * 60 * 60 } as never, // 24h max
+      taskTimeout: { seconds: 7 * 24 * 60 * 60 } as never, // 7 days
+    });
+
+    // If the 7-day window elapses with no decision, the task raises
+    // States.Timeout. Catch it and end the execution cleanly (no expense, no
+    // publish) instead of letting it surface as a failed/timed-out execution
+    // that would page an on-call alarm — an abandoned HITL preview is expected,
+    // not an error. The matching DB row is reconciled to 'expired' lazily when
+    // a late Confirm/Cancel hits a now-invalid task token.
+    const previewExpired = new Succeed(this, 'PreviewExpired');
+    waitForConfirmation.addCatch(previewExpired, {
+      errors: ['States.Timeout'],
     });
 
     // [5] Create expense + confirmation message
@@ -518,7 +533,9 @@ export class StepFunctionsChatStack extends BaseStack {
       definitionBody: DefinitionBody.fromChainable(definition),
       tracingEnabled: true,
       logs: { destination: logGroup, level: LogLevel.ALL },
-      timeout: Duration.minutes(30),
+      // Backstop above the 7-day HITL task timeout so the catchable task-level
+      // timeout governs (the execution-level timeout is not catchable).
+      timeout: Duration.days(8),
     });
 
     // For the Claude Haiku cross-region inference profile, the state machine

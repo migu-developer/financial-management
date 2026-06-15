@@ -60,4 +60,13 @@ export interface ChatMessageRepository {
     status: ChatMessageTaskTokenStatus,
     modifiedBy: string,
   ): Promise<ChatMessage>;
+
+  /**
+   * Forces a message to `expired`, regardless of its current status.
+   * Used to reconcile a row when the confirmation callback discovers the
+   * task token is already gone (the HITL wait timed out). Unlike
+   * `updateTaskTokenStatus`, this has no `pending` guard because the caller
+   * already owns the row (it won the pending→decision transition).
+   */
+  markExpired(id: string, uid: string, modifiedBy: string): Promise<void>;
 }

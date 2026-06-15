@@ -448,17 +448,22 @@ export class MonitoringStack extends BaseStack {
     chatExecutionsFailedAlarm.addAlarmAction(snsAction);
     this.alarms.push(chatExecutionsFailedAlarm);
 
+    // HITL previews now wait up to 7 days and an abandoned one is caught
+    // (States.Timeout) and ends cleanly, so ExecutionsTimedOut should be ~0.
+    // A non-zero value here means the 8-day execution backstop fired — a real
+    // anomaly (e.g. confirmations stuck), so require a sustained signal
+    // (3 datapoints) to page instead of alerting on a single benign blip.
     const chatExecutionsTimedOutAlarm = new Alarm(
       this,
       `${stackName}-ChatWorkflowTimedOutAlarm`,
       {
         alarmName: `${stackName}-ChatWorkflow-ExecutionsTimedOut`,
         alarmDescription:
-          'AI Chat state machine executions timed out (30 min limit — likely stuck HITL confirmations)',
+          'AI Chat executions hit the 8-day backstop timeout — abandoned HITL previews are caught at 7 days and end cleanly, so this indicates a real anomaly',
         metric: chatWorkflowMetric('ExecutionsTimedOut'),
         threshold: 0,
-        evaluationPeriods: 1,
-        datapointsToAlarm: 1,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 3,
         comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
         treatMissingData: TreatMissingData.NOT_BREACHING,
       },
