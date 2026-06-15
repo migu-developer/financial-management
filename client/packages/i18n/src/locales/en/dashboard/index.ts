@@ -58,6 +58,8 @@ export const dashboard = {
     card: {
       deleteAccessibility: 'Delete expense',
       accessibilityLabel: '{{name}}, {{amount}}',
+      expenseDate: 'Expense date',
+      createdAt: 'Created',
     },
     selector: {
       selectTitle: 'Select {{field}}',

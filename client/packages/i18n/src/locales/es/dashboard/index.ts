@@ -58,6 +58,8 @@ export const dashboard = {
     card: {
       deleteAccessibility: 'Eliminar gasto',
       accessibilityLabel: '{{name}}, {{amount}}',
+      expenseDate: 'Fecha del gasto',
+      createdAt: 'Registrado',
     },
     selector: {
       selectTitle: 'Seleccionar {{field}}',

@@ -12,7 +12,7 @@ import { textTokens } from '@features/ui/utils/colors';
 import { fontSizeScale } from '@features/ui/utils/spacing';
 import { useThemeActions } from '@features/ui/contexts/theme-context';
 import { ColorScheme } from '@features/ui/utils/constants';
-import { formatDate, getUserLocale } from '@packages/utils';
+import { formatDate, formatDateOnly, getUserLocale } from '@packages/utils';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -35,6 +35,7 @@ export function ExpenseCard({
   const { colorScheme } = useThemeActions();
   const isDark = colorScheme === ColorScheme.DARK;
   const type = expenseType?.name ?? 'outcome';
+  const locale = getUserLocale();
 
   return (
     <Pressable
@@ -59,8 +60,19 @@ export function ExpenseCard({
             {expenseCategory && (
               <Badge label={expenseCategory.name} variant="default" />
             )}
+          </View>
+          {/* Both dates, so the list isn't ambiguous: when the expense
+              happened vs. when it was recorded (no need to open the detail). */}
+          <View className="flex-row items-center gap-x-3 gap-y-0.5 mt-1 flex-wrap">
+            {expense.date && (
+              <Text className="text-xs text-slate-500 dark:text-slate-400">
+                {t('expenses.card.expenseDate')}:{' '}
+                {formatDateOnly(expense.date, locale, 'medium')}
+              </Text>
+            )}
             <Text className="text-xs text-slate-400 dark:text-slate-500">
-              {formatDate(expense.created_at, getUserLocale(), 'medium')}
+              {t('expenses.card.createdAt')}:{' '}
+              {formatDate(expense.created_at, locale, 'medium')}
             </Text>
           </View>
         </View>

@@ -57,6 +57,45 @@ export function formatDate(
 }
 
 /**
+ * Formats a calendar date (no time component) without any timezone shift.
+ *
+ * Use this for "date-only" values like an expense's occurrence date
+ * ("2026-03-31"). Parsing such a string with `new Date()` treats it as UTC
+ * midnight, which `formatDate` then renders in the local timezone — shifting
+ * the day backwards in negative-offset zones (e.g. "2026-03-31" → "Mar 30" in
+ * America/Bogotá). This parses the Y-M-D parts into a LOCAL date so the day is
+ * preserved exactly as stored.
+ *
+ * @param date - "YYYY-MM-DD" (a leading date part with an optional time is
+ *               accepted; anything after "T" is ignored)
+ * @param locale - BCP 47 locale tag
+ * @param style - "short" | "medium" | "long"
+ */
+export function formatDateOnly(
+  date: string,
+  locale: string,
+  style: DateFormatStyle,
+): string {
+  const datePart = date.split('T')[0] ?? date;
+  const [year, month, day] = datePart.split('-').map(Number);
+
+  // Unexpected shape — fall back to instant formatting rather than throwing.
+  if (!year || !month || !day) {
+    return formatDate(date, locale, style);
+  }
+
+  const resolvedLocale = LOCALE_MAP[locale] ?? locale;
+  const options = DATE_OPTIONS[style];
+  const localDate = new Date(year, month - 1, day);
+
+  try {
+    return new Intl.DateTimeFormat(resolvedLocale, options).format(localDate);
+  } catch {
+    return localDate.toLocaleDateString(DEFAULT_LOCALE, options);
+  }
+}
+
+/**
  * Returns the user's locale from the platform.
  *
  * - Web: navigator.language (e.g. "es-CO", "en-US")

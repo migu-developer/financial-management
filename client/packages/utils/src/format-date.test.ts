@@ -2,7 +2,12 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'web' as string },
 }));
 
-import { formatDate, getUserLocale, getSupportedLocales } from './format-date';
+import {
+  formatDate,
+  formatDateOnly,
+  getUserLocale,
+  getSupportedLocales,
+} from './format-date';
 
 const ISO = '2026-03-31T12:00:00Z';
 
@@ -75,6 +80,28 @@ describe('formatDate', () => {
       const result = formatDate(ISO, 'xx-XX', 'medium');
       expect(result).toBeTruthy();
     });
+  });
+});
+
+describe('formatDateOnly', () => {
+  it('preserves the calendar day regardless of timezone (no UTC shift)', () => {
+    // "2026-03-31" as instant-UTC would render "Mar 30" in negative offsets;
+    // formatDateOnly must keep the 31st.
+    const result = formatDateOnly('2026-03-31', 'en-US', 'medium');
+    expect(result).toContain('Mar');
+    expect(result).toContain('31');
+    expect(result).toContain('2026');
+  });
+
+  it('ignores a trailing time component', () => {
+    const result = formatDateOnly('2026-03-31T00:00:00Z', 'en-US', 'medium');
+    expect(result).toContain('31');
+    expect(result).toContain('2026');
+  });
+
+  it('falls back gracefully for an unexpected shape', () => {
+    const result = formatDateOnly('not-a-date', 'en-US', 'medium');
+    expect(result).toBeTruthy();
   });
 });
 
