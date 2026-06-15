@@ -103,6 +103,13 @@ describe('formatDateOnly', () => {
     const result = formatDateOnly('not-a-date', 'en-US', 'medium');
     expect(result).toBeTruthy();
   });
+
+  it('does not silently roll over an out-of-range date', () => {
+    // Month 13 / day 40 must NOT render as a rolled-over Jan/Feb date.
+    const result = formatDateOnly('2026-13-40', 'en-US', 'medium');
+    expect(result).not.toContain('Jan');
+    expect(result).not.toContain('Feb');
+  });
 });
 
 describe('getUserLocale', () => {

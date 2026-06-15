@@ -231,7 +231,11 @@ export function ExpensesTemplate() {
 
       {/* Register expenses by chat without leaving this view. ChatProvider is
           already mounted at the dashboard layout, so no extra wiring needed. */}
-      <FloatingActionButton icon="robot" onPress={handleOpenChat} />
+      <FloatingActionButton
+        icon="robot"
+        onPress={handleOpenChat}
+        accessibilityLabel={t('aiChat.openLabel')}
+      />
       <AIChatDrawer visible={chatOpen} onClose={handleCloseChat} />
     </View>
   );

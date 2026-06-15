@@ -88,6 +88,18 @@ export function formatDateOnly(
   const options = DATE_OPTIONS[style];
   const localDate = new Date(year, month - 1, day);
 
+  // Guard against silent overflow (e.g. "2026-13-40", "2026-02-30"):
+  // `new Date(y, m, d)` rolls over out-of-range parts to a different day.
+  // If the constructed date doesn't round-trip to the parsed parts, the input
+  // wasn't a real calendar date — fall back to instant formatting.
+  if (
+    localDate.getFullYear() !== year ||
+    localDate.getMonth() !== month - 1 ||
+    localDate.getDate() !== day
+  ) {
+    return formatDate(date, locale, style);
+  }
+
   try {
     return new Intl.DateTimeFormat(resolvedLocale, options).format(localDate);
   } catch {
