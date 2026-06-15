@@ -17,10 +17,33 @@ export interface ResolvedExpenseFields {
   date?: string;
 }
 
+/**
+ * Human-readable version of the resolved fields, for the user-facing preview
+ * and confirmation messages. NEVER contains catalog IDs — those leak into the
+ * chat as opaque UUIDs otherwise.
+ */
+export interface ExpenseDisplayFields {
+  name: string;
+  value: number;
+  /** Currency CODE (e.g. "COP"), never the currency id. */
+  currency: string;
+  /** "ingreso" | "egreso" (or the raw extracted value as a fallback). */
+  type: string;
+  /** Category NAME, present only when it resolved against the catalog. */
+  category?: string;
+  /** "YYYY-MM-DD", present only when the user gave a date. */
+  date?: string;
+}
+
 export interface ValidateExpenseFieldsResult {
   complete: boolean;
   /** When `complete` is true, the resolved fields ready to create. */
   fields?: ResolvedExpenseFields;
+  /**
+   * When `complete` is true, the same expense in human-readable form for the
+   * preview/confirmation prompts (labels, not IDs).
+   */
+  display?: ExpenseDisplayFields;
   /** When `complete` is false, the friendly names of what is missing. */
   missing: string[];
   /**
@@ -46,6 +69,14 @@ const FRIENDLY_LABELS = {
   expense_type: 'tipo (ingreso o egreso)',
   date: 'fecha',
 } as const;
+
+/** Maps the catalog expense-type name to a Spanish label for the preview. */
+function toDisplayExpenseType(name: string): string {
+  const catalog = toCatalogExpenseTypeName(name);
+  if (catalog === 'income') return 'ingreso';
+  if (catalog === 'outcome') return 'egreso';
+  return name;
+}
 
 /**
  * Validates the AI-extracted fields:
@@ -123,6 +154,18 @@ export class ValidateExpenseFieldsUseCase {
       ...(extracted.date !== undefined && { date: extracted.date }),
     };
 
-    return { complete: true, fields, missing: [] };
+    // Human-readable mirror for the preview/confirmation prompts — labels
+    // only, so the assistant never echoes catalog UUIDs back to the user.
+    const display: ExpenseDisplayFields = {
+      name: extracted.name!,
+      value: extracted.value!,
+      currency: extracted.currencyCode!.toUpperCase(),
+      type: toDisplayExpenseType(extracted.expenseTypeName!),
+      ...(categoryId !== null &&
+        extracted.categoryName && { category: extracted.categoryName }),
+      ...(extracted.date !== undefined && { date: extracted.date }),
+    };
+
+    return { complete: true, fields, display, missing: [] };
   }
 }

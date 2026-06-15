@@ -32,6 +32,13 @@ describe('ValidateExpenseFieldsUseCase', () => {
       currency_id: 'cur-1',
       expense_type_id: 'type-1',
     });
+    // Human-readable mirror for the preview/confirmation — labels, never IDs.
+    expect(result.display).toEqual({
+      name: 'Cena',
+      value: 45,
+      currency: 'USD',
+      type: 'egreso',
+    });
   });
 
   it('maps Spanish expense type synonyms to catalog names before lookup', async () => {
@@ -195,6 +202,8 @@ describe('ValidateExpenseFieldsUseCase', () => {
 
     expect(result.complete).toBe(true);
     expect(result.fields?.expense_category_id).toBe('cat-comida');
+    // The preview shows the category NAME, not its id.
+    expect(result.display?.category).toBe('comida');
   });
 
   it('passes through the date when provided', async () => {
@@ -212,5 +221,25 @@ describe('ValidateExpenseFieldsUseCase', () => {
     });
 
     expect(result.fields?.date).toBe('2026-06-15');
+    expect(result.display?.date).toBe('2026-06-15');
+  });
+
+  it('omits the category from display when it does not resolve', async () => {
+    const catalog = makeMockCatalog();
+    catalog.findCurrencyIdByCode.mockResolvedValue('cur-1');
+    catalog.findExpenseTypeIdByName.mockResolvedValue('type-1');
+    catalog.findCategoryIdByName.mockResolvedValue(null);
+    const useCase = new ValidateExpenseFieldsUseCase(catalog);
+
+    const result = await useCase.execute({
+      name: 'Cena',
+      value: 45,
+      currencyCode: 'USD',
+      expenseTypeName: 'egreso',
+      categoryName: 'inexistente',
+    });
+
+    expect(result.complete).toBe(true);
+    expect(result.display?.category).toBeUndefined();
   });
 });
