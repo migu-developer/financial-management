@@ -325,6 +325,15 @@ describe('StepFunctionsChatStack', () => {
           r.includes('foundation-model/amazon.nova-lite-v1:0'),
         ),
       ).toBe(true);
+      // Least-privilege: scoped to the us. profile regions, never a wildcard.
+      expect(
+        resources.every((r) =>
+          /^arn:aws:bedrock:us-(east-[12]|west-2)::/.test(r),
+        ),
+      ).toBe(true);
+      expect(resources.some((r) => r.startsWith('arn:aws:bedrock:*'))).toBe(
+        false,
+      );
     });
   });
 
