@@ -5,8 +5,11 @@ import {
 } from './extraction';
 import {
   CANCELLATION_SYSTEM_PROMPT,
+  CLARIFICATION_SYSTEM_PROMPT,
   CONFIRMATION_SYSTEM_PROMPT,
+  NL_RESPONSE_SYSTEM_PROMPT,
   PREVIEW_SYSTEM_PROMPT,
+  UNKNOWN_SYSTEM_PROMPT,
 } from './responses';
 
 describe('intent classifier prompt', () => {
@@ -75,6 +78,19 @@ describe('user-facing response prompts', () => {
     expect(CONFIRMATION_SYSTEM_PROMPT).toContain(
       'NUNCA muestres identificadores',
     );
+  });
+
+  it('every prose response demands a complete, non-truncated message', () => {
+    for (const prompt of [
+      PREVIEW_SYSTEM_PROMPT,
+      CONFIRMATION_SYSTEM_PROMPT,
+      CANCELLATION_SYSTEM_PROMPT,
+      CLARIFICATION_SYSTEM_PROMPT,
+      NL_RESPONSE_SYSTEM_PROMPT,
+      UNKNOWN_SYSTEM_PROMPT,
+    ]) {
+      expect(prompt).toContain('nunca dejes el mensaje cortado');
+    }
   });
 
   it('cancellation states the expense was NOT saved', () => {
