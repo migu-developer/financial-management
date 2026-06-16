@@ -68,12 +68,12 @@ Each API-facing service (expenses, documents, currencies, users) and each AI cha
 
 ### AI Chat workflow alarms (2)
 
-| Alarm                           | Namespace    | Metric               | Threshold |
-| ------------------------------- | ------------ | -------------------- | --------- |
-| ChatWorkflow-ExecutionsFailed   | `AWS/States` | `ExecutionsFailed`   | >= 1      |
-| ChatWorkflow-ExecutionsTimedOut | `AWS/States` | `ExecutionsTimedOut` | >= 1      |
+| Alarm                           | Namespace    | Metric               | Trigger                  |
+| ------------------------------- | ------------ | -------------------- | ------------------------ |
+| ChatWorkflow-ExecutionsFailed   | `AWS/States` | `ExecutionsFailed`   | >= 1 datapoint           |
+| ChatWorkflow-ExecutionsTimedOut | `AWS/States` | `ExecutionsTimedOut` | sustained (3 datapoints) |
 
-A Bedrock failure or a stuck HITL confirmation kills the conversation without touching any Lambda — these alarms watch the workflow itself.
+A Bedrock failure kills the conversation without touching any Lambda — `ExecutionsFailed` watches the workflow itself. Abandoned HITL previews are now caught at the 7-day mark and end gracefully, so `ExecutionsTimedOut` should stay ~0; a non-zero value means the 8-day execution backstop fired (a real anomaly), hence it requires a sustained signal before paging.
 
 ### AppSync Events alarms (2)
 
