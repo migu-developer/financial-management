@@ -2,14 +2,12 @@ import { BaseStack, BaseStackProps } from '@core/base-stack';
 import {
   BEDROCK_MODELS,
   CLAUDE_HAIKU_FOUNDATION_MODEL_ID,
+  NOVA_LITE_FOUNDATION_MODEL_ID,
+  NOVA_MICRO_FOUNDATION_MODEL_ID,
 } from '@packages/prompts/bedrock/models';
 import { CHAT_BEDROCK_PROMPTS } from '@packages/prompts/chat/catalog';
 import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import { Duration } from 'aws-cdk-lib';
-import {
-  FoundationModel,
-  FoundationModelIdentifier,
-} from 'aws-cdk-lib/aws-bedrock';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -146,24 +144,18 @@ export class StepFunctionsChatStack extends BaseStack {
     savePreviewFn.addToRolePolicy(eventApiPublishPolicy);
 
     // ── Bedrock task helpers ───────────────────────────────
-    const novaMicro = FoundationModel.fromFoundationModelId(
-      this,
-      'NovaMicroModel',
-      new FoundationModelIdentifier(BEDROCK_MODELS.NOVA_MICRO),
-    );
-    const novaLite = FoundationModel.fromFoundationModelId(
-      this,
-      'NovaLiteModel',
-      new FoundationModelIdentifier(BEDROCK_MODELS.NOVA_LITE),
-    );
-    // Anthropic Claude models require an *inference profile* (not the
-    // foundation-model ARN that `FoundationModel.fromFoundationModelId`
-    // produces). We build the inference-profile ARN by hand and grant
-    // bedrock:InvokeModel on both the profile AND the underlying foundation
-    // models the profile fans out to (us-east-1, us-east-2, us-west-2).
-    const claudeHaiku = {
-      modelArn: `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/${BEDROCK_MODELS.CLAUDE_HAIKU}`,
-    };
+    // Every model is invoked through its `us.` cross-region INFERENCE PROFILE
+    // (built as an ARN by hand), never the bare on-demand model id: Nova is
+    // not on-demand-invocable in every region (fails in us-east-2), and
+    // Anthropic Claude requires a profile everywhere. We then grant
+    // bedrock:InvokeModel on the profile (auto, per task) AND on the underlying
+    // foundation models the profiles fan out to (us-east-1/2, us-west-2).
+    const inferenceProfile = (profileId: string) => ({
+      modelArn: `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/${profileId}`,
+    });
+    const novaMicro = inferenceProfile(BEDROCK_MODELS.NOVA_MICRO);
+    const novaLite = inferenceProfile(BEDROCK_MODELS.NOVA_LITE);
+    const claudeHaiku = inferenceProfile(BEDROCK_MODELS.CLAUDE_HAIKU);
 
     const novaBody = (
       systemPrompt: string,
@@ -542,15 +534,26 @@ export class StepFunctionsChatStack extends BaseStack {
       timeout: Duration.days(8),
     });
 
-    // For the Claude Haiku cross-region inference profile, the state machine
-    // also needs InvokeModel on the underlying foundation models in every
-    // region the profile fans out to (us-east-1, us-east-2, us-west-2 for `us.`).
+    // For each cross-region inference profile (Nova Micro/Lite, Claude Haiku),
+    // the state machine also needs InvokeModel on the underlying foundation
+    // models in every region the `us.` profile fans out to. The per-task
+    // auto-grant only covers the profile ARN. Scope to those exact regions
+    // (not a wildcard) to keep the grant least-privilege.
+    const US_PROFILE_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2'];
+    const FOUNDATION_MODEL_IDS = [
+      CLAUDE_HAIKU_FOUNDATION_MODEL_ID,
+      NOVA_MICRO_FOUNDATION_MODEL_ID,
+      NOVA_LITE_FOUNDATION_MODEL_ID,
+    ];
     this.stateMachine.role.addToPrincipalPolicy(
       new PolicyStatement({
         actions: ['bedrock:InvokeModel'],
-        resources: [
-          `arn:aws:bedrock:*::foundation-model/${CLAUDE_HAIKU_FOUNDATION_MODEL_ID}`,
-        ],
+        resources: FOUNDATION_MODEL_IDS.flatMap((modelId) =>
+          US_PROFILE_REGIONS.map(
+            (region) =>
+              `arn:aws:bedrock:${region}::foundation-model/${modelId}`,
+          ),
+        ),
       }),
     );
 
