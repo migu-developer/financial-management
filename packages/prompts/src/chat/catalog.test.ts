@@ -44,4 +44,18 @@ describe('CHAT_BEDROCK_PROMPTS routing', () => {
       expect(config.maxTokens).toBeGreaterThan(0);
     }
   });
+
+  it('gives multi-sentence prose responses enough headroom to not truncate', () => {
+    // These recap context and/or ask a question with examples — too low a
+    // ceiling cuts the message off mid-word (regression guard).
+    const proseResponses: ChatPromptKey[] = [
+      'nlResponse',
+      'preview',
+      'clarification',
+      'unknown',
+    ];
+    for (const key of proseResponses) {
+      expect(CHAT_BEDROCK_PROMPTS[key].maxTokens).toBeGreaterThanOrEqual(200);
+    }
+  });
 });
