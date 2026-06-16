@@ -255,8 +255,11 @@ describe('StepFunctionsChatStack', () => {
         (c: unknown[]) => c[0] === 'ClassifyIntent',
       );
       expect(classifyCall).toBeDefined();
-      const props = classifyCall![1] as { model: { modelId: string } };
-      expect(props.model.modelId).toBe('amazon.nova-micro-v1:0');
+      const props = classifyCall![1] as { model: { modelArn: string } };
+      // Nova is invoked through its cross-region inference profile too.
+      expect(props.model.modelArn).toContain(
+        'inference-profile/us.amazon.nova-micro-v1:0',
+      );
     });
 
     test('extraction tasks use Nova Lite', () => {
@@ -267,8 +270,10 @@ describe('StepFunctionsChatStack', () => {
           (c: unknown[]) => c[0] === id,
         );
         expect(call).toBeDefined();
-        const props = call![1] as { model: { modelId: string } };
-        expect(props.model.modelId).toBe('amazon.nova-lite-v1:0');
+        const props = call![1] as { model: { modelArn: string } };
+        expect(props.model.modelArn).toContain(
+          'inference-profile/us.amazon.nova-lite-v1:0',
+        );
       }
     });
 
@@ -297,17 +302,29 @@ describe('StepFunctionsChatStack', () => {
 
     test('grants the state machine InvokeModel on the underlying foundation model regions', () => {
       createStack();
-      const haikuGrant = mockAddToPrincipalPolicy.mock.calls.find(
-        (c: unknown[]) => {
-          const stmt = c[0] as { props: { resources: string[] } };
-          return stmt.props.resources.some((r) =>
-            r.includes(
-              'foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
-            ),
-          );
-        },
-      );
-      expect(haikuGrant).toBeDefined();
+      const grant = mockAddToPrincipalPolicy.mock.calls.find((c: unknown[]) => {
+        const stmt = c[0] as { props: { resources: string[] } };
+        return stmt.props.resources.some((r) =>
+          r.includes(
+            'foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+          ),
+        );
+      });
+      expect(grant).toBeDefined();
+      // Nova's underlying foundation models must be granted too (the profile
+      // fans out per region), or Nova fails outside us-east-1.
+      const resources = (grant![0] as { props: { resources: string[] } }).props
+        .resources;
+      expect(
+        resources.some((r) =>
+          r.includes('foundation-model/amazon.nova-micro-v1:0'),
+        ),
+      ).toBe(true);
+      expect(
+        resources.some((r) =>
+          r.includes('foundation-model/amazon.nova-lite-v1:0'),
+        ),
+      ).toBe(true);
     });
   });
 

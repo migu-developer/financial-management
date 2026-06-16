@@ -1,23 +1,25 @@
 /**
  * Bedrock model identifiers used by the AI orchestration.
  *
- * Two families coexist in Bedrock:
- *  - Amazon Nova (Micro, Lite, Pro) — Amazon's native models, on-demand supported.
- *  - Anthropic Claude — newer Claude versions require an "inference profile"
- *    instead of on-demand invocation. We use the `us.` cross-region profile.
+ * Every model is invoked through a `us.` cross-region INFERENCE PROFILE, not
+ * the bare on-demand model id. On-demand invocation of these models is NOT
+ * available in every region (e.g. Amazon Nova requires an inference profile in
+ * us-east-2), so using the profile keeps the workflow portable across regions
+ * (dev us-east-1, prod us-east-2). IAM grants need the underlying
+ * foundation-model ids too (the profile fans out per region).
  */
 export const BEDROCK_MODELS = {
   /**
-   * Cheap classification model.
+   * Cheap classification model (cross-region inference profile).
    * Used for: intent detection (QUERY vs CREATE).
    */
-  NOVA_MICRO: 'amazon.nova-micro-v1:0',
+  NOVA_MICRO: 'us.amazon.nova-micro-v1:0',
 
   /**
-   * Mid-tier extraction model with tool-use support.
+   * Mid-tier extraction model with tool-use support (cross-region profile).
    * Used for: SQL parameter extraction and expense field extraction.
    */
-  NOVA_LITE: 'amazon.nova-lite-v1:0',
+  NOVA_LITE: 'us.amazon.nova-lite-v1:0',
 
   /**
    * Anthropic's Haiku 4.5 via the cross-region inference profile.
@@ -38,3 +40,11 @@ export type BedrockModelId =
  */
 export const CLAUDE_HAIKU_FOUNDATION_MODEL_ID =
   'anthropic.claude-haiku-4-5-20251001-v1:0';
+
+/**
+ * Foundation-model ids behind the Nova cross-region inference profiles (the
+ * profile ids minus the `us.` prefix). IAM grants need them because the
+ * profile fans out to the underlying foundation models per region.
+ */
+export const NOVA_MICRO_FOUNDATION_MODEL_ID = 'amazon.nova-micro-v1:0';
+export const NOVA_LITE_FOUNDATION_MODEL_ID = 'amazon.nova-lite-v1:0';
