@@ -58,39 +58,47 @@ export const CHAT_BEDROCK_PROMPTS = {
     maxTokens: 300,
     temperature: 0.5,
   },
-  /** Preview shown before saving a new expense (HITL pause). */
+  /**
+   * Preview shown before saving a new expense (HITL pause). Headroom matters:
+   * the message restates the full expense (name, amount + currency, type,
+   * category, date) and must never truncate mid-sentence.
+   */
   preview: {
     modelId: BEDROCK_MODELS.CLAUDE_HAIKU,
     system: PREVIEW_SYSTEM_PROMPT,
-    maxTokens: 140,
+    maxTokens: 220,
     temperature: 0.3,
   },
   /** Confirmation after the expense was created. */
   confirmation: {
     modelId: BEDROCK_MODELS.CLAUDE_HAIKU,
     system: CONFIRMATION_SYSTEM_PROMPT,
-    maxTokens: 80,
+    maxTokens: 150,
     temperature: 0.4,
   },
   /** Message after the user cancelled the preview. */
   cancellation: {
     modelId: BEDROCK_MODELS.CLAUDE_HAIKU,
     system: CANCELLATION_SYSTEM_PROMPT,
-    maxTokens: 60,
+    maxTokens: 100,
     temperature: 0.3,
   },
-  /** Question asking for the missing expense fields. */
+  /**
+   * Question asking for the missing expense fields. It often recaps the
+   * gathered context AND asks for the missing field with examples, so it
+   * needs the most headroom to avoid being cut off mid-word.
+   */
   clarification: {
     modelId: BEDROCK_MODELS.CLAUDE_HAIKU,
     system: CLARIFICATION_SYSTEM_PROMPT,
-    maxTokens: 120,
+    maxTokens: 256,
     temperature: 0.5,
   },
   /** Fallback when the intent is UNKNOWN. */
   unknown: {
     modelId: BEDROCK_MODELS.CLAUDE_HAIKU,
     system: UNKNOWN_SYSTEM_PROMPT,
-    maxTokens: 80,
+    maxTokens: 200,
     temperature: 0.5,
   },
 } as const satisfies Record<string, ChatPromptConfig>;
