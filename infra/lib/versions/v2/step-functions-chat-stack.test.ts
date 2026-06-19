@@ -76,7 +76,7 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
 
 jest.mock('aws-cdk-lib/aws-logs', () => ({
   LogGroup: jest.fn(),
-  RetentionDays: { THREE_MONTHS: 90 },
+  RetentionDays: { THREE_MONTHS: 90, ONE_MONTH: 30 },
 }));
 
 const mockAddToPrincipalPolicy = jest.fn();

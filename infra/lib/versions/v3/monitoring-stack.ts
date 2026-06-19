@@ -1,7 +1,10 @@
 import { CfnOutput, Duration } from 'aws-cdk-lib';
 import {
   Alarm,
+  AlarmRule,
+  AlarmState,
   ComparisonOperator,
+  CompositeAlarm,
   Dashboard,
   GraphWidget,
   LogQueryWidget,
@@ -353,6 +356,10 @@ export class MonitoringStack extends BaseStack {
     this.alarms.push(apiLatencyAlarm);
 
     // ── Lambda Alarms (per service function) ───────────────
+    // Capture chat Lambda error alarms so the composite "Chat unhealthy"
+    // alarm can OR them together into a single actionable signal.
+    const chatLambdaErrorAlarms = new Map<string, Alarm>();
+
     for (const [service, config] of Object.entries(lambdaFunctions)) {
       const errAlarm = new Alarm(this, `${stackName}-${service}-ErrorsAlarm`, {
         alarmName: `${stackName}-Lambda-${service}-Errors`,
@@ -368,6 +375,10 @@ export class MonitoringStack extends BaseStack {
       });
       errAlarm.addAlarmAction(snsAction);
       this.alarms.push(errAlarm);
+
+      if (service.startsWith('Chat')) {
+        chatLambdaErrorAlarms.set(service, errAlarm);
+      }
 
       if (config.includeThrottleAlarm) {
         const throttleAlarm = new Alarm(
@@ -431,16 +442,25 @@ export class MonitoringStack extends BaseStack {
         period: Duration.minutes(5),
       });
 
+    // The workflow's catch-all publishes a friendly error to the user before
+    // failing, so a SINGLE failed execution is no longer a silent hang — the
+    // user got a reply and can retry. Alarm on a sustained PATTERN instead of
+    // every failure (which would cause alert fatigue): >2 failed executions
+    // (i.e. ≥3) in 2 of 3 consecutive 5-minute windows. Consistent with the
+    // per-Lambda error alarms' "2 of 3 datapoints" sustain. The cases that DO
+    // mean "the user truly got nothing" stay single-datapoint sensitive:
+    // Chat-PublishFailed (the error publish itself failed) and ExecutionsAborted.
     const chatExecutionsFailedAlarm = new Alarm(
       this,
       `${stackName}-ChatWorkflowFailedAlarm`,
       {
         alarmName: `${stackName}-ChatWorkflow-ExecutionsFailed`,
-        alarmDescription: 'AI Chat state machine executions are failing',
+        alarmDescription:
+          'AI Chat state machine executions are failing at an elevated, sustained rate (>2 per 5-min window in 2 of 3 windows) — each failure is already shown to the user via the catch-all, so this flags a systemic problem, not one-off errors',
         metric: chatWorkflowMetric('ExecutionsFailed'),
-        threshold: 0,
-        evaluationPeriods: 1,
-        datapointsToAlarm: 1,
+        threshold: 2,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
         comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
         treatMissingData: TreatMissingData.NOT_BREACHING,
       },
@@ -524,6 +544,108 @@ export class MonitoringStack extends BaseStack {
     );
     appSyncFailedEventsAlarm.addAlarmAction(snsAction);
     this.alarms.push(appSyncFailedEventsAlarm);
+
+    // ── Chat Workflow Latency + Aborted Alarms ─────────────
+    // A slow workflow (p90 > 60s) means users are waiting too long for the
+    // assistant to respond — usually a Bedrock slowdown — so page on a
+    // sustained signal rather than a single spike.
+    const chatWorkflowLatencyAlarm = new Alarm(
+      this,
+      `${stackName}-ChatWorkflowLatencyAlarm`,
+      {
+        alarmName: `${stackName}-ChatWorkflow-LatencyP90High`,
+        alarmDescription:
+          'AI Chat state machine p90 execution time exceeds 60s — users are waiting too long for a response',
+        metric: new Metric({
+          namespace: 'AWS/States',
+          metricName: 'ExecutionTime',
+          dimensionsMap: { StateMachineArn: chatStateMachineArn },
+          statistic: 'p90',
+          period: Duration.minutes(5),
+        }),
+        threshold: 60000,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    chatWorkflowLatencyAlarm.addAlarmAction(snsAction);
+    this.alarms.push(chatWorkflowLatencyAlarm);
+
+    // An aborted execution means a chat conversation was killed mid-flight
+    // (manual stop or quota). Always investigate the first one.
+    const chatExecutionsAbortedAlarm = new Alarm(
+      this,
+      `${stackName}-ChatWorkflowAbortedAlarm`,
+      {
+        alarmName: `${stackName}-ChatWorkflow-ExecutionsAborted`,
+        alarmDescription: 'AI Chat state machine executions were aborted',
+        metric: chatWorkflowMetric('ExecutionsAborted'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    chatExecutionsAbortedAlarm.addAlarmAction(snsAction);
+    this.alarms.push(chatExecutionsAbortedAlarm);
+
+    // ── Chat Business Metrics Alarms (EMF) ─────────────────
+    // The chat service emits EMF counters in the FinancialManagement
+    // namespace, dimension service=chat.
+    const chatBusinessMetric = (metricName: string, statistic = 'Sum') =>
+      new Metric({
+        namespace: 'FinancialManagement',
+        metricName,
+        dimensionsMap: { service: 'chat' },
+        statistic,
+        period: Duration.minutes(5),
+      });
+
+    // A publish failure means the assistant computed a response but the user
+    // never received it over AppSync — a silent UX failure. Alarm on the first.
+    const chatPublishFailedAlarm = new Alarm(
+      this,
+      `${stackName}-ChatPublishFailedAlarm`,
+      {
+        alarmName: `${stackName}-Chat-PublishFailed`,
+        alarmDescription:
+          'AI Chat failed to publish an assistant message to the client over AppSync — a silent delivery failure',
+        metric: chatBusinessMetric('ChatPublishFailed'),
+        threshold: 0,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    chatPublishFailedAlarm.addAlarmAction(snsAction);
+    this.alarms.push(chatPublishFailedAlarm);
+
+    // ── Composite "Chat Unhealthy" Alarm ───────────────────
+    // Single actionable chat-health signal: ORs together the workflow
+    // failure, AppSync delivery failure, publish failure, and every chat
+    // Lambda error alarm. On-call watches this one alarm instead of a dozen.
+    const chatUnhealthyAlarm = new CompositeAlarm(
+      this,
+      `${stackName}-ChatUnhealthyAlarm`,
+      {
+        compositeAlarmName: `${stackName}-Chat-Unhealthy`,
+        alarmDescription:
+          'Single actionable AI Chat health signal — fires when the chat workflow, AppSync delivery, message publish, or any chat Lambda is in alarm',
+        alarmRule: AlarmRule.anyOf(
+          AlarmRule.fromAlarm(chatExecutionsFailedAlarm, AlarmState.ALARM),
+          AlarmRule.fromAlarm(appSyncFailedEventsAlarm, AlarmState.ALARM),
+          AlarmRule.fromAlarm(chatPublishFailedAlarm, AlarmState.ALARM),
+          ...[...chatLambdaErrorAlarms.values()].map((alarm) =>
+            AlarmRule.fromAlarm(alarm, AlarmState.ALARM),
+          ),
+        ),
+      },
+    );
+    chatUnhealthyAlarm.addAlarmAction(snsAction);
 
     // ── Dashboard ──────────────────────────────────────────
     this.dashboard = new Dashboard(this, `${stackName}-Dashboard`, {
@@ -762,6 +884,39 @@ export class MonitoringStack extends BaseStack {
             statistic: 'p90',
             period: Duration.minutes(5),
           }),
+        ],
+        width: 12,
+      }),
+    );
+
+    // AI Chat Business Metrics section (EMF — emitted by the chat service)
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## AI Chat Business Metrics (EMF)',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Conversation outcomes',
+        left: [
+          chatBusinessMetric('ChatMessageReceived'),
+          chatBusinessMetric('ChatQueryExecuted'),
+          chatBusinessMetric('ChatExpenseCreated'),
+          chatBusinessMetric('ChatClarificationSent'),
+          chatBusinessMetric('ChatExpenseCancelled'),
+        ],
+        width: 12,
+      }),
+      new GraphWidget({
+        title: 'Errors & anomalies',
+        left: [
+          chatBusinessMetric('ChatUnknownIntent'),
+          chatBusinessMetric('ChatWorkflowError'),
+          chatBusinessMetric('ChatPublishFailed'),
+          chatBusinessMetric('ChatPreviewSuperseded'),
         ],
         width: 12,
       }),

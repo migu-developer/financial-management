@@ -29,6 +29,12 @@
     "inlineSources": true,
     "strictPropertyInitialization": false
   },
-  "include": ["bin", "lib", "eslint.config.ts", "jest.config.ts"],
+  "include": [
+    "bin",
+    "lib",
+    "eslint.config.ts",
+    "jest.config.ts",
+    "scripts/*.ts"
+  ],
   "exclude": ["node_modules", "dist", "cdk.out", ".turbo"]
 }

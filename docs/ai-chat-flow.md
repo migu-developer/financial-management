@@ -71,6 +71,10 @@ Step Function "ChatProcess" (Standard):
   |          (States.Timeout after 7 days) → PreviewExpired (Succeed, silent)
   |
   |-- UNKNOWN → GenerateUnknown (Haiku) → save-and-publish
+  |
+  |-- ON ANY UNHANDLED ERROR (retries exhausted / Lambda or Bedrock failure):
+  |     catch-all (States.ALL) → PublishError (static friendly message,
+  |       eventKind:'error', no Bedrock) → Fail (ChatWorkflowError)
   v
 AppSync Events (SigV4 publish to chat/{userId}/responses)
   v
@@ -100,13 +104,13 @@ X-Ray-instrumented Step Functions client):
 
 ## Components
 
-| Component     | Resource                                                                                           | Notes                                                               |
-| ------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Chat handler  | `fm-{stage}-chat` (LambdaChat stack)                                                               | Routes the 4 chat routes; only principal allowed to start/resume SF |
-| State machine | `fm-{stage}-chat-process` (StepFunctionsChat stack)                                                | Standard; 8-day execution timeout (backstop), X-Ray + full logging  |
-| Task Lambdas  | `fm-{stage}-chat-{execute-query, validate-fields, create-expense, save-and-publish, save-preview}` | All Node.js 24 ESM                                                  |
-| Realtime API  | `fm-{stage}-chat-events` (AppSyncEvents stack)                                                     | Cognito auth for clients, IAM SigV4 for backend                     |
-| Tables        | `chat_sessions`, `chat_messages` (migrations 4.0.0 + 4.1.0)                                        | RLS + audit triggers; `task_token`/`task_token_status` drive HITL   |
+| Component     | Resource                                                                                           | Notes                                                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Chat handler  | `fm-{stage}-chat` (LambdaChat stack)                                                               | Routes the 4 chat routes; only principal allowed to start/resume SF                                                   |
+| State machine | `fm-{stage}-chat-process` (StepFunctionsChat stack)                                                | Standard; 8-day execution timeout (backstop); X-Ray; stage-aware logging (ALL dev / ERROR prod); catch-all error path |
+| Task Lambdas  | `fm-{stage}-chat-{execute-query, validate-fields, create-expense, save-and-publish, save-preview}` | All Node.js 24 ESM                                                                                                    |
+| Realtime API  | `fm-{stage}-chat-events` (AppSyncEvents stack)                                                     | Cognito auth for clients, IAM SigV4 for backend                                                                       |
+| Tables        | `chat_sessions`, `chat_messages` (migrations 4.0.0 + 4.1.0)                                        | RLS + audit triggers; `task_token`/`task_token_status` drive HITL                                                     |
 
 ## Bedrock Model Routing (2-tier)
 
@@ -133,7 +137,9 @@ privilege, no region wildcard. CDK builds the profile ARN by hand
 
 All Bedrock states have explicit Retry for `ServiceUnavailableException`,
 `ThrottlingException`, `InternalServerException` and `ModelTimeoutException`
-(4 attempts, 2× backoff) so a transient 503 doesn't kill the run.
+(4 attempts, 2× backoff) so a transient 503 doesn't kill the run. Task Lambdas
+have their own infra-error retries and every task routes to a catch-all on
+failure — see [Error handling & resilience](#error-handling--resilience-never-leave-the-client-hanging).
 
 ### Response quality guards
 
@@ -172,6 +178,32 @@ superseded`.
 - **Stale confirm.** If a token is already gone (expired wait), `/chat/confirm`
   reconciles the row to `expired` and returns a clean "preview expired" error
   instead of a 500. No expense is ever created from a dead token.
+
+## Error handling & resilience (never leave the client hanging)
+
+Two layers keep a failure from stranding the user on the typing indicator:
+
+1. **Retries (automatic, in-execution).** Every Bedrock state retries
+   `ServiceUnavailable`/`Throttling`/`InternalServer`/`ModelTimeout` (4 attempts,
+   2× backoff). Every task Lambda retries transient infra errors
+   (`Lambda.ServiceException`, `AWSLambdaException`, `SdkClientException`,
+   `TooManyRequestsException`; 3 attempts) via an `addLambdaRetry` helper —
+   **except `CreateExpense`**, which is not idempotent (a retry could duplicate
+   the expense), so its failures go straight to the catch-all.
+2. **Catch-all (in-execution).** Every fallible task has
+   `.addCatch({ errors: ['States.ALL'] })` → **`PublishError`** (a `LambdaInvoke`
+   that calls `save-and-publish` with a STATIC friendly message and
+   `eventKind:'error'` — no Bedrock dependency, since that's what may have
+   failed) → **`Fail`** (`ChatWorkflowError`). The user always gets a reply; the
+   execution still ends `FAILED` so it stays visible to alarms.
+
+Other guards: explicit `taskTimeout` on every task (Bedrock 60s, Lambda 40s;
+`WaitForConfirmation` keeps its 7-day HITL timeout plus a `States.ALL` catch);
+`tryParseBedrockJson` degrades malformed model output to a clarification/generic
+query instead of throwing; the `messageId` is threaded into every task payload
+for trace correlation. Residual gap: if `PublishError` itself fails (AppSync
+down after its retries) no event reaches the client — a client-side
+"still working…" timeout is the planned mitigation.
 
 ## Sessions & continuity
 
@@ -218,15 +250,26 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
 
 - **Traces**: X-Ray end-to-end (API GW → handler → SFN → task Lambdas);
   `@trace` subsegments on repositories and outbound services; SFN client wrapped
-  with `captureAWSv3Client`.
+  with `captureAWSv3Client`. Task handlers annotate `userId`/`sessionId`/`messageId`
+  so all spans of one conversation turn can be filtered by `messageId` (= the SFN
+  execution name). The AppSync publish is a **named `AppSyncEvents` remote
+  subsegment** (`TracerServiceImplementation.traceRemote`) instead of a raw DNS
+  host. A Step Function has no single selectable trace — open a run's trace from
+  the SFN console → execution → "Trace".
 - **Metrics**: built-in Lambda/States/AppSync metrics plus EMF business counters
-  under namespace `FinancialManagement` (`ChatExpenseCreated`,
-  `ChatQueryExecuted`, `ChatAssistantMessagePublished`, `ChatPreviewRequested`).
-- **Alarms**: per-Lambda errors/throttles, `ChatWorkflow-ExecutionsFailed`,
-  `ChatWorkflow-ExecutionsTimedOut` and AppSync Events `5XXError`/`FailedEvents`.
-  Because abandoned previews are now caught at 7 days (graceful Succeed), a
-  workflow timeout means the 8-day backstop fired — a real anomaly — so that
-  alarm requires a sustained signal before paging. See `docs/observability-flow.md`.
+  under namespace `FinancialManagement` (dim `service=chat`): `ChatMessageReceived`,
+  `ChatWorkflowStartFailure`, `ChatPreviewSuperseded`, `ChatQueryExecuted`,
+  `ChatMalformedModelJson`, `ChatPreviewRequested`, `ChatExpenseCreated`,
+  `ChatAssistantMessagePublished`, per-branch `ChatQueryAnswerSent` /
+  `ChatExpenseConfirmationSent` / `ChatExpenseCancelled` / `ChatClarificationSent`
+  / `ChatUnknownIntent`, `ChatWorkflowError` (catch-all), and `ChatPublishFailed`.
+- **Alarms**: per-Lambda errors/throttles; `ChatWorkflow-ExecutionsFailed`
+  (thresholded — >2 in 2 of 3 windows, since the catch-all already replies to the
+  user on a single failure), `ChatWorkflow-ExecutionsTimedOut`,
+  `ChatWorkflow-ExecutionsAborted`, `ChatWorkflow-LatencyP90High` (p90 > 60s),
+  `Chat-PublishFailed`, AppSync Events `5XXError`/`FailedEvents`, and a **composite
+  `Chat-Unhealthy`** that ORs them into one actionable page. A dashboard section
+  graphs the EMF business metrics. See `docs/observability-flow.md`.
 
 ## Local Testing
 
@@ -236,3 +279,10 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
   (inside `services/chat`, with `DATABASE_URL` set)
 - Per-Lambda exec scripts in `services/chat/src/exec/` (`pnpm run:file src/exec/<name>.ts`),
   payloads overridable via env vars.
+- **Workflow tests (no deploy)** — see `infra/test/sfn-local/`:
+  - `pnpm --filter @infra test:sfn-local` — runs the REAL ASL in Step Functions
+    Local (Docker) with a MockConfigFile across every branch + the retry/catch
+    paths; a completeness guard fails CI if a new `Task` state has no test case.
+    Runs as the `sfn-local` job in `.github/workflows/ci.yml`.
+  - `pnpm --filter @infra test:sfn-teststate` — TestState API for single-state
+    routing (DEV only, narrow IAM role).

@@ -189,4 +189,23 @@ describe('parseAlarmMessage', () => {
     const result = parseAlarmMessage(event, '');
     expect(result.severity).toBe('INFO');
   });
+
+  it('parses a composite alarm (no Trigger) as CRITICAL without throwing', () => {
+    // Composite alarms carry an `AlarmRule` and have NO `Trigger`/metric —
+    // reading Trigger.MetricName used to crash the notifier.
+    const event = JSON.stringify({
+      AlarmName: 'FinancialManagementDev-v3-Monitoring-Chat-Unhealthy',
+      AlarmDescription: 'Single actionable AI Chat health signal',
+      NewStateValue: 'ALARM',
+      NewStateReason: 'arn:...ExecutionsFailed transitioned to ALARM',
+      StateChangeTime: '2026-06-19T20:16:00Z',
+      AlarmRule: 'ALARM("child-a") OR ALARM("child-b")',
+    });
+    const result = parseAlarmMessage(event, '');
+    expect(result.severity).toBe('CRITICAL');
+    expect(result.service).toBe('Composite alarm');
+    expect(result.alarmName).toBe(
+      'FinancialManagementDev-v3-Monitoring-Chat-Unhealthy',
+    );
+  });
 });

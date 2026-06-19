@@ -23,14 +23,14 @@ function resolveSeverity(metricName: string): AlertSeverity {
   return CRITICAL_METRICS.has(metricName) ? 'CRITICAL' : 'WARNING';
 }
 
-function resolveService(alarm: CloudWatchAlarmMessage): string {
-  const ns = alarm.Trigger.Namespace;
+type AlarmTrigger = NonNullable<CloudWatchAlarmMessage['Trigger']>;
+
+function resolveService(trigger: AlarmTrigger): string {
+  const ns = trigger.Namespace;
   const base = NAMESPACE_TO_SERVICE[ns] ?? ns;
 
   if (ns === 'AWS/Lambda') {
-    const fnDim = alarm.Trigger.Dimensions?.find(
-      (d) => d.name === 'FunctionName',
-    );
+    const fnDim = trigger.Dimensions?.find((d) => d.name === 'FunctionName');
     return fnDim ? `Lambda (${fnDim.value})` : base;
   }
 
@@ -83,10 +83,25 @@ export function parseAlarmMessage(
   }
 
   const alarm = parsed as CloudWatchAlarmMessage;
+
+  // Composite alarms have no `Trigger` / metric — they roll up child alarms via
+  // an `AlarmRule`. Treat them as a CRITICAL, actionable signal instead of
+  // crashing on `Trigger.MetricName` (undefined for composites).
+  if (!alarm.Trigger) {
+    return {
+      alarmName: alarm.AlarmName,
+      severity: 'CRITICAL',
+      service: 'Composite alarm',
+      description: alarm.NewStateReason,
+      timestamp: alarm.StateChangeTime,
+      dashboardUrl,
+    };
+  }
+
   return {
     alarmName: alarm.AlarmName,
     severity: resolveSeverity(alarm.Trigger.MetricName),
-    service: resolveService(alarm),
+    service: resolveService(alarm.Trigger),
     description: alarm.NewStateReason,
     timestamp: alarm.StateChangeTime,
     dashboardUrl,

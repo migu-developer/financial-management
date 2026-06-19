@@ -4,7 +4,12 @@ export interface CloudWatchAlarmMessage {
   NewStateValue: 'ALARM' | 'OK' | 'INSUFFICIENT_DATA';
   NewStateReason: string;
   StateChangeTime: string;
-  Trigger: {
+  /**
+   * Present on metric alarms. **Absent on composite alarms** — those carry an
+   * `AlarmRule` instead and have no single metric, so always guard before
+   * reading `Trigger.*`.
+   */
+  Trigger?: {
     MetricName: string;
     Namespace: string;
     Period: number;
@@ -12,6 +17,8 @@ export interface CloudWatchAlarmMessage {
     Statistic?: string;
     Dimensions?: Array<{ name: string; value: string }>;
   };
+  /** Present on composite alarms (the boolean rule over child alarms). */
+  AlarmRule?: string;
 }
 
 export interface AmplifyBuildEvent {

@@ -2,8 +2,8 @@
 
 ## Scope
 
-Applies to everything under `services/` (currencies, documents, expenses,
-users, shared).
+Applies to everything under `services/` (chat, currencies, documents,
+expenses, users, shared).
 
 ## DDD Layers
 
@@ -102,9 +102,30 @@ Two patterns, applied consistently across all services:
   `captureAWSv3Client()`. Create at module scope (outside handler).
 - **Method level** (repos/services): Use `@trace('SegmentName')` Stage 3 decorator
   from `@services/shared/infrastructure/decorators/trace`. Creates X-Ray subsegments.
+- **External calls via native `fetch`** (NOT auto-instrumented by X-Ray — they
+  show up as a raw DNS host): wrap them in a NAMED remote subsegment with
+  `TracerServiceImplementation.traceRemote(name, fn, { annotations, metadata })`
+  so the service map shows a readable node (e.g. `AppSyncEvents`). Inject the
+  tracer into the adapter rather than `new Tracer()`.
+- **Correlation**: annotate the keys needed to follow one request end-to-end
+  (e.g. `userId`/`sessionId`/`messageId`) in every handler on a workflow, so all
+  spans of one flow can be filtered together in X-Ray.
 - NEVER use `@tracer.captureMethod()` from Powertools (legacy decorator).
 - NEVER use `new Tracer()` directly -- use `TracerServiceImplementation` or `@trace`.
 - NEVER enable `experimentalDecorators` in tsconfig.
+
+### Metrics (EMF — third observability pillar)
+
+- Use `MetricsServiceImplementation` from `@services/shared` for business
+  metrics (Embedded Metric Format — no API calls or IAM needed).
+- Create at module scope, `count('MetricName')` during the invocation, and
+  `publish()` in a `finally` block (one flush per invocation).
+- Namespace `FinancialManagement`, dimension `service=<name>`.
+- To emit metrics from `application`/`presentation` (use cases, services) WITHOUT
+  importing Powertools into those layers, depend on the `MetricsService` domain
+  port (`@services/shared/domain/services/metrics`) and inject the
+  `MetricsServiceImplementation` adapter from the handler. Keeps use cases pure.
+- NEVER use `new Metrics()` from Powertools directly.
 
 ### CORS Handling
 
@@ -114,12 +135,25 @@ Two patterns, applied consistently across all services:
 
 ## Environment Variables
 
-| Variable                | Description                          |
-| ----------------------- | ------------------------------------ |
-| `DATABASE_URL`          | Primary PostgreSQL connection string |
-| `DATABASE_READONLY_URL` | Read-replica connection string       |
-| `ALLOWED_ORIGINS`       | Comma-separated allowed origins      |
-| `ALLOWED_METHODS`       | Comma-separated HTTP methods         |
+| Variable                 | Description                              |
+| ------------------------ | ---------------------------------------- |
+| `DATABASE_URL`           | Primary PostgreSQL connection string     |
+| `DATABASE_READONLY_URL`  | Read-replica connection string           |
+| `ALLOWED_ORIGINS`        | Comma-separated allowed origins          |
+| `ALLOWED_METHODS`        | Comma-separated HTTP methods             |
+| `CHAT_STATE_MACHINE_ARN` | ChatProcess state machine (chat handler) |
+| `APPSYNC_HTTP_DNS`       | AppSync Events publish endpoint (chat)   |
+| `APPSYNC_CHAT_NAMESPACE` | AppSync Events channel namespace (chat)  |
+
+### Required env vars — fail fast, NO fallbacks
+
+- Validate every REQUIRED env var at module scope in `handlers/` with
+  `requireEnv(process.env['X'], 'X')` from
+  `@packages/models/shared/utils/require-env`.
+- NEVER use hardcoded fallbacks (`?? ''`, `?? 'default'`) for required
+  values — a missing variable must crash the Lambda at init with the
+  variable name, not run with a wrong default.
+- Exception: `src/exec/` local scripts may default values intentionally.
 
 ## Commands
 

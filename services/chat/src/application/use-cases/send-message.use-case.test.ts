@@ -348,6 +348,103 @@ describe('SendMessageUseCase', () => {
     expect(starter.start).toHaveBeenCalled();
   });
 
+  it('returns the number of previews actually released', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    const callback = makeMockCallback();
+    sessionRepo.findByIdAndUserUid.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+    messageRepo.findPendingPreviewsBySession.mockResolvedValue([
+      {
+        ...mockUserMessage,
+        id: 'preview-1',
+        role: 'assistant',
+        task_token: 'token-1',
+        task_token_status: 'pending',
+      },
+      {
+        ...mockUserMessage,
+        id: 'preview-2',
+        role: 'assistant',
+        task_token: 'token-2',
+        task_token_status: 'pending',
+      },
+    ]);
+    messageRepo.updateTaskTokenStatus.mockResolvedValue({
+      ...mockUserMessage,
+      task_token_status: 'superseded',
+    });
+
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      callback,
+    );
+    const result = await useCase.execute(
+      { sessionId: 'session-1', content: 'cambialo' },
+      UID,
+      EMAIL,
+    );
+
+    expect(result.supersededPreviews).toBe(2);
+  });
+
+  it('reports zero superseded previews when none are pending', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    sessionRepo.create.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      makeMockCallback(),
+    );
+    const result = await useCase.execute({ content: 'Hola' }, UID, EMAIL);
+
+    expect(result.supersededPreviews).toBe(0);
+  });
+
+  it('does not count a preview whose release failed', async () => {
+    const sessionRepo = makeMockSessionRepo();
+    const messageRepo = makeMockMessageRepo();
+    const starter = makeMockStarter();
+    const callback = makeMockCallback();
+    sessionRepo.findByIdAndUserUid.mockResolvedValue(mockSession);
+    messageRepo.create.mockResolvedValue(mockUserMessage);
+    starter.start.mockResolvedValue(mockExecution);
+    messageRepo.findPendingPreviewsBySession.mockResolvedValue([
+      {
+        ...mockUserMessage,
+        id: 'preview-1',
+        role: 'assistant',
+        task_token: 'token-1',
+        task_token_status: 'pending',
+      },
+    ]);
+    messageRepo.updateTaskTokenStatus.mockRejectedValue(new Error('no rows'));
+
+    const useCase = new SendMessageUseCase(
+      sessionRepo,
+      messageRepo,
+      starter,
+      callback,
+    );
+    const result = await useCase.execute(
+      { sessionId: 'session-1', content: 'otra cosa' },
+      UID,
+      EMAIL,
+    );
+
+    expect(result.supersededPreviews).toBe(0);
+  });
+
   it('still sends the message if releasing a stale preview fails', async () => {
     const sessionRepo = makeMockSessionRepo();
     const messageRepo = makeMockMessageRepo();

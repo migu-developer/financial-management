@@ -21,6 +21,9 @@ const tracerService = new TracerServiceImplementation(
  */
 export interface ValidateExpenseFieldsEvent {
   rawJson: string;
+  uid?: string;
+  sessionId?: string;
+  messageId?: string;
 }
 
 export const handler = async (event: ValidateExpenseFieldsEvent) => {
@@ -28,6 +31,11 @@ export const handler = async (event: ValidateExpenseFieldsEvent) => {
     'chat-validate-expense-fields',
   );
   tracerService.annotateColdStart();
+  if (event.uid) tracerService.putAnnotation('userId', event.uid);
+  if (event.sessionId)
+    tracerService.putAnnotation('sessionId', event.sessionId);
+  if (event.messageId)
+    tracerService.putAnnotation('messageId', event.messageId);
 
   const parsed = tryParseBedrockJson<ExtractedExpenseFields>(event.rawJson);
   if (parsed === null) {

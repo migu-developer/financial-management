@@ -42,6 +42,16 @@ export interface StepFunctionsChatStackProps extends BaseStackProps {
 // @packages/prompts — the single source of truth shared with services/chat.
 const PROMPTS = CHAT_BEDROCK_PROMPTS;
 
+// Branch identifier carried in the save-and-publish payload so the handler can
+// emit a per-branch business metric. ('error' is sent separately by the
+// catch-all PublishError task.)
+type SaveEventKind =
+  | 'query'
+  | 'created'
+  | 'cancelled'
+  | 'clarification'
+  | 'unknown';
+
 /**
  * StepFunctionsChat stack — the ChatProcess Standard workflow.
  *
@@ -60,6 +70,13 @@ const PROMPTS = CHAT_BEDROCK_PROMPTS;
 export class StepFunctionsChatStack extends BaseStack {
   public readonly stateMachine: StateMachine;
 
+  /**
+   * Log retention for the chat Lambdas and the state-machine log group.
+   * Stage-aware (cost control): prod keeps 3 months for audit/debugging, dev
+   * keeps 1 month since old dev logs have little value.
+   */
+  private logRetention: RetentionDays = RetentionDays.THREE_MONTHS;
+
   constructor(
     scope: Construct,
     id: string,
@@ -74,6 +91,9 @@ export class StepFunctionsChatStack extends BaseStack {
       stage,
     } = props;
     super(scope, id, { version, stackName, description });
+
+    this.logRetention =
+      stage === 'prod' ? RetentionDays.THREE_MONTHS : RetentionDays.ONE_MONTH;
 
     // ── Lambdas ────────────────────────────────────────────
     const baseEnv = {
@@ -261,6 +281,8 @@ export class StepFunctionsChatStack extends BaseStack {
       lambdaFunction: executeQueryFn,
       payload: TaskInput.fromObject({
         'uid.$': '$.userId',
+        'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
         'rawJson.$': '$.queryParamsRaw.json',
         'today.$': '$$.Execution.StartTime',
       }),
@@ -301,6 +323,9 @@ export class StepFunctionsChatStack extends BaseStack {
     const validateFields = new LambdaInvoke(this, 'ValidateFields', {
       lambdaFunction: validateFieldsFn,
       payload: TaskInput.fromObject({
+        'uid.$': '$.userId',
+        'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
         'rawJson.$': '$.fieldsRaw.json',
       }),
       resultPath: '$.validation',
@@ -333,6 +358,7 @@ export class StepFunctionsChatStack extends BaseStack {
       integrationPattern: IntegrationPattern.WAIT_FOR_TASK_TOKEN,
       payload: TaskInput.fromObject({
         'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
         'uid.$': '$.userId',
         'userEmail.$': '$.userEmail',
         'content.$': '$.preview.text',
@@ -358,6 +384,8 @@ export class StepFunctionsChatStack extends BaseStack {
       lambdaFunction: createExpenseFn,
       payload: TaskInput.fromObject({
         'uid.$': '$.userId',
+        'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
         'userEmail.$': '$.userEmail',
         'fields.$': '$.validation.fields',
       }),
@@ -419,19 +447,25 @@ export class StepFunctionsChatStack extends BaseStack {
       },
     );
 
-    // [6] Terminal: save assistant message + publish via AppSync Events
+    // [6] Terminal: save assistant message + publish via AppSync Events.
+    // `eventKind` lets the handler emit a per-branch business metric and
+    // (for 'error') publish a `type:'error'` event; `messageId` is threaded
+    // through so every task span can be filtered by message in X-Ray.
     const saveAndPublish = (
       id: string,
       contentPath: string,
+      eventKind: SaveEventKind,
       expensePath?: string,
     ) =>
       new LambdaInvoke(this, id, {
         lambdaFunction: saveAndPublishFn,
         payload: TaskInput.fromObject({
           'sessionId.$': '$.sessionId',
+          'messageId.$': '$.messageId',
           'uid.$': '$.userId',
           'userEmail.$': '$.userEmail',
           'content.$': contentPath,
+          eventKind,
           ...(expensePath !== undefined && { 'expenseId.$': expensePath }),
         }),
         payloadResponseOnly: true,
@@ -441,23 +475,28 @@ export class StepFunctionsChatStack extends BaseStack {
     const saveQueryAnswer = saveAndPublish(
       'SaveQueryAnswer',
       '$.nlAnswer.text',
+      'query',
     );
     const saveCreatedExpense = saveAndPublish(
       'SaveCreatedExpense',
       '$.finalText.text',
+      'created',
       '$.createResult.expense.id',
     );
     const saveCancellation = saveAndPublish(
       'SaveCancellation',
       '$.finalText.text',
+      'cancelled',
     );
     const saveClarification = saveAndPublish(
       'SaveClarification',
       '$.finalText.text',
+      'clarification',
     );
     const saveUnknownReply = saveAndPublish(
       'SaveUnknownReply',
       '$.finalText.text',
+      'unknown',
     );
 
     // ── Choice states ───────────────────────────────────────
@@ -557,6 +596,7 @@ export class StepFunctionsChatStack extends BaseStack {
       lambdaFunction: saveAndPublishFn,
       payload: TaskInput.fromObject({
         'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
         'uid.$': '$.userId',
         'userEmail.$': '$.userEmail',
         content: ERROR_REPLY_TEXT,
@@ -640,7 +680,7 @@ export class StepFunctionsChatStack extends BaseStack {
     // ── State Machine ──────────────────────────────────────
     const logGroup = new LogGroup(this, `${stackName}-StateMachineLogs`, {
       logGroupName: `/aws/vendedlogs/states/fm-${stage}-chat-process`,
-      retention: RetentionDays.THREE_MONTHS,
+      retention: this.logRetention,
     });
 
     this.stateMachine = new StateMachine(this, `${stackName}-ChatProcess`, {
@@ -741,7 +781,7 @@ export class StepFunctionsChatStack extends BaseStack {
   ): NodejsFunction {
     const logGroup = new LogGroup(this, `${id}LogGroup`, {
       logGroupName: `/aws/lambda/${fnName}`,
-      retention: RetentionDays.THREE_MONTHS,
+      retention: this.logRetention,
     });
 
     return new NodejsFunction(this, id, {

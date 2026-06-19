@@ -47,3 +47,31 @@ jobs:
 
       - name: 🤖 AI docs test
         run: pnpm ai:test
+
+  sfn-local:
+    # Exercises the ChatProcess state machine end-to-end against AWS Step
+    # Functions Local with a MockConfigFile — every branch, retry and catch,
+    # plus a completeness guard that fails if a new Task state isn't covered by
+    # a test case. No AWS deploy, no credentials. Runs in parallel with quality.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: Step Functions Local
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Configure pnpm and Node.js
+        uses: ./.github/actions/configure_pnpm
+
+      - name: 📌 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🐳 Pull Step Functions Local image
+        run: docker pull amazon/aws-stepfunctions-local
+
+      - name: 🧰 Verify AWS CLI is available
+        run: aws --version
+
+      - name: 🧪 Run Step Functions Local mock suite
+        run: pnpm --filter @infra test:sfn-local

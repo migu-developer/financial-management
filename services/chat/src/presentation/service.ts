@@ -46,6 +46,9 @@ export class ChatService extends Service {
       throw new DataNotDefinedError('content is required');
     }
 
+    // A well-formed send-message request was accepted for processing.
+    this.app.metrics.count('ChatMessageReceived');
+
     const sessionRepository = new PostgresChatSessionRepository(
       this.app.dbService,
     );
@@ -59,20 +62,37 @@ export class ChatService extends Service {
       this.app.workflowCallback,
     );
 
-    const result = await useCase.execute(
-      {
-        ...(body.sessionId !== undefined && { sessionId: body.sessionId }),
-        content: body.content,
-        ...(body.attachmentS3Key !== undefined && {
-          attachmentS3Key: body.attachmentS3Key,
-        }),
-        ...(body.attachmentType !== undefined && {
-          attachmentType: body.attachmentType,
-        }),
-      },
-      this.app.user.uid,
-      this.app.user.email,
-    );
+    let result;
+    try {
+      result = await useCase.execute(
+        {
+          ...(body.sessionId !== undefined && { sessionId: body.sessionId }),
+          content: body.content,
+          ...(body.attachmentS3Key !== undefined && {
+            attachmentS3Key: body.attachmentS3Key,
+          }),
+          ...(body.attachmentType !== undefined && {
+            attachmentType: body.attachmentType,
+          }),
+        },
+        this.app.user.uid,
+        this.app.user.email,
+      );
+    } catch (error) {
+      // Persisting the message or kicking off the Step Function failed — the
+      // client never gets its async answer, so alarm on it separately.
+      this.app.metrics.count('ChatWorkflowStartFailure');
+      throw error;
+    }
+
+    // Each silently-released pending preview (user iterated on a confirmation)
+    // is tracked so we can see how often previews get abandoned.
+    if (result.supersededPreviews > 0) {
+      this.app.metrics.count(
+        'ChatPreviewSuperseded',
+        result.supersededPreviews,
+      );
+    }
 
     return new Response(
       JSON.stringify({

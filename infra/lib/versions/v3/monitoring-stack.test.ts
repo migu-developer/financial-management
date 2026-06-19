@@ -2,6 +2,7 @@ import { Construct } from 'constructs';
 import { MonitoringStack } from './monitoring-stack';
 
 const mockAlarm = { addAlarmAction: jest.fn() };
+const mockCompositeAlarm = { addAlarmAction: jest.fn() };
 const mockDashboard = { addWidgets: jest.fn() };
 const mockTopic = {
   addSubscription: jest.fn(),
@@ -30,7 +31,13 @@ jest.mock('aws-cdk-lib', () => {
 
 jest.mock('aws-cdk-lib/aws-cloudwatch', () => ({
   Alarm: jest.fn().mockImplementation(() => mockAlarm),
+  AlarmRule: {
+    anyOf: jest.fn(),
+    fromAlarm: jest.fn(),
+  },
+  AlarmState: { ALARM: 'ALARM' },
   ComparisonOperator: { GREATER_THAN_THRESHOLD: 'GREATER_THAN_THRESHOLD' },
+  CompositeAlarm: jest.fn().mockImplementation(() => mockCompositeAlarm),
   Dashboard: jest.fn().mockImplementation(() => mockDashboard),
   GraphWidget: jest.fn(),
   LogQueryWidget: jest.fn(),
@@ -241,8 +248,10 @@ describe('MonitoringStack', () => {
     // + (6 chat Lambdas × 2 each: error + throttle) = 12
     // + 2 chat Step Functions (ExecutionsFailed + ExecutionsTimedOut)
     // + 2 AppSync Events (5XXError + FailedEvents)
-    // Total = 31
-    expect(stack.alarms).toHaveLength(31);
+    // + 3 chat resilience (LatencyP90High + ExecutionsAborted + PublishFailed)
+    // Total = 34
+    // (the CompositeAlarm "Chat-Unhealthy" is NOT pushed into this.alarms)
+    expect(stack.alarms).toHaveLength(34);
   });
 
   test('creates AI chat workflow and AppSync Events alarms', () => {
@@ -264,6 +273,48 @@ describe('MonitoringStack', () => {
     expect(alarmNames).toContain('Monitoring-ChatWorkflow-ExecutionsTimedOut');
     expect(alarmNames).toContain('Monitoring-AppSyncEvents-5xx-Errors');
     expect(alarmNames).toContain('Monitoring-AppSyncEvents-FailedEvents');
+  });
+
+  test('creates chat resilience alarms (latency p90, aborted, publish-failed)', () => {
+    const { Alarm: MockAlarm } = jest.requireMock(
+      'aws-cdk-lib/aws-cloudwatch',
+    ) as { Alarm: jest.Mock };
+    MockAlarm.mockClear();
+
+    new MonitoringStack(
+      app as unknown as Construct,
+      'MonitoringStack',
+      defaultProps,
+    );
+
+    const alarmNames = MockAlarm.mock.calls.map(
+      (c: unknown[]) => (c[2] as Record<string, unknown>).alarmName as string,
+    );
+    expect(alarmNames).toContain('Monitoring-ChatWorkflow-LatencyP90High');
+    expect(alarmNames).toContain('Monitoring-ChatWorkflow-ExecutionsAborted');
+    expect(alarmNames).toContain('Monitoring-Chat-PublishFailed');
+  });
+
+  test('creates a composite "Chat Unhealthy" alarm with SNS action', () => {
+    const { CompositeAlarm: MockCompositeAlarm } = jest.requireMock(
+      'aws-cdk-lib/aws-cloudwatch',
+    ) as { CompositeAlarm: jest.Mock };
+    MockCompositeAlarm.mockClear();
+    mockCompositeAlarm.addAlarmAction.mockClear();
+
+    new MonitoringStack(
+      app as unknown as Construct,
+      'MonitoringStack',
+      defaultProps,
+    );
+
+    expect(MockCompositeAlarm).toHaveBeenCalledTimes(1);
+    const compositeProps = MockCompositeAlarm.mock.calls[0][2] as Record<
+      string,
+      unknown
+    >;
+    expect(compositeProps.compositeAlarmName).toBe('Monitoring-Chat-Unhealthy');
+    expect(mockCompositeAlarm.addAlarmAction).toHaveBeenCalledTimes(1);
   });
 
   test('stackName follows BaseStack convention', () => {

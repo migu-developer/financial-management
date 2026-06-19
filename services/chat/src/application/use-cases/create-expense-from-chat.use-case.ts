@@ -8,6 +8,9 @@ export interface CreateExpenseFromChatInput {
   uid: string;
   userEmail: string;
   fields: ResolvedExpenseFields;
+  /** Correlation ids forwarded by the workflow for X-Ray annotations only. */
+  sessionId?: string;
+  messageId?: string;
 }
 
 /**

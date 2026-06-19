@@ -23,6 +23,8 @@ const metricsService = new MetricsServiceImplementation('chat');
  */
 export interface ExecuteQueryEvent {
   uid: string;
+  sessionId?: string;
+  messageId?: string;
   rawJson: string;
   /** ISO timestamp from the Step Functions context ($$.Execution.StartTime). */
   today: string;
@@ -31,6 +33,11 @@ export interface ExecuteQueryEvent {
 export const handler = async (event: ExecuteQueryEvent) => {
   const logger = new LoggerServiceImplementation('chat-execute-query');
   tracerService.annotateColdStart();
+  if (event.uid) tracerService.putAnnotation('userId', event.uid);
+  if (event.sessionId)
+    tracerService.putAnnotation('sessionId', event.sessionId);
+  if (event.messageId)
+    tracerService.putAnnotation('messageId', event.messageId);
 
   const parsed = tryParseBedrockJson<{
     queryType?: 'list' | 'metrics';

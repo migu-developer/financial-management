@@ -8,11 +8,11 @@ Applies to everything under `infra/`.
 
 Stacks are organized by version under `infra/lib/versions/`:
 
-| Version | Purpose               | Examples                            |
-| ------- | --------------------- | ----------------------------------- |
-| **v1**  | Foundation resources  | Cognito, S3 assets bucket           |
-| **v2**  | Application resources | API Gateway, Lambda stacks, Amplify |
-| **v3**  | Observability         | Monitoring, alarms, dashboards      |
+| Version | Purpose               | Examples                                                            |
+| ------- | --------------------- | ------------------------------------------------------------------- |
+| **v1**  | Foundation resources  | Cognito, S3 assets bucket                                           |
+| **v2**  | Application resources | API Gateway, Lambda stacks, Step Functions, AppSync Events, Amplify |
+| **v3**  | Observability         | Monitoring, alarms, dashboards                                      |
 
 Each version directory has a `stacks.ts` that registers its stacks and an
 `index.ts` that exports them.
@@ -49,10 +49,58 @@ export class MyStack extends BaseStack {
 - `functionName` MUST be explicit: `fm-{stage}-{service}`.
 - `logGroup` with `RetentionDays.THREE_MONTHS`.
 - `tracing: Tracing.ACTIVE` (X-Ray).
-- `runtime: Runtime.NODEJS_22_X`.
+- `runtime: Runtime.NODEJS_24_X`.
 - Bundling: `format: OutputFormat.ESM`, `sourceMap: true`, `minify: true`.
 - Bundling environment: `{ npm_config_trust_policy: 'lenient' }`.
 - ESM banner: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`.
+- If the Lambda uses `@smithy/*` or `@aws-crypto/*` (e.g. SigV4 signing), set
+  `externalModules: ['@aws-sdk/*']` explicitly — the CDK default also
+  externalizes `@smithy/*`, which is NOT in the Lambda runtime and causes
+  `Cannot find module '@smithy/...'` at runtime.
+
+## Step Functions + Bedrock Conventions
+
+- Build state machine definitions with CDK chainables
+  (`DefinitionBody.fromChainable`) — no hand-written `asl.json` files.
+- Prompt texts, model ids and inference settings come from
+  `@packages/prompts` (`CHAT_BEDROCK_PROMPTS`) — NEVER inline them in stacks.
+- Anthropic Claude models REQUIRE a cross-region **inference profile** ARN
+  (`arn:aws:bedrock:{region}:{account}:inference-profile/us.anthropic...`).
+  `FoundationModel.fromFoundationModelId` builds the wrong ARN shape — wrap
+  manually and ALSO grant `bedrock:InvokeModel` on the underlying foundation
+  model with a wildcard region (`arn:aws:bedrock:*::foundation-model/...`).
+- EVERY `BedrockInvokeModel` state MUST have an explicit Retry for
+  `Bedrock.ServiceUnavailableException`, `Bedrock.ThrottlingException`,
+  `Bedrock.InternalServerException` and `Bedrock.ModelTimeoutException`
+  (transient 503s otherwise kill the execution on the first attempt).
+- Task Lambdas MUST retry transient infra errors (`Lambda.ServiceException`,
+  `Lambda.AWSLambdaException`, `Lambda.SdkClientException`,
+  `Lambda.TooManyRequestsException`) via a shared `addLambdaRetry` helper —
+  EXCEPT non-idempotent tasks (e.g. expense creation), which must NOT be retried
+  (a retry would duplicate the write); route their failures to the catch-all.
+- EVERY fallible task MUST have a catch-all so the client never hangs:
+  `.addCatch({ errors: ['States.ALL'], resultPath: '$.error' })` → a shared
+  `PublishError` `LambdaInvoke` that publishes a STATIC user-facing error
+  message (no Bedrock dependency) → a `Fail` state. The execution still ends
+  `FAILED` (so alarms fire) but the user always gets a reply.
+- Set an explicit `taskTimeout` on every task (e.g. Bedrock ~60s, Lambda ~40s)
+  so a stalled integration can't pin a run open until the SM-level timeout.
+- State-machine logging and log retention MUST be **stage-aware** for cost
+  control: `LogLevel.ALL` in dev / `LogLevel.ERROR` in prod; shorter retention
+  in dev (`ONE_MONTH`) than prod (`THREE_MONTHS`). The catch-all captures every
+  failure, so prod loses no signal.
+- Inject the current date with `$$.Execution.StartTime` (context object) —
+  NEVER hardcode dates in ASL payloads or prompts.
+- Use `Condition.stringMatches('$.x', 'VALUE*')` for LLM output dispatch
+  (models append whitespace/punctuation that breaks `stringEquals`).
+- New Lambdas MUST be added to the v3 monitoring `lambdaFunctions` map
+  (drives both alarms and dashboard widgets); state machines get
+  `ExecutionsFailed`/`ExecutionsTimedOut`/`ExecutionsAborted`/latency alarms,
+  and chat health rolls up into the composite `Chat-Unhealthy` alarm.
+- New states/branches MUST be covered by the Step Functions Local mock suite
+  (`infra/test/sfn-local/`, run via `pnpm --filter @infra test:sfn-local` in the
+  `sfn-local` CI job). A completeness guard fails CI if a `Task` state has no
+  test case — add a `MockedResponse` + `TestCase` when you add a state.
 
 ## Deploy Order
 

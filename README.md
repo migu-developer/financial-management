@@ -48,17 +48,17 @@ A full-stack application with:
 
 ## Tech Stack
 
-| Layer             | Technology                                                                      |
-| ----------------- | ------------------------------------------------------------------------------- |
-| **Client**        | React Native 0.81, Expo 54, NativeWind (Tailwind), TypeScript                   |
-| **Backend**       | AWS Lambda (Node.js 24), API Gateway REST, PostgreSQL (Supabase)                |
-| **AI**            | Amazon Bedrock (Nova Micro/Lite + Claude Haiku), Step Functions, AppSync Events |
-| **Auth**          | AWS Cognito (User Pool + Identity Pool), Google/Facebook/Apple/Microsoft OAuth  |
-| **Infra**         | AWS CDK (TypeScript), CloudFormation, multi-region (us-east-1, us-east-2)       |
-| **Observability** | CloudWatch (dashboard + 31 alarms), EMF metrics, X-Ray tracing, SNS alerts      |
-| **Email**         | React Email templates, SES, S3-based template storage                           |
-| **CI/CD**         | GitHub Actions (OIDC auth), Turbo, pnpm workspaces                              |
-| **Database**      | PostgreSQL 17, semantic versioning migrations, RLS policies, audit logging      |
+| Layer             | Technology                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| **Client**        | React Native 0.81, Expo 54, NativeWind (Tailwind), TypeScript                          |
+| **Backend**       | AWS Lambda (Node.js 24), API Gateway REST, PostgreSQL (Supabase)                       |
+| **AI**            | Amazon Bedrock (Nova Micro/Lite + Claude Haiku), Step Functions, AppSync Events        |
+| **Auth**          | AWS Cognito (User Pool + Identity Pool), Google/Facebook/Apple/Microsoft OAuth         |
+| **Infra**         | AWS CDK (TypeScript), CloudFormation, multi-region (us-east-1, us-east-2)              |
+| **Observability** | CloudWatch (dashboard + 34 alarms + composite), EMF metrics, X-Ray tracing, SNS alerts |
+| **Email**         | React Email templates, SES, S3-based template storage                                  |
+| **CI/CD**         | GitHub Actions (OIDC auth), Turbo, pnpm workspaces                                     |
+| **Database**      | PostgreSQL 17, semantic versioning migrations, RLS policies, audit logging             |
 
 ## Monorepo Structure
 
@@ -123,7 +123,7 @@ pnpm dev
 | [Authentication and Registration](docs/auth-register-flow.md)    | Cognito signup, social providers, MFA, email templates via S3                         |
 | [Post-Authentication Requests](docs/post-authentication-flow.md) | JWT validation, API Gateway routing, DDD Lambda architecture                          |
 | [AI Chat](docs/ai-chat-flow.md)                                  | Conversational expenses: Step Functions + Bedrock + AppSync Events, Human-in-the-Loop |
-| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 31 alarms, EMF metrics, SNS alert pipeline, X-Ray               |
+| [Observability and Monitoring](docs/observability-flow.md)       | CloudWatch dashboard, 34 alarms + composite, EMF metrics, SNS alert pipeline, X-Ray   |
 | [Amplify Hosting](docs/amplify-hosting-flow.md)                  | Web deployment, GitHub integration, SPA routing, custom domain                        |
 | [API Documentation](docs/api-docs-flow.md)                       | OpenAPI docs generation, export, versioning via API Gateway                           |
 

@@ -23,6 +23,12 @@ export interface SendMessageResult {
   session: ChatSession;
   userMessage: ChatMessage;
   execution: StartChatWorkflowResult;
+  /**
+   * How many still-pending expense previews were silently released because the
+   * user sent a new message. Surfaced so the handler can emit the
+   * `ChatPreviewSuperseded` metric without pulling Powertools into the domain.
+   */
+  supersededPreviews: number;
 }
 
 /** How many prior messages to feed the LLM as conversation context. */
@@ -87,7 +93,11 @@ export class SendMessageUseCase {
     // preview means the user is iterating on it. Release the old preview(s)
     // silently so only the latest confirmation stays actionable and the
     // abandoned executions don't fire a false timeout alarm.
-    await this.supersedePendingPreviews(session.id, uid, userEmail);
+    const supersededPreviews = await this.supersedePendingPreviews(
+      session.id,
+      uid,
+      userEmail,
+    );
 
     // Load prior turns BEFORE persisting the current message so the history
     // is context for it (not including it).
@@ -126,7 +136,7 @@ export class SendMessageUseCase {
       }),
     });
 
-    return { session, userMessage, execution };
+    return { session, userMessage, execution, supersededPreviews };
   }
 
   /**
@@ -134,21 +144,23 @@ export class SendMessageUseCase {
    * resumes its paused workflow with `{ confirmed: false, superseded: true }`
    * so the Choice state ends silently (no expense, no client publish).
    *
-   * Best-effort per preview: the DB guard makes the status transition atomic
-   * (only `pending` rows flip), and a failed callback for one stale token
-   * must not block the user's new message — the worst case is the old
+   * Returns the number of previews actually released so the caller can emit a
+   * metric. Best-effort per preview: the DB guard makes the status transition
+   * atomic (only `pending` rows flip), and a failed callback for one stale
+   * token must not block the user's new message — the worst case is the old
    * execution eventually timing out, which is what we already had.
    */
   private async supersedePendingPreviews(
     sessionId: string,
     uid: string,
     userEmail: string,
-  ): Promise<void> {
+  ): Promise<number> {
     const pending = await this.messageRepository.findPendingPreviewsBySession(
       sessionId,
       uid,
     );
 
+    let superseded = 0;
     for (const preview of pending) {
       if (!preview.task_token) continue;
       try {
@@ -162,12 +174,14 @@ export class SendMessageUseCase {
           confirmed: false,
           superseded: true,
         });
+        superseded += 1;
       } catch {
         // A concurrent confirm/cancel may have already resolved this token,
         // or the execution may be gone. Skip and continue — the new message
         // must still go through.
       }
     }
+    return superseded;
   }
 
   private async resolveSession(

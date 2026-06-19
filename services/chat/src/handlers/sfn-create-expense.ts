@@ -22,7 +22,11 @@ const metricsService = new MetricsServiceImplementation('chat');
 export const handler = async (event: CreateExpenseFromChatInput) => {
   const logger = new LoggerServiceImplementation('chat-create-expense');
   tracerService.annotateColdStart();
-  tracerService.putAnnotation('userId', event.uid);
+  if (event.uid) tracerService.putAnnotation('userId', event.uid);
+  if (event.sessionId)
+    tracerService.putAnnotation('sessionId', event.sessionId);
+  if (event.messageId)
+    tracerService.putAnnotation('messageId', event.messageId);
 
   logger.info('Creating expense from chat', { event });
 
