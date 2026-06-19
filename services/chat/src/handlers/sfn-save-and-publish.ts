@@ -28,6 +28,12 @@ export interface SaveAndPublishEvent {
   userEmail: string;
   content: string;
   expenseId?: string;
+  /**
+   * Set to `'error'` by the workflow's catch-all (PublishError) so the message
+   * is published as a `type: 'error'` event — the client turns off the typing
+   * indicator and renders the friendly retry message instead of hanging.
+   */
+  eventKind?: 'error';
 }
 
 /**
@@ -55,6 +61,8 @@ export const handler = async (event: SaveAndPublishEvent) => {
     channelTemplate,
   );
 
+  const isError = event.eventKind === 'error';
+
   try {
     const result = await useCase.execute({
       sessionId: event.sessionId,
@@ -62,12 +70,18 @@ export const handler = async (event: SaveAndPublishEvent) => {
       userEmail: event.userEmail,
       content: event.content,
       ...(event.expenseId !== undefined && { expenseId: event.expenseId }),
+      ...(isError && { eventType: 'error' as const }),
     });
 
     logger.info('Assistant message saved and published', {
       messageId: result.message.id,
+      eventKind: event.eventKind ?? 'assistant_message',
     });
-    metricsService.count('ChatAssistantMessagePublished');
+    // A terminal-failure publish is the workflow's last-resort user reply —
+    // track it separately so we can alarm on it (catch-all activations).
+    metricsService.count(
+      isError ? 'ChatWorkflowError' : 'ChatAssistantMessagePublished',
+    );
 
     return { messageId: result.message.id };
   } finally {

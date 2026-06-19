@@ -214,6 +214,38 @@ describe('SaveAssistantMessageUseCase', () => {
     });
   });
 
+  describe('error event (catch-all)', () => {
+    it('publishes type=error when eventType is overridden', async () => {
+      const sessionRepo = makeSessionRepo();
+      const messageRepo = makeMessageRepo();
+      const publisher = makePublisher();
+      messageRepo.create.mockResolvedValue(mockMessage);
+
+      const useCase = new SaveAssistantMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        publisher,
+        channelTemplate,
+      );
+
+      await useCase.execute({
+        sessionId: 'session-1',
+        uid: 'uid-1',
+        userEmail: 'u@test.com',
+        content: 'Uy, tuve un problema. ¿Lo intentamos de nuevo?',
+        eventType: 'error',
+      });
+
+      expect(publisher.publish).toHaveBeenCalledWith(
+        'default/chat/uid-1/responses',
+        expect.objectContaining({
+          type: 'error',
+          sessionId: 'session-1',
+        }),
+      );
+    });
+  });
+
   it('refreshes the session last_message_at after persisting', async () => {
     const sessionRepo = makeSessionRepo();
     const messageRepo = makeMessageRepo();

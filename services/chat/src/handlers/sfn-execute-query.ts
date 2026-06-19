@@ -7,7 +7,7 @@ import {
   ExecuteQueryUseCase,
   type ExtractedQueryFilters,
 } from '@services/chat/application/use-cases/execute-query.use-case';
-import { parseBedrockJson } from '@services/chat/domain/utils/parse-bedrock-json';
+import { tryParseBedrockJson } from '@services/chat/domain/utils/parse-bedrock-json';
 
 import { MetricsServiceImplementation } from '@services/shared/infrastructure/services/MetricsServiceImp';
 
@@ -32,13 +32,24 @@ export const handler = async (event: ExecuteQueryEvent) => {
   const logger = new LoggerServiceImplementation('chat-execute-query');
   tracerService.annotateColdStart();
 
-  const parsed = parseBedrockJson<{
+  const parsed = tryParseBedrockJson<{
     queryType?: 'list' | 'metrics';
     filters?: ExtractedQueryFilters;
   }>(event.rawJson);
 
-  const queryType = parsed.queryType === 'list' ? 'list' : 'metrics';
-  const filters = parsed.filters ?? {};
+  if (parsed === null) {
+    // Nova returned non-JSON. Degrade to a generic metrics query (no filters)
+    // instead of throwing, so the user still gets a reply and we don't alarm
+    // on a malformed-input case. The catch-all error path remains the backstop
+    // for genuine failures (DB down, etc.).
+    logger.warn('Malformed query JSON from model; falling back to metrics', {
+      rawJson: event.rawJson,
+    });
+    metricsService.count('ChatMalformedModelJson');
+  }
+
+  const queryType = parsed?.queryType === 'list' ? 'list' : 'metrics';
+  const filters = parsed?.filters ?? {};
 
   tracerService.putAnnotation('queryType', queryType);
   logger.info('Executing chat query', {
