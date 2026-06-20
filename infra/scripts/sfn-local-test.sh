@@ -36,6 +36,11 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 export CDK_DEFAULT_REGION="${CDK_DEFAULT_REGION:-us-east-1}"
 export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-localtest}"
 export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-localtest}"
+# `cdk list`/`cdk synth` builds the WHOLE app (every version), so unrelated
+# stacks must also construct. The Cognito UserPoolDomain requires a non-empty
+# domain prefix at synth — supply a dummy (this is synth-only; nothing is
+# deployed). Any other stack's empty env values are tolerated at synth.
+export COGNITO_DOMAIN_PREFIX="${COGNITO_DOMAIN_PREFIX:-fmsfnlocaltest}"
 
 # Resolve the synthesized stack name dynamically — it carries the stage suffix
 # (e.g. FinancialManagementDev-v2-StepFunctionsChatStack), so never hardcode it.
