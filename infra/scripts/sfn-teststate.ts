@@ -18,7 +18,7 @@
  *   - states:TestState
  *   - the task-invoke permissions the tested state would use (for Choice
  *     states there is no task to invoke, so states:TestState is enough; for
- *     Task states it also needs the matching lambda:InvokeModel /
+ *     Task states it also needs the matching lambda:InvokeFunction /
  *     bedrock:InvokeModel grant). See test/sfn-local/README.md.
  *
  * Run:  pnpm --filter @infra test:sfn-teststate

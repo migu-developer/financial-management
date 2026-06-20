@@ -40,6 +40,10 @@ export class MonitoringStack extends BaseStack {
   public readonly dashboard: Dashboard;
   public readonly alertTopic: Topic;
   public readonly alarms: Alarm[] = [];
+  // The composite "Chat-Unhealthy" rollup is kept OUT of `alarms` (which holds
+  // the individual component alarms) and exposed separately — it gets its own
+  // dashboard widget as the primary, at-a-glance chat-health signal.
+  public readonly chatUnhealthyAlarm: CompositeAlarm;
 
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     const { version, stackName, description } = props;
@@ -646,6 +650,7 @@ export class MonitoringStack extends BaseStack {
       },
     );
     chatUnhealthyAlarm.addAlarmAction(snsAction);
+    this.chatUnhealthyAlarm = chatUnhealthyAlarm;
 
     // ── Dashboard ──────────────────────────────────────────
     this.dashboard = new Dashboard(this, `${stackName}-Dashboard`, {
@@ -959,6 +964,16 @@ export class MonitoringStack extends BaseStack {
         markdown: '## Alarm Status',
         width: 24,
         height: 1,
+      }),
+    );
+
+    // Primary at-a-glance signal: the composite chat-health rollup on its own,
+    // so on-call sees overall chat health before scanning the component alarms.
+    this.dashboard.addWidgets(
+      new AlarmStatusWidget({
+        title: 'AI Chat Health (composite)',
+        alarms: [this.chatUnhealthyAlarm],
+        width: 24,
       }),
     );
 

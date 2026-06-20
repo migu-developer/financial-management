@@ -62,7 +62,7 @@ export class ChatService extends Service {
       this.app.workflowCallback,
     );
 
-    let result;
+    let result: Awaited<ReturnType<SendMessageUseCase['execute']>>;
     try {
       result = await useCase.execute(
         {

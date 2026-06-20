@@ -302,7 +302,7 @@ describe('MonitoringStack', () => {
     MockCompositeAlarm.mockClear();
     mockCompositeAlarm.addAlarmAction.mockClear();
 
-    new MonitoringStack(
+    const stack = new MonitoringStack(
       app as unknown as Construct,
       'MonitoringStack',
       defaultProps,
@@ -315,6 +315,9 @@ describe('MonitoringStack', () => {
     >;
     expect(compositeProps.compositeAlarmName).toBe('Monitoring-Chat-Unhealthy');
     expect(mockCompositeAlarm.addAlarmAction).toHaveBeenCalledTimes(1);
+    // Exposed separately from `alarms` so it can drive its own dashboard widget.
+    expect(stack.chatUnhealthyAlarm).toBe(mockCompositeAlarm);
+    expect(stack.alarms).not.toContain(mockCompositeAlarm);
   });
 
   test('stackName follows BaseStack convention', () => {
