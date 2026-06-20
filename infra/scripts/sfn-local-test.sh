@@ -25,21 +25,33 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SFN_LOCAL_DIR="${INFRA_DIR}/test/sfn-local"
 
+# Local-only AWS env — Step Functions Local ignores credentials, but BOTH the
+# AWS CLI and `cdk synth`/`cdk list` refuse to run without them. The REGION in
+# particular MUST be exported BEFORE the `cdk list` below: the Cognito UserPool
+# derives its SES/SNS region from `AWS_REGION`, and CDK throws "Your stack region
+# cannot be determined" during synth when it is empty. CI sets none of these, so
+# without this the script would die silently on the `cdk list` call.
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
+export CDK_DEFAULT_REGION="${CDK_DEFAULT_REGION:-us-east-1}"
+export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-localtest}"
+export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-localtest}"
+
 # Resolve the synthesized stack name dynamically — it carries the stage suffix
 # (e.g. FinancialManagementDev-v2-StepFunctionsChatStack), so never hardcode it.
-STACK="$(cd "${INFRA_DIR}" && pnpm exec cdk list 2>/dev/null | awk '/StepFunctionsChatStack/{print $1; exit}')"
+# Capture stdout+stderr so a synth failure surfaces with its real error instead
+# of dying silently (set -e + a suppressed pipe used to hide the cause).
+CDK_LIST_OUT="$(cd "${INFRA_DIR}" && pnpm exec cdk list 2>&1)" || {
+  printf '\033[1;31mX `cdk list` failed:\033[0m\n%s\n' "${CDK_LIST_OUT}" >&2
+  exit 1
+}
+STACK="$(printf '%s\n' "${CDK_LIST_OUT}" | awk '/StepFunctionsChatStack/{print $1; exit}')"
 if [[ -z "${STACK:-}" ]]; then
-  printf '\033[1;31mX Could not resolve the StepFunctionsChat stack via cdk list\033[0m\n' >&2
+  printf '\033[1;31mX Could not resolve the StepFunctionsChat stack via cdk list\033[0m\n%s\n' "${CDK_LIST_OUT}" >&2
   exit 1
 fi
 ASL_FILE="${SFN_LOCAL_DIR}/chat-process.asl.json"
 MOCK_CONFIG="${SFN_LOCAL_DIR}/mock-config.json"
-
-# Local-only credentials — Step Functions Local ignores them but the AWS CLI
-# refuses to run without something set.
-export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-localtest}"
-export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-localtest}"
 
 ENDPOINT="http://localhost:8083"
 CONTAINER_NAME="sfn-local-chat-test"
