@@ -1,4 +1,8 @@
-import { AppSyncEventPublisher } from './appsync-event-publisher.service';
+import {
+  AppSyncEventPublisher,
+  AppSyncPublishError,
+} from './appsync-event-publisher.service';
+import type { TracerServiceImplementation } from '@services/shared/infrastructure/services/TracerServiceImp';
 
 jest.mock('@aws-sdk/credential-provider-node', () => ({
   defaultProvider: jest.fn(
@@ -38,8 +42,11 @@ describe('AppSyncEventPublisher', () => {
     global.fetch = fetchMock;
   });
 
-  it('throws when the HTTP DNS is not configured', async () => {
+  it('throws AppSyncPublishError when the HTTP DNS is not configured', async () => {
     const publisher = new AppSyncEventPublisher('', 'us-east-1');
+    await expect(
+      publisher.publish('chat/u/responses', PAYLOAD),
+    ).rejects.toBeInstanceOf(AppSyncPublishError);
     await expect(
       publisher.publish('chat/u/responses', PAYLOAD),
     ).rejects.toThrow('APPSYNC_HTTP_DNS is not configured');
@@ -68,7 +75,7 @@ describe('AppSyncEventPublisher', () => {
     expect(JSON.parse(body.events[0]!)).toEqual(PAYLOAD);
   });
 
-  it('throws with status and body excerpt when AppSync rejects', async () => {
+  it('throws AppSyncPublishError with status and body excerpt when AppSync rejects', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 403,
@@ -76,8 +83,47 @@ describe('AppSyncEventPublisher', () => {
     });
     const publisher = new AppSyncEventPublisher('api.example.com', 'us-east-1');
 
-    await expect(
-      publisher.publish('chat/u/responses', PAYLOAD),
-    ).rejects.toThrow('AppSync publish failed (403): Forbidden');
+    const error = await publisher
+      .publish('chat/u/responses', PAYLOAD)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AppSyncPublishError);
+    expect((error as Error).message).toBe(
+      'AppSync publish failed (403): Forbidden',
+    );
+  });
+
+  it('routes the fetch through the tracer as the "AppSyncEvents" node when a tracer is given', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    const traceRemote = jest.fn(
+      async (
+        _name: string,
+        fn: () => Promise<unknown>,
+        _opts?: unknown,
+      ): Promise<unknown> => fn(),
+    );
+    const tracer = {
+      traceRemote,
+    } as unknown as TracerServiceImplementation;
+    const publisher = new AppSyncEventPublisher(
+      'api.example.com',
+      'us-east-1',
+      tracer,
+    );
+
+    await publisher.publish('chat/u/responses', PAYLOAD);
+
+    expect(traceRemote).toHaveBeenCalledTimes(1);
+    expect(traceRemote.mock.calls[0]![0]).toBe('AppSyncEvents');
+    // The wrapped fn is what actually issues the fetch.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // The annotations getter reflects the response status captured inside fn.
+    const opts = traceRemote.mock.calls[0]![2] as {
+      annotations: { channel: string; httpStatus: number };
+      metadata: { eventType: string };
+    };
+    expect(opts.annotations.channel).toBe('chat/u/responses');
+    expect(opts.annotations.httpStatus).toBe(200);
+    expect(opts.metadata.eventType).toBe('assistant_message');
   });
 });

@@ -48,6 +48,12 @@ All CI/CD runs on GitHub Actions with OIDC authentication (no static AWS keys).
 | **Publish API Docs**       | After infrastructure deploy | staging/production     |
 | **Integration Tests**      | PR + push to main           | -                      |
 
+The **CI** workflow runs two jobs: `quality` (lint/typecheck/format/test) and
+`sfn-local` — which validates the AI chat state machine end-to-end against Step
+Functions Local with a MockConfigFile (every branch, retry and catch), no deploy
+required. See [AI Chat flow](ai-chat-flow.md) for the workflow architecture and
+`infra/test/sfn-local/` for the mock suite.
+
 Production deploys are triggered by creating a GitHub release (non-pre-release).
 
 > GitHub Environments are `staging` (= dev account) and `production`. The
@@ -75,16 +81,18 @@ pnpm email:export && pnpm email:upload
 
 ### us-east-1 (Development)
 
-| Service     | Resource                  | Name / Details                                                                                                                                                       |
-| ----------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lambda      | 8 functions               | `fm-dev-expenses`, `fm-dev-documents`, `fm-dev-currencies`, `fm-dev-users`, `fm-dev-custom-message`, `fm-dev-user-sync`, `fm-dev-pre-signup`, `fm-dev-notifications` |
-| API Gateway | 1 REST API                | Regional endpoint, Cognito authorizer, custom domain                                                                                                                 |
-| Cognito     | User Pool + Identity Pool | Google, Facebook, Apple, Microsoft IdPs                                                                                                                              |
-| S3          | 1 assets bucket           | `migudev-fm-us-east-1-assets`                                                                                                                                        |
-| Amplify     | 1 hosting app             | `dev.financial-management.migudev.com`                                                                                                                               |
-| CloudWatch  | 1 dashboard + 14 alarms   | API Gateway, Lambda, Cognito triggers                                                                                                                                |
-| EventBridge | 1 rule                    | Amplify build status -> SNS                                                                                                                                          |
-| Route 53    | 1 hosted zone             | `financial-management.migudev.com`                                                                                                                                   |
+| Service        | Resource                            | Name / Details                                                                                                                                                                                                                                                                      |
+| -------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lambda         | 14 functions                        | API handlers: `fm-dev-{expenses,documents,currencies,users,chat}`. Cognito triggers: `fm-dev-{custom-message,user-sync,pre-signup}`. Monitoring: `fm-dev-notifications`. Chat SFN tasks: `fm-dev-chat-{execute-query,validate-fields,create-expense,save-and-publish,save-preview}` |
+| Step Functions | 1 state machine                     | `fm-dev-chat-process` (AI chat workflow, Standard)                                                                                                                                                                                                                                  |
+| AppSync        | 1 Events API                        | `fm-dev-chat-events` (realtime chat delivery)                                                                                                                                                                                                                                       |
+| API Gateway    | 1 REST API                          | Regional endpoint, Cognito authorizer, custom domain                                                                                                                                                                                                                                |
+| Cognito        | User Pool + Identity Pool           | Google, Facebook, Apple, Microsoft IdPs                                                                                                                                                                                                                                             |
+| S3             | 1 assets bucket                     | `migudev-fm-us-east-1-assets`                                                                                                                                                                                                                                                       |
+| Amplify        | 1 hosting app                       | `dev.financial-management.migudev.com`                                                                                                                                                                                                                                              |
+| CloudWatch     | 1 dashboard + 34 alarms + composite | API Gateway, Lambda (incl. chat), Cognito triggers, Step Functions chat workflow, AppSync Events; composite `Chat-Unhealthy`                                                                                                                                                        |
+| EventBridge    | 1 rule                              | Amplify build status -> SNS                                                                                                                                                                                                                                                         |
+| Route 53       | 1 hosted zone                       | `financial-management.migudev.com`                                                                                                                                                                                                                                                  |
 
 ### us-east-2 (Production)
 

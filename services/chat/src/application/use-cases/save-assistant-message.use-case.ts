@@ -20,6 +20,12 @@ export interface SaveAssistantMessageInput {
    *     the Confirm/Cancel buttons.
    */
   taskToken?: string;
+  /**
+   * Overrides the published event `type`. Defaults to `'preview_pending'` when
+   * a `taskToken` is present, otherwise `'assistant_message'`. The workflow's
+   * catch-all passes `'error'` so the client renders the failure gracefully.
+   */
+  eventType?: ChatEventPayload['type'];
 }
 
 export interface SaveAssistantMessageResult {
@@ -65,7 +71,9 @@ export class SaveAssistantMessageUseCase {
     await this.sessionRepository.touchLastMessage(input.sessionId, input.uid);
 
     const payload: ChatEventPayload = {
-      type: isPreview ? 'preview_pending' : 'assistant_message',
+      type:
+        input.eventType ??
+        (isPreview ? 'preview_pending' : 'assistant_message'),
       sessionId: input.sessionId,
       messageId: message.id,
       content: input.content,

@@ -1,0 +1,365 @@
+{
+  "StateMachines": {
+    "ChatProcessTest": {
+      "TestCases": {
+        "queryHappyPath": {
+          "ClassifyIntent": "IntentQuery",
+          "ExtractSqlParams": "SqlParamsExtracted",
+          "ExecuteQuery": "QueryRows",
+          "GenerateQueryNL": "NLAnswer",
+          "SaveQueryAnswer": "SavedOk"
+        },
+        "createCompleteConfirmed": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationConfirmed",
+          "CreateExpense": "ExpenseCreated",
+          "GenerateConfirmation": "ConfirmationText",
+          "SaveCreatedExpense": "SavedOk"
+        },
+        "createCompleteCancelled": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationCancelled",
+          "GenerateCancellation": "CancellationText",
+          "SaveCancellation": "SavedOk"
+        },
+        "createCompleteSuperseded": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationSuperseded"
+        },
+        "createCompleteExpired": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationTimeout"
+        },
+        "createIncompleteClarification": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsIncomplete",
+          "GenerateClarification": "ClarificationText",
+          "SaveClarification": "SavedOk"
+        },
+        "unknownIntent": {
+          "ClassifyIntent": "IntentUnknown",
+          "GenerateUnknown": "UnknownText",
+          "SaveUnknownReply": "SavedOk"
+        },
+        "executeQueryFailsRoutesToPublishError": {
+          "ClassifyIntent": "IntentQuery",
+          "ExtractSqlParams": "SqlParamsExtracted",
+          "ExecuteQuery": "QueryTaskFailed",
+          "PublishError": "SavedOk"
+        },
+        "bedrockThrottleRecovers": {
+          "ClassifyIntent": "IntentThrottleThenQuery",
+          "ExtractSqlParams": "SqlParamsExtracted",
+          "ExecuteQuery": "QueryRows",
+          "GenerateQueryNL": "NLAnswer",
+          "SaveQueryAnswer": "SavedOk"
+        }
+      }
+    }
+  },
+  "MockedResponses": {
+    "IntentQuery": {
+      "0": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "QUERY"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "IntentCreate": {
+      "0": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "CREATE"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "IntentUnknown": {
+      "0": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "no entiendo bien tu mensaje"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "IntentThrottleThenQuery": {
+      "3": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "QUERY"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "0-2": {
+        "Throw": {
+          "Error": "Bedrock.ThrottlingException",
+          "Cause": "Too many requests, please wait before trying again."
+        }
+      }
+    },
+    "SqlParamsExtracted": {
+      "0": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "{\"from\":\"2026-06-01\",\"to\":\"2026-06-30\",\"groupBy\":\"category\"}"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "FieldsExtracted": {
+      "0": {
+        "Return": {
+          "Body": {
+            "output": {
+              "message": {
+                "content": [
+                  {
+                    "text": "{\"amount\":50000,\"currency\":\"COP\",\"category\":\"comida\",\"description\":\"almuerzo\",\"date\":\"2026-06-19\"}"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "NLAnswer": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "En junio gastaste $150.000 en comida."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "PreviewText": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "Voy a registrar: comida, $50.000 COP el 2026-06-19. ¿Confirmas?"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "ConfirmationText": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "Listo, registré tu gasto de comida."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "CancellationText": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "De acuerdo, no registré nada."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "ClarificationText": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "Me falta el monto del gasto. ¿Cuánto fue?"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "UnknownText": {
+      "0": {
+        "Return": {
+          "Body": {
+            "content": [
+              {
+                "text": "No te entendí. Puedo registrar gastos o responder consultas."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "QueryRows": {
+      "0": {
+        "Return": {
+          "rows": [
+            {
+              "category": "comida",
+              "total": 150000
+            }
+          ],
+          "currency": "COP"
+        }
+      }
+    },
+    "QueryTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "ExecuteQuery Lambda threw: invalid SQL parameters."
+        }
+      }
+    },
+    "FieldsComplete": {
+      "0": {
+        "Return": {
+          "complete": true,
+          "fields": {
+            "amount": 50000,
+            "currencyId": "11111111-1111-1111-1111-111111111111",
+            "categoryId": "22222222-2222-2222-2222-222222222222",
+            "description": "almuerzo",
+            "date": "2026-06-19"
+          },
+          "display": {
+            "amount": 50000,
+            "currency": "COP",
+            "category": "Comida",
+            "description": "almuerzo",
+            "date": "2026-06-19"
+          },
+          "missing": [],
+          "unsupportedCurrency": null,
+          "availableCurrencies": ["COP", "USD", "EUR"]
+        }
+      }
+    },
+    "FieldsIncomplete": {
+      "0": {
+        "Return": {
+          "complete": false,
+          "fields": {},
+          "display": {},
+          "missing": ["amount"],
+          "unsupportedCurrency": null,
+          "availableCurrencies": ["COP", "USD", "EUR"]
+        }
+      }
+    },
+    "ConfirmationConfirmed": {
+      "0": {
+        "Return": {
+          "confirmed": true
+        }
+      }
+    },
+    "ConfirmationCancelled": {
+      "0": {
+        "Return": {
+          "confirmed": false
+        }
+      }
+    },
+    "ConfirmationSuperseded": {
+      "0": {
+        "Return": {
+          "confirmed": false,
+          "superseded": true
+        }
+      }
+    },
+    "ConfirmationTimeout": {
+      "0": {
+        "Throw": {
+          "Error": "States.Timeout",
+          "Cause": "The user never confirmed the preview within 7 days."
+        }
+      }
+    },
+    "ExpenseCreated": {
+      "0": {
+        "Return": {
+          "expense": {
+            "id": "33333333-3333-3333-3333-333333333333",
+            "amount": 50000
+          }
+        }
+      }
+    },
+    "SavedOk": {
+      "0": {
+        "Return": {
+          "ok": true
+        }
+      }
+    }
+  }
+}

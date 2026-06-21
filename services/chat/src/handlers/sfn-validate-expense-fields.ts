@@ -6,7 +6,7 @@ import {
   ValidateExpenseFieldsUseCase,
   type ExtractedExpenseFields,
 } from '@services/chat/application/use-cases/validate-expense-fields.use-case';
-import { parseBedrockJson } from '@services/chat/domain/utils/parse-bedrock-json';
+import { tryParseBedrockJson } from '@services/chat/domain/utils/parse-bedrock-json';
 
 const dbService = new PostgresDatabaseService();
 const tracerService = new TracerServiceImplementation(
@@ -21,6 +21,9 @@ const tracerService = new TracerServiceImplementation(
  */
 export interface ValidateExpenseFieldsEvent {
   rawJson: string;
+  uid?: string;
+  sessionId?: string;
+  messageId?: string;
 }
 
 export const handler = async (event: ValidateExpenseFieldsEvent) => {
@@ -28,8 +31,22 @@ export const handler = async (event: ValidateExpenseFieldsEvent) => {
     'chat-validate-expense-fields',
   );
   tracerService.annotateColdStart();
+  if (event.uid) tracerService.putAnnotation('userId', event.uid);
+  if (event.sessionId)
+    tracerService.putAnnotation('sessionId', event.sessionId);
+  if (event.messageId)
+    tracerService.putAnnotation('messageId', event.messageId);
 
-  const extracted = parseBedrockJson<ExtractedExpenseFields>(event.rawJson);
+  const parsed = tryParseBedrockJson<ExtractedExpenseFields>(event.rawJson);
+  if (parsed === null) {
+    // Nova returned non-JSON. Treat as "no fields extracted" so validation
+    // reports the expense as incomplete and the workflow routes to a friendly
+    // clarification — never a States.TaskFailed on malformed input.
+    logger.warn('Malformed expense-fields JSON from model; treating as empty', {
+      rawJson: event.rawJson,
+    });
+  }
+  const extracted: ExtractedExpenseFields = parsed ?? {};
   logger.info('Validating extracted expense fields', { extracted });
 
   const catalogLookup = new CatalogLookupRepository(dbService);

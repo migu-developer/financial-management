@@ -8,6 +8,7 @@ import { ErrorHandler } from '@services/shared/domain/utils/error-handler';
 import { addCors } from '@services/shared/domain/utils/cors';
 import { LoggerServiceImplementation } from '@services/shared/infrastructure/services/LoggerServiceImp';
 import { TracerServiceImplementation } from '@services/shared/infrastructure/services/TracerServiceImp';
+import { MetricsServiceImplementation } from '@services/shared/infrastructure/services/MetricsServiceImp';
 import { PostgresDatabaseService } from '@services/shared/infrastructure/services/DatabaseServiceImp';
 import { HttpCode } from '@packages/models/shared/utils/http-code';
 import { getUserProfile } from '@packages/models/users/utils';
@@ -18,6 +19,7 @@ import { SFNClient } from '@aws-sdk/client-sfn';
 
 const dbService = new PostgresDatabaseService();
 const tracerService = new TracerServiceImplementation('chat-service');
+const metricsService = new MetricsServiceImplementation('chat');
 // X-Ray-instrumented SFN client: StartExecution / SendTaskSuccess show up as
 // subsegments in the trace.
 const sfnClient = tracerService.captureAWSv3Client(new SFNClient({}));
@@ -55,6 +57,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       logger,
       user,
       dbService,
+      metrics: metricsService,
       workflowStarter,
       workflowCallback,
     });
@@ -83,6 +86,9 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       response.headers = addCors(response, event.headers);
       logger.info(`Response: ${JSON.stringify(response)}`, handler.name);
     }
+    // Flush any business metrics emitted during dispatch (e.g.
+    // ChatMessageReceived, ChatPreviewSuperseded, ChatWorkflowStartFailure).
+    metricsService.publish();
   }
 
   response ??= {

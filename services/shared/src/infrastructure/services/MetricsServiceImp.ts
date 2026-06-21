@@ -1,4 +1,5 @@
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
+import type { MetricsService } from '@services/shared/domain/services/metrics';
 
 /**
  * EMF (Embedded Metric Format) wrapper for AWS Powertools Metrics.
@@ -10,7 +11,7 @@ import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
  * Mirrors the LoggerServiceImplementation / TracerServiceImplementation
  * pattern: never use `new Metrics()` directly in services.
  */
-export class MetricsServiceImplementation {
+export class MetricsServiceImplementation implements MetricsService {
   public readonly metrics: Metrics;
 
   constructor(serviceName: string, namespace = 'FinancialManagement') {

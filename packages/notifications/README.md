@@ -27,7 +27,9 @@ CloudWatch Alarm / Amplify Build Event
 
 ### CloudWatch Alarm Messages
 
-Standard CloudWatch alarm JSON with `AlarmName`, `NewStateValue`, `NewStateReason`, `StateChangeTime`, and `Trigger` (metric name, namespace, dimensions).
+Standard **metric** alarm JSON with `AlarmName`, `NewStateValue`, `NewStateReason`, `StateChangeTime`, and `Trigger` (metric name, namespace, dimensions).
+
+**Composite alarms** (e.g. `Chat-Unhealthy`) have **no `Trigger`/metric** — they carry an `AlarmRule` over child alarms. The parser detects the absent `Trigger` and treats them as `CRITICAL` with service `"Composite alarm"` (instead of crashing on `Trigger.MetricName`).
 
 **Service resolution** from AWS namespace:
 

@@ -41,7 +41,7 @@ Responses arrive asynchronously on the AppSync Events channel `chat/{userId}/res
 ### Domain Layer
 
 - Ports: `chat-session.repository`, `chat-message.repository`, `workflow-starter.service`, `workflow-callback.service`, `event-publisher.service`.
-- `domain/utils/parse-bedrock-json.ts` -- strips the markdown fences Nova sometimes emits.
+- `domain/utils/parse-bedrock-json.ts` -- strips the markdown fences Nova sometimes emits. `parseBedrockJson` throws on bad JSON; `tryParseBedrockJson` returns `null` so callers can degrade gracefully instead of failing the workflow.
 - `domain/utils/expense-type-synonyms.ts` -- maps Spanish prompt output (`ingreso`/`egreso`) to the English catalog names (`income`/`outcome`).
 
 ### Infrastructure Layer
@@ -63,11 +63,18 @@ Prompts, Bedrock model ids and inference settings come from **`@packages/prompts
 
 All required vars are validated at module scope with `requireEnv` — no fallbacks.
 
+## Resilience (the client never hangs)
+
+- **Retries**: Bedrock states retry transient 503/throttle/timeout; task Lambdas retry transient infra errors (via `addLambdaRetry`) — except `CreateExpense` (not idempotent → would duplicate).
+- **Catch-all**: every fallible task `.addCatch(States.ALL)` → `PublishError` (publishes a static friendly message with `eventKind:'error'`) → `Fail`. The user always gets a reply; the run still ends `FAILED` for alarms.
+- **Graceful degrade**: `tryParseBedrockJson` returns `null` on malformed model output so the handler degrades to a clarification/generic query instead of throwing.
+- Explicit `taskTimeout` per task (Bedrock 60s, Lambda 40s). See [docs/ai-chat-flow.md](../../docs/ai-chat-flow.md#error-handling--resilience-never-leave-the-client-hanging).
+
 ## Observability
 
-- X-Ray active tracing on every Lambda + `@trace` subsegments; SFN client captured.
-- EMF business metrics (`ChatExpenseCreated`, `ChatQueryExecuted`, `ChatPreviewRequested`, `ChatAssistantMessagePublished`) via `MetricsServiceImplementation`.
-- Per-Lambda error/throttle alarms + workflow-level `ExecutionsFailed`/`ExecutionsTimedOut` alarms (v3 Monitoring).
+- X-Ray active tracing on every Lambda + `@trace` subsegments; SFN client captured. Task handlers annotate `userId`/`sessionId`/`messageId`; the AppSync publish is a named `AppSyncEvents` remote subsegment (`TracerServiceImplementation.traceRemote`).
+- EMF business metrics via `MetricsServiceImplementation` / the `MetricsService` port (namespace `FinancialManagement`, dim `service=chat`): `ChatMessageReceived`, `ChatWorkflowStartFailure`, `ChatPreviewSuperseded`, `ChatQueryExecuted`, `ChatMalformedModelJson`, `ChatPreviewRequested`, `ChatExpenseCreated`, `ChatAssistantMessagePublished`, per-branch `ChatQueryAnswerSent`/`ChatExpenseConfirmationSent`/`ChatExpenseCancelled`/`ChatClarificationSent`/`ChatUnknownIntent`, `ChatWorkflowError`, `ChatPublishFailed`.
+- Alarms (v3 Monitoring): per-Lambda errors/throttles, `ExecutionsFailed` (thresholded), `ExecutionsTimedOut`, `ExecutionsAborted`, `LatencyP90High`, `Chat-PublishFailed`, AppSync `5XXError`/`FailedEvents`, and the composite `Chat-Unhealthy`. See [docs/observability-flow.md](../../docs/observability-flow.md).
 
 ## Testing
 
@@ -78,3 +85,7 @@ DATABASE_SCHEMA=financial_management TEST_RUN_ID=x pnpm test:integration
 # Per-Lambda local scripts (payload overridable via env vars):
 pnpm run:file src/exec/sfn-validate-expense-fields.ts
 ```
+
+The **whole state machine** is tested without deploying via Step Functions Local
+with a MockConfigFile (`pnpm --filter @infra test:sfn-local`) — every branch,
+retry and catch — see [`infra/test/sfn-local/`](../../infra/test/sfn-local/README.md).

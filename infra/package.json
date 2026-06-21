@@ -12,9 +12,12 @@
     "cdk": "cdk",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:sfn-local": "bash scripts/sfn-local-test.sh",
+    "test:sfn-teststate": "tsx scripts/sfn-teststate.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-sfn": "catalog:",
     "@packages/config": "workspace:*",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
@@ -25,6 +28,7 @@
     "ts-jest": "catalog:",
     "ts-node": "catalog:",
     "tsconfig-paths": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "dependencies": {

@@ -24,11 +24,11 @@ All stacks extend `BaseStack`, which applies a standardized naming convention (`
 
 The infrastructure uses a versioning strategy defined in `lib/versions/deploy-config.ts`. Each version groups related stacks by deployment tier:
 
-| Version | Layer         | Purpose                                                               | Stacks                                                                                                                   |
-| ------- | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **v1**  | Foundation    | Identity and storage resources that other layers depend on            | AssetsBucket, Cognito                                                                                                    |
-| **v2**  | Application   | API Gateway, Lambda services, documentation, and frontend hosting     | ApiGateway, LambdaExpenses, LambdaDocuments, LambdaCurrencies, LambdaUsers, LambdaExchangeRates, ApiDocs, AmplifyHosting |
-| **v3**  | Observability | Monitoring, alerting, and dashboards that observe v1 and v2 resources | Monitoring                                                                                                               |
+| Version | Layer         | Purpose                                                                    | Stacks                                                                                                                                                                 |
+| ------- | ------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1**  | Foundation    | Identity and storage resources that other layers depend on                 | AssetsBucket, Cognito                                                                                                                                                  |
+| **v2**  | Application   | API Gateway, Lambda services, AI chat, documentation, and frontend hosting | ApiGateway, LambdaExpenses, LambdaDocuments, LambdaCurrencies, LambdaUsers, LambdaExchangeRates, LambdaChat, StepFunctionsChat, AppSyncEvents, ApiDocs, AmplifyHosting |
+| **v3**  | Observability | Monitoring, alerting, and dashboards that observe v1 and v2 resources      | Monitoring                                                                                                                                                             |
 
 Versions are deployed in order: **v1 first, then v2, then v3**. Each higher version imports CloudFormation outputs from the versions below it. The `DEPLOY_VERSIONS` array in `lib/versions/deploy-config.ts` controls which versions are synthesized and deployed. The current default is `['v1', 'v2', 'v3']`.
 
@@ -306,7 +306,9 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 
 Subscribed to the SNS alert topic via `LambdaSubscription`.
 
-**Alarms (15 total):**
+**Alarms (34 total + 1 composite):** the table below lists the foundation
+service alarms; the AI chat subsystem adds the rest — see the chat alarms note
+after the table.
 
 | Alarm                        | Metric                     | Threshold | Eval Periods | Datapoints |
 | ---------------------------- | -------------------------- | --------- | ------------ | ---------- |
@@ -328,6 +330,16 @@ Subscribed to the SNS alert topic via `LambdaSubscription`.
 
 All alarms use `TreatMissingData.NOT_BREACHING` and trigger the SNS alert topic.
 
+**AI chat alarms** (in addition to the table above): per-Lambda errors/throttles
+for the 6 chat Lambdas (handler + 5 SFN task Lambdas); state-machine
+`ChatWorkflow-ExecutionsFailed` (thresholded: >2 in 2 of 3 windows, since the
+workflow catch-all already replies to the user on a single failure),
+`ExecutionsTimedOut`, `ExecutionsAborted`, `LatencyP90High` (p90 > 60s); AppSync
+Events `5XXError`/`FailedEvents`; the EMF `Chat-PublishFailed` (namespace
+`FinancialManagement`, dim `service=chat`); and a **composite `Chat-Unhealthy`**
+that ORs the above into a single actionable page. The notification Lambda handles
+composite alarms (which have no `Trigger`/metric). See `docs/observability-flow.md`.
+
 **CloudWatch Dashboard sections:**
 
 1. **API Gateway** -- Requests, Errors (4xx/5xx), Latency (p50/p90/p99)
@@ -335,7 +347,9 @@ All alarms use `TreatMissingData.NOT_BREACHING` and trigger the SNS alert topic.
 3. **Cognito Triggers** -- Invocations, Errors, Duration (for PreSignUp, CustomMessage, UserSync; 5-minute period)
 4. **Cognito Trigger Errors (Logs Insights)** -- LogQueryWidget querying `/aws/lambda/{fnName}` log groups for recent ERROR entries
 5. **Amplify Hosting** -- Requests, Errors (4xx/5xx), Latency (p50/p90)
-6. **Alarm Status** -- AlarmStatusWidget showing all 15 alarms
+6. **AI Chat Workflow** -- Step Functions executions (started/succeeded/failed/timed out) + ExecutionTime p90
+7. **AI Chat Business Metrics (EMF)** -- conversation outcomes + errors/anomalies (the `FinancialManagement` chat counters)
+8. **Alarm Status** -- AlarmStatusWidget showing all alarms
 
 **EventBridge Rule:** Captures Amplify Deployment Status Change events (STARTED, FAILED, SUCCEED) for the monitored app and forwards them to the SNS alert topic.
 
@@ -517,21 +531,48 @@ export const DEPLOY_VERSIONS: string[] = ['v1', 'v2', 'v3'];
 
 ---
 
+## Testing
+
+```bash
+# CDK unit/assertion tests (stack structure, alarms, retries/catches)
+pnpm --filter @infra test
+
+# Step Functions Local — run the REAL ChatProcess ASL with mocked Bedrock/Lambda
+# responses across every branch + retry/catch path (Docker required). A
+# completeness guard fails if a Task state has no test case. Runs as the
+# `sfn-local` job in .github/workflows/ci.yml.
+pnpm --filter @infra test:sfn-local
+
+# TestState API — single-state routing against DEV only (narrow IAM role)
+pnpm --filter @infra test:sfn-teststate
+```
+
+See `infra/test/sfn-local/README.md` for the mock config and how to add coverage
+when you add a new state to the chat workflow.
+
+---
+
 ## Lambda Functions
 
 All Lambda functions use Node.js 24.x runtime, ESM output format, minified bundles with source maps, and `aws-xray-sdk-core` for X-Ray tracing.
 
-| Function Name               | Stack                         | Service                                       | Memory           | Timeout | Tracing | Log Retention |
-| --------------------------- | ----------------------------- | --------------------------------------------- | ---------------- | ------- | ------- | ------------- |
-| `fm-{stage}-expenses`       | LambdaExpensesStack (v2)      | Expenses CRUD + metrics                       | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-documents`      | LambdaDocumentsStack (v2)     | Documents catalog                             | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-currencies`     | LambdaCurrenciesStack (v2)    | Currencies catalog                            | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-users`          | LambdaUsersStack (v2)         | Users CRUD                                    | default (128 MB) | 30s     | Active  | 3 months      |
-| `fm-{stage}-update-rates`   | LambdaExchangeRatesStack (v2) | Exchange rate updates (EventBridge, 12h)      | 128 MB           | 60s     | Active  | 3 months      |
-| `fm-{stage}-pre-signup`     | CognitoStack (v1)             | Cognito PreSignUp trigger                     | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-custom-message` | CognitoStack (v1)             | Cognito CustomMessage trigger                 | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-user-sync`      | CognitoStack (v1)             | Cognito PostConfirmation + PostAuthentication | default (128 MB) | 10s     | Active  | 3 months      |
-| `fm-{stage}-notifications`  | MonitoringStack (v3)          | SES alarm email notifications                 | default (128 MB) | 10s     | Active  | 3 months      |
+| Function Name                      | Stack                         | Service                                       | Memory           | Timeout | Tracing | Log Retention      |
+| ---------------------------------- | ----------------------------- | --------------------------------------------- | ---------------- | ------- | ------- | ------------------ |
+| `fm-{stage}-expenses`              | LambdaExpensesStack (v2)      | Expenses CRUD + metrics                       | default (128 MB) | 30s     | Active  | 3 months           |
+| `fm-{stage}-documents`             | LambdaDocumentsStack (v2)     | Documents catalog                             | default (128 MB) | 30s     | Active  | 3 months           |
+| `fm-{stage}-currencies`            | LambdaCurrenciesStack (v2)    | Currencies catalog                            | default (128 MB) | 30s     | Active  | 3 months           |
+| `fm-{stage}-users`                 | LambdaUsersStack (v2)         | Users CRUD                                    | default (128 MB) | 30s     | Active  | 3 months           |
+| `fm-{stage}-update-rates`          | LambdaExchangeRatesStack (v2) | Exchange rate updates (EventBridge, 12h)      | 128 MB           | 60s     | Active  | 3 months           |
+| `fm-{stage}-chat`                  | LambdaChatStack (v2)          | AI chat HTTP handler (start/resume workflow)  | default (128 MB) | 30s     | Active  | 3 months           |
+| `fm-{stage}-chat-execute-query`    | StepFunctionsChatStack (v2)   | SFN task: run NL query                        | 256 MB           | 30s     | Active  | 1mo dev / 3mo prod |
+| `fm-{stage}-chat-validate-fields`  | StepFunctionsChatStack (v2)   | SFN task: validate/resolve expense fields     | 256 MB           | 30s     | Active  | 1mo dev / 3mo prod |
+| `fm-{stage}-chat-create-expense`   | StepFunctionsChatStack (v2)   | SFN task: create confirmed expense            | 256 MB           | 30s     | Active  | 1mo dev / 3mo prod |
+| `fm-{stage}-chat-save-and-publish` | StepFunctionsChatStack (v2)   | SFN task: persist + publish reply             | 256 MB           | 30s     | Active  | 1mo dev / 3mo prod |
+| `fm-{stage}-chat-save-preview`     | StepFunctionsChatStack (v2)   | SFN task: HITL preview (.waitForTaskToken)    | 256 MB           | 30s     | Active  | 1mo dev / 3mo prod |
+| `fm-{stage}-pre-signup`            | CognitoStack (v1)             | Cognito PreSignUp trigger                     | default (128 MB) | 10s     | Active  | 3 months           |
+| `fm-{stage}-custom-message`        | CognitoStack (v1)             | Cognito CustomMessage trigger                 | default (128 MB) | 10s     | Active  | 3 months           |
+| `fm-{stage}-user-sync`             | CognitoStack (v1)             | Cognito PostConfirmation + PostAuthentication | default (128 MB) | 10s     | Active  | 3 months           |
+| `fm-{stage}-notifications`         | MonitoringStack (v3)          | SES alarm email notifications                 | default (128 MB) | 10s     | Active  | 3 months           |
 
 ---
 

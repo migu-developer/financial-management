@@ -12,6 +12,7 @@ jest.mock('@utils/cross-version', () => ({
 const mockAddToRolePolicy = jest.fn();
 const mockStateMachineNext = jest.fn().mockReturnThis();
 const mockAddCatch = jest.fn().mockReturnThis();
+const mockAddRetry = jest.fn().mockReturnThis();
 
 jest.mock('aws-cdk-lib', () => {
   const MockStack = class {
@@ -75,7 +76,7 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
 
 jest.mock('aws-cdk-lib/aws-logs', () => ({
   LogGroup: jest.fn(),
-  RetentionDays: { THREE_MONTHS: 90 },
+  RetentionDays: { THREE_MONTHS: 90, ONE_MONTH: 30 },
 }));
 
 const mockAddToPrincipalPolicy = jest.fn();
@@ -89,7 +90,7 @@ const mockStateMachineCtor = jest
 
 class MockChain {
   next = mockStateMachineNext;
-  addRetry = jest.fn().mockReturnThis();
+  addRetry = mockAddRetry;
   addCatch = mockAddCatch;
 }
 
@@ -103,8 +104,9 @@ jest.mock('aws-cdk-lib/aws-stepfunctions', () => ({
   StateMachineType: { STANDARD: 'STANDARD' },
   IntegrationPattern: { WAIT_FOR_TASK_TOKEN: 'waitForTaskToken' },
   DefinitionBody: { fromChainable: jest.fn().mockReturnValue('def-body') },
-  LogLevel: { ALL: 'ALL' },
+  LogLevel: { ALL: 'ALL', ERROR: 'ERROR' },
   Pass: jest.fn().mockImplementation(() => new MockChain()),
+  Fail: jest.fn().mockImplementation(() => new MockChain()),
   Succeed: jest.fn().mockImplementation(() => new MockChain()),
   Choice: jest.fn().mockImplementation(() => {
     const choiceObj = {
@@ -424,6 +426,98 @@ describe('StepFunctionsChatStack', () => {
           'SavePreviewFnName',
         ]),
       );
+    });
+  });
+
+  describe('Resilience — error handling', () => {
+    test('retries task Lambdas on transient infra errors', () => {
+      createStack();
+      const lambdaRetry = mockAddRetry.mock.calls.find((c: unknown[]) => {
+        const opts = c[0] as { errors?: string[] };
+        return opts?.errors?.includes('Lambda.ServiceException');
+      });
+      expect(lambdaRetry).toBeDefined();
+      const opts = lambdaRetry![0] as { errors: string[]; maxAttempts: number };
+      expect(opts.errors).toEqual(
+        expect.arrayContaining([
+          'Lambda.ServiceException',
+          'Lambda.AWSLambdaException',
+          'Lambda.SdkClientException',
+          'Lambda.TooManyRequestsException',
+        ]),
+      );
+      expect(opts.maxAttempts).toBe(3);
+    });
+
+    test('routes every fallible task to a catch-all (States.ALL → $.error)', () => {
+      createStack();
+      const catchAll = mockAddCatch.mock.calls.filter((c: unknown[]) => {
+        const opts = c[1] as { errors?: string[] } | undefined;
+        return opts?.errors?.includes('States.ALL');
+      });
+      // 17 catch-all tasks + WaitForConfirmation's second catch = 18.
+      expect(catchAll.length).toBeGreaterThanOrEqual(18);
+      const first = catchAll[0]![1] as { resultPath: string };
+      expect(first.resultPath).toBe('$.error');
+    });
+
+    test('wires PublishError → Fail with a STATIC error reply (no Bedrock)', () => {
+      createStack();
+      const publishErrorCall = mockLambdaInvokeCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'PublishError',
+      );
+      expect(publishErrorCall).toBeDefined();
+      const props = publishErrorCall![1] as {
+        payload: { obj: Record<string, unknown> };
+      };
+      expect(props.payload.obj['eventKind']).toBe('error');
+      // Static literal content, never a JsonPath ('content.$') — the error
+      // path must not depend on Bedrock, which is what may have failed.
+      expect(typeof props.payload.obj['content']).toBe('string');
+      expect(props.payload.obj['content.$']).toBeUndefined();
+
+      const { Fail } = jest.requireMock<Record<string, jest.Mock>>(
+        'aws-cdk-lib/aws-stepfunctions',
+      );
+      expect(Fail).toHaveBeenCalled();
+      const failProps = (Fail as jest.Mock).mock.calls[0]![2] as {
+        error: string;
+      };
+      expect(failProps.error).toBe('ChatWorkflowError');
+    });
+
+    test('does NOT retry CreateExpense (not idempotent → no duplicate expense)', () => {
+      createStack();
+      const lambdaRetries = mockAddRetry.mock.calls.filter((c: unknown[]) => {
+        const opts = c[0] as { errors?: string[] };
+        return opts?.errors?.includes('Lambda.ServiceException');
+      });
+      // executeQuery, validateFields, 4×save*, saveUnknownReply, publishError,
+      // waitForConfirmation = 9. CreateExpense is intentionally excluded.
+      expect(lambdaRetries.length).toBe(9);
+    });
+  });
+
+  describe('Cost — stage-aware SFN logging', () => {
+    test('dev logs ALL state transitions for debugging', () => {
+      createStack();
+      const props = mockStateMachineCtor.mock.calls[0]?.[1] as {
+        logs: { level: string };
+      };
+      expect(props.logs.level).toBe('ALL');
+    });
+
+    test('prod logs only ERROR states (cost control; catch-all still alarms)', () => {
+      const app = { node: { tryGetContext: jest.fn(), children: [] } };
+      new StepFunctionsChatStack(
+        app as unknown as Construct,
+        'ProdStepFunctionsChatStack',
+        { ...defaultProps, stage: 'prod' },
+      );
+      const props = mockStateMachineCtor.mock.calls[0]?.[1] as {
+        logs: { level: string };
+      };
+      expect(props.logs.level).toBe('ERROR');
     });
   });
 });

@@ -3,7 +3,10 @@ import { TracerServiceImplementation } from '@services/shared/infrastructure/ser
 import { PostgresDatabaseService } from '@services/shared/infrastructure/services/DatabaseServiceImp';
 import { PostgresChatSessionRepository } from '@services/chat/infrastructure/repositories/postgres-chat-session.repository';
 import { PostgresChatMessageRepository } from '@services/chat/infrastructure/repositories/postgres-chat-message.repository';
-import { AppSyncEventPublisher } from '@services/chat/infrastructure/services/appsync-event-publisher.service';
+import {
+  AppSyncEventPublisher,
+  AppSyncPublishError,
+} from '@services/chat/infrastructure/services/appsync-event-publisher.service';
 import { SaveAssistantMessageUseCase } from '@services/chat/application/use-cases/save-assistant-message.use-case';
 
 import { MetricsServiceImplementation } from '@services/shared/infrastructure/services/MetricsServiceImp';
@@ -15,6 +18,7 @@ const metricsService = new MetricsServiceImplementation('chat');
 const publisher = new AppSyncEventPublisher(
   requireEnv(process.env['APPSYNC_HTTP_DNS'], 'APPSYNC_HTTP_DNS'),
   requireEnv(process.env['AWS_REGION'], 'AWS_REGION'),
+  tracerService,
 );
 const namespace = requireEnv(
   process.env['APPSYNC_CHAT_NAMESPACE'],
@@ -24,6 +28,7 @@ const channelTemplate = (uid: string) => `${namespace}/${uid}/responses`;
 
 export interface SavePreviewEvent {
   sessionId: string;
+  messageId?: string;
   uid: string;
   userEmail: string;
   content: string;
@@ -44,7 +49,11 @@ export interface SavePreviewEvent {
 export const handler = async (event: SavePreviewEvent) => {
   const logger = new LoggerServiceImplementation('chat-save-preview');
   tracerService.annotateColdStart();
-  tracerService.putAnnotation('userId', event.uid);
+  if (event.uid) tracerService.putAnnotation('userId', event.uid);
+  if (event.sessionId)
+    tracerService.putAnnotation('sessionId', event.sessionId);
+  if (event.messageId)
+    tracerService.putAnnotation('messageId', event.messageId);
 
   logger.info('Saving expense preview with task token (HITL)', {
     sessionId: event.sessionId,
@@ -76,6 +85,13 @@ export const handler = async (event: SavePreviewEvent) => {
     metricsService.count('ChatPreviewRequested');
 
     return { messageId: result.message.id };
+  } catch (error) {
+    // The preview publish failed: count it before rethrowing so the SFN
+    // catch-all still fires.
+    if (error instanceof AppSyncPublishError) {
+      metricsService.count('ChatPublishFailed');
+    }
+    throw error;
   } finally {
     metricsService.publish();
   }
