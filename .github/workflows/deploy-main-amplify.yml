@@ -1,14 +1,14 @@
-# Deploy client/main to AWS Amplify for staging and production environments.
+# Deploy client/main to AWS Amplify.
 #
-# Automatic deploy fires after CI passes on main when changes are detected in:
-#   - client/main/**
-#   - .github/workflows/deploy-main-amplify.yml
-# Release and manual triggers always deploy regardless of changed paths.
+# Production deploys automatically on a published (non-pre-release) release.
+# Staging (dev) is NO longer auto-deployed — it deploys ONLY via manual
+# workflow_dispatch. The staging guard on the deploy job enforces this even if
+# the shared resolver maps a trigger (e.g. pre-release) to staging.
 #
 # Environment resolution (single source of truth: setup job):
-#   staging    — CI passes on main  OR  pre-release
-#   production — published release (non-pre-release)
-#   manual     — environment chosen via workflow_dispatch input
+#   production — published (non-pre-release) release  [automatic]
+#                (also deployable manually via workflow_dispatch)
+#   staging    — workflow_dispatch only               [manual]
 #
 # Authentication: OIDC — no static AWS keys required.
 # The IAM role is assumed via GitHub's OIDC provider (id-token: write).
@@ -26,10 +26,6 @@
 name: Deploy client/main to Amplify
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
-    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -60,9 +56,8 @@ permissions:
 concurrency:
   group: >-
     amplify-deploy-${{
-      (github.event_name == 'workflow_run' ||
-       (github.event_name == 'release' && github.event.release.prerelease == true))
-      && 'staging'
+      (github.event_name == 'release' && github.event.release.prerelease == true)
+      && 'prerelease'
       || inputs.environment
       || 'production'
     }}
@@ -94,7 +89,12 @@ jobs:
   deploy:
     name: 🚀 Trigger Amplify build
     needs: [setup]
-    if: needs.setup.outputs.should_deploy == 'true'
+    # Staging (dev) is manual-only: block it unless triggered via
+    # workflow_dispatch. Production (and any other env) deploys as resolved.
+    if: >-
+      needs.setup.outputs.should_deploy == 'true' &&
+      (needs.setup.outputs.env_name != 'staging' ||
+       github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

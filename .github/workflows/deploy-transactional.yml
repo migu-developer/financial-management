@@ -1,14 +1,14 @@
-# Deploy transactional email templates to S3 for staging and production environments.
+# Deploy transactional email templates to S3.
 #
-# Automatic deploy fires after CI passes on main when changes are detected in:
-#   - packages/transactional/**
-#   - .github/workflows/deploy-transactional.yml
-# Release and manual triggers always deploy regardless of changed paths.
+# Production deploys automatically on a published (non-pre-release) release.
+# Staging (dev) is NO longer auto-deployed — it deploys ONLY via manual
+# workflow_dispatch. The staging guard on the upload job enforces this even if
+# the shared resolver maps a trigger (e.g. pre-release) to staging.
 #
 # Environment resolution (single source of truth: resolve_deploy_env action):
-#   staging    — CI passes on main  OR  pre-release
-#   production — published release (non-pre-release)
-#   manual     — environment chosen via workflow_dispatch input
+#   production — published (non-pre-release) release  [automatic]
+#                (also deployable manually via workflow_dispatch)
+#   staging    — workflow_dispatch only               [manual]
 #
 # Authentication: OIDC — no static AWS keys required.
 # The IAM role must have s3:PutObject on the target bucket prefix.
@@ -28,10 +28,6 @@
 name: Deploy transactional emails to S3
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
-    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -58,9 +54,8 @@ permissions:
 concurrency:
   group: >-
     transactional-deploy-${{
-      (github.event_name == 'workflow_run' ||
-       (github.event_name == 'release' && github.event.release.prerelease == true))
-      && 'staging'
+      (github.event_name == 'release' && github.event.release.prerelease == true)
+      && 'prerelease'
       || inputs.environment
       || 'production'
     }}
@@ -92,7 +87,12 @@ jobs:
   upload:
     name: 📧 Export & upload email templates
     needs: [setup]
-    if: needs.setup.outputs.should_deploy == 'true'
+    # Staging (dev) is manual-only: block it unless triggered via
+    # workflow_dispatch. Production (and any other env) deploys as resolved.
+    if: >-
+      needs.setup.outputs.should_deploy == 'true' &&
+      (needs.setup.outputs.env_name != 'staging' ||
+       github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
