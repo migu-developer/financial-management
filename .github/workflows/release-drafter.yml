@@ -1,24 +1,33 @@
 name: Release Drafter
 
-# This workflow now ONLY autolabels PRs (branch prefix -> label) via
-# release-drafter's autolabeler; the release drafter/releaser is disabled
-# (`disable-releaser: true`) because release NOTES are generated natively by
-# GitHub from .github/release.yml (our date-based tags break release-drafter's
-# semver drafter).
+# Maintains a DRAFT "next release" whose body is the changelog of PRs merged
+# since the last release (see .github/release-drafter.yml), and autolabels PRs
+# by branch prefix.
 #
-# NOTE: the workflow name ("Release Drafter") and job name ("Draft release")
-# are intentionally KEPT so the existing branch-protection ruleset required
-# status check "Draft release" keeps being produced. Renaming them would
-# require updating the ruleset context in lockstep, so we don't.
+# Two jobs, split so pull_request_target (untrusted PR head) never gets
+# contents: write:
+#   - draft        : PR events -> autolabel by branch prefix using `gh`
+#                    (contents: read + pull-requests: write). NOT release-drafter:
+#                    on pull_request_target release-drafter always tries to CREATE
+#                    a release (needs contents: write) — there is no
+#                    "autolabel-only" flag in any version — so we label with gh
+#                    instead. Named "Draft release" because that is the
+#                    branch-protection ruleset's required status check; do NOT
+#                    rename without updating the ruleset context in lockstep.
+#   - update-draft : push to main / manual -> release-drafter refreshes the draft
+#                    (contents: write to write the release, pull-requests: read to
+#                    read merged PRs).
+#
+# No paths-ignore on push: every merge to main refreshes the draft.
 
 on:
+  push:
+    branches: [main]
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: release-drafter-${{ github.ref }}
@@ -27,15 +36,47 @@ concurrency:
 jobs:
   draft:
     name: Draft release
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      # Pinned to a full commit SHA (not a mutable tag) to reduce supply-chain
-      # risk: this runs on pull_request_target with `pull-requests: write`.
-      # SHA below is release-drafter v7.2.1.
+      - name: Autolabel by branch prefix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          # Map the branch prefix (feat/… -> feat) to a conventional label so the
+          # PR satisfies enforce_pr_labels and lands in the right release
+          # category. Labels must already exist in the repo.
+          prefix="${HEAD_REF%%/*}"
+          case "$prefix" in
+            feat | fix | docs | chore | refactor | test | perf | ci | build | style | revert)
+              echo "Applying label '$prefix' to PR #$PR"
+              gh pr edit "$PR" --add-label "$prefix"
+              ;;
+            *)
+              echo "Branch prefix '$prefix' has no matching label — skipping (label manually)."
+              ;;
+          esac
+
+  update-draft:
+    name: Update draft release
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      # SHA-pinned (v7.2.1). Only runs on push/dispatch (trusted context).
       - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         with:
           config-name: release-drafter.yml
-          disable-releaser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
