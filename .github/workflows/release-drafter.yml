@@ -1,22 +1,24 @@
 name: Release Drafter
 
 # Maintains a DRAFT "next release" whose body is the changelog of PRs merged
-# since the last release (see .github/release-drafter.yml).
+# since the last release (see .github/release-drafter.yml), and autolabels PRs
+# by branch prefix.
 #
-# Split into two jobs so pull_request_target (which handles untrusted PR head
-# refs) never gets `contents: write`:
-#   - draft         : PR events -> autolabel only (pull-requests: write).
-#                     Named "Draft release" because that is the branch-protection
-#                     ruleset's required status check — do NOT rename without
-#                     updating the ruleset context in lockstep.
-#   - update-draft  : push to main / manual -> refresh the draft (contents: write).
+# Two jobs, split so pull_request_target (untrusted PR head) never gets
+# contents: write:
+#   - draft        : PR events -> autolabel by branch prefix using `gh`
+#                    (contents: read + pull-requests: write). NOT release-drafter:
+#                    on pull_request_target release-drafter always tries to CREATE
+#                    a release (needs contents: write) — there is no
+#                    "autolabel-only" flag in any version — so we label with gh
+#                    instead. Named "Draft release" because that is the
+#                    branch-protection ruleset's required status check; do NOT
+#                    rename without updating the ruleset context in lockstep.
+#   - update-draft : push to main / manual -> release-drafter refreshes the draft
+#                    (contents: write to write the release, pull-requests: read to
+#                    read merged PRs).
 #
-# No paths-ignore on push: every merge to main refreshes the draft so any PR
-# (docs included) lands in the changelog.
-#
-# Date-based releases: the config avoids semver version-resolver, so
-# release-drafter drafts the changelog and the concrete date tag is set at
-# publish time (release-drafter has no native CalVer).
+# No paths-ignore on push: every merge to main refreshes the draft.
 
 on:
   push:
@@ -41,13 +43,27 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # SHA-pinned (v7.2.1) — runs on pull_request_target, so keep it locked.
-      - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
-        with:
-          config-name: release-drafter.yml
-          disable-releaser: true # PR runs only autolabel; no release writes
+      - name: Autolabel by branch prefix
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          # Map the branch prefix (feat/… -> feat) to a conventional label so the
+          # PR satisfies enforce_pr_labels and lands in the right release
+          # category. Labels must already exist in the repo.
+          prefix="${HEAD_REF%%/*}"
+          case "$prefix" in
+            feat | fix | docs | chore | refactor | test | perf | ci | build | style | revert)
+              echo "Applying label '$prefix' to PR #$PR"
+              gh pr edit "$PR" --add-label "$prefix"
+              ;;
+            *)
+              echo "Branch prefix '$prefix' has no matching label — skipping (label manually)."
+              ;;
+          esac
 
   update-draft:
     name: Update draft release
@@ -56,8 +72,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-      pull-requests: write
+      pull-requests: read
     steps:
+      # SHA-pinned (v7.2.1). Only runs on push/dispatch (trusted context).
       - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         with:
           config-name: release-drafter.yml
