@@ -8,6 +8,12 @@ updates:
       interval: 'weekly'
       day: 'monday'
     open-pull-requests-limit: 10
+    # Override Dependabot's default labels (dependencies + ecosystem) with a
+    # conventional label so PRs pass enforce_pr_labels and land under Chores in
+    # the release draft. 'chore' matches the 'chore(deps):' commit type. The
+    # label must already exist in the repo.
+    labels:
+      - 'chore'
     groups:
       minor-and-patch:
         update-types:
@@ -23,5 +29,9 @@ updates:
       interval: 'weekly'
       day: 'monday'
     open-pull-requests-limit: 5
+    # Same as npm: use a conventional label ('chore' matches 'chore(ci):') so
+    # PRs satisfy enforce_pr_labels and categorize in the release draft.
+    labels:
+      - 'chore'
     commit-message:
       prefix: 'chore(ci):'
