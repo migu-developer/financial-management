@@ -1,5 +1,6 @@
-name: Feature Request
+name: ✨ Feature Request
 description: Suggest a new feature or improvement
+title: 'feat: '
 labels: ['feat']
 
 body:
@@ -30,11 +31,14 @@ body:
       label: Area
       description: Which part of the project would this affect?
       options:
-        - Client (Expo / React Native)
-        - Services (Lambda / API)
-        - Infrastructure (CDK)
-        - Packages (shared libraries)
-        - CI/CD (GitHub Actions)
+        - Client (client/main)
+        - Services (backend)
+        - Packages (shared)
+        - Infra (CDK)
+        - AI (chat)
+        - DevOps / CI
+        - Design
+        - Other / not sure
     validations:
       required: true
 
