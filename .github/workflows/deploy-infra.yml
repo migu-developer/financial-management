@@ -1,12 +1,13 @@
-# Deploy infrastructure (CDK) to AWS for staging and production environments.
+# Deploy infrastructure (CDK) to AWS.
 #
-# Automatic deploy fires after Integration Tests pass on main when changes
-# are detected in relevant paths.
-# Release and manual triggers always deploy regardless of changed paths.
+# Production deploys automatically on a published (non-pre-release) release.
+# Staging (dev) is NO longer auto-deployed — it deploys ONLY via manual
+# workflow_dispatch. The staging guard on the deploy job enforces this even if
+# the shared resolver maps a trigger (e.g. pre-release) to staging.
 #
 # Environment resolution (single source of truth: setup job):
-#   staging    — Integration Tests pass on main  OR  pre-release
-#   production — published release (non-pre-release)
+#   production — published release (non-pre-release)  [automatic]
+#   staging    — workflow_dispatch input only         [manual]
 #   manual     — environment chosen via workflow_dispatch input
 #
 # Authentication: OIDC — no static AWS keys required.
@@ -38,9 +39,6 @@
 name: Deploy Infrastructure
 
 on:
-  workflow_run:
-    workflows: ['Integration Tests']
-    types: [completed]
   release:
     types: [published]
   workflow_dispatch:
@@ -64,8 +62,7 @@ permissions:
 concurrency:
   group: >-
     infra-deploy-${{
-      (github.event_name == 'workflow_run' ||
-       (github.event_name == 'release' && github.event.release.prerelease == true))
+      (github.event_name == 'release' && github.event.release.prerelease == true)
       && 'staging'
       || inputs.environment
       || 'production'
@@ -100,7 +97,12 @@ jobs:
   deploy:
     name: 🚀 CDK Deploy (${{ needs.setup.outputs.env_name }})
     needs: [setup]
-    if: needs.setup.outputs.should_deploy == 'true'
+    # Staging (dev) is manual-only: block it unless triggered via
+    # workflow_dispatch. Production (and any other env) deploys as resolved.
+    if: >-
+      needs.setup.outputs.should_deploy == 'true' &&
+      (needs.setup.outputs.env_name != 'staging' ||
+       github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
