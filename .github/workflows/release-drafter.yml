@@ -25,7 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: release-drafter/release-drafter@v7.2.1
+      # Pinned to a full commit SHA (not a mutable tag) to reduce supply-chain
+      # risk: this runs on pull_request_target with `pull-requests: write`.
+      # SHA below is release-drafter v7.2.1.
+      - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         with:
           config-name: release-drafter.yml
           disable-releaser: true

@@ -36,7 +36,5 @@ changelog:
       labels: [style]
     - title: ⏪ Reverts
       labels: [revert]
-    - title: 📦 Dependencies
-      labels: [dependencies]
     - title: 🔀 Other Changes
       labels: ['*']
