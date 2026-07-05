@@ -6,9 +6,9 @@
 # the shared resolver maps a trigger (e.g. pre-release) to staging.
 #
 # Environment resolution (single source of truth: setup job):
-#   production — published release (non-pre-release)  [automatic]
-#   staging    — workflow_dispatch input only         [manual]
-#   manual     — environment chosen via workflow_dispatch input
+#   production — published (non-pre-release) release  [automatic]
+#                (also deployable manually via workflow_dispatch)
+#   staging    — workflow_dispatch only               [manual]
 #
 # Authentication: OIDC — no static AWS keys required.
 # The IAM role is assumed via GitHub's OIDC provider (id-token: write).
@@ -63,7 +63,7 @@ concurrency:
   group: >-
     infra-deploy-${{
       (github.event_name == 'release' && github.event.release.prerelease == true)
-      && 'staging'
+      && 'prerelease'
       || inputs.environment
       || 'production'
     }}
