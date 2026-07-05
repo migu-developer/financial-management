@@ -1,37 +1,33 @@
-name: Release Drafter
+name: PR Autolabeler
+
+# Autolabels PRs by branch prefix (feat/ -> feat, fix/ -> fix, ...) using
+# release-drafter's autolabeler ONLY. Release NOTES are generated natively by
+# GitHub from .github/release.yml (our releases use date-based tags, which
+# release-drafter's semver drafter cannot handle) — so the drafter is disabled
+# here via `disable-releaser: true`.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.github/release-drafter.yml'
-      - '.envrc'
-      - 'config/**'
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 concurrency:
-  group: release-drafter-${{ github.ref }}
+  group: pr-autolabeler-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  draft:
-    name: Draft release
+  autolabel:
+    name: Autolabel PR
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: release-drafter/release-drafter@v7.2.1
         with:
           config-name: release-drafter.yml
+          disable-releaser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
