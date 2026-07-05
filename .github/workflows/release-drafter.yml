@@ -1,36 +1,31 @@
 name: Release Drafter
 
 # Maintains a DRAFT "next release" whose body is the changelog of PRs merged
-# since the last release (see .github/release-drafter.yml). Runs on:
-#   - push to main   -> refresh the draft changelog
-#   - pull_request_target -> autolabel the PR (feeds the changelog categories)
+# since the last release (see .github/release-drafter.yml).
 #
-# Date-based releases: the config intentionally avoids semver version-resolver,
-# so release-drafter drafts the changelog and the concrete date tag is set at
-# publish time. See .github/release-drafter.yml for details.
+# Split into two jobs so pull_request_target (which handles untrusted PR head
+# refs) never gets `contents: write`:
+#   - draft         : PR events -> autolabel only (pull-requests: write).
+#                     Named "Draft release" because that is the branch-protection
+#                     ruleset's required status check — do NOT rename without
+#                     updating the ruleset context in lockstep.
+#   - update-draft  : push to main / manual -> refresh the draft (contents: write).
 #
-# NOTE: the workflow name ("Release Drafter") and job name ("Draft release")
-# are the branch-protection ruleset's required status check — do NOT rename
-# without updating the ruleset context in lockstep.
+# No paths-ignore on push: every merge to main refreshes the draft so any PR
+# (docs included) lands in the changelog.
+#
+# Date-based releases: the config avoids semver version-resolver, so
+# release-drafter drafts the changelog and the concrete date tag is set at
+# publish time (release-drafter has no native CalVer).
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/pull_request_template.md'
-      - '.envrc'
-      - 'config/**'
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: release-drafter-${{ github.ref }}
@@ -39,12 +34,30 @@ concurrency:
 jobs:
   draft:
     name: Draft release
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      # Pinned to a full commit SHA (not a mutable tag) to reduce supply-chain
-      # risk: this runs on pull_request_target with write permissions.
-      # SHA below is release-drafter v7.2.1.
+      # SHA-pinned (v7.2.1) — runs on pull_request_target, so keep it locked.
+      - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
+        with:
+          config-name: release-drafter.yml
+          disable-releaser: true # PR runs only autolabel; no release writes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-draft:
+    name: Update draft release
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
       - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         with:
           config-name: release-drafter.yml

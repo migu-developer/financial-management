@@ -10,6 +10,10 @@
 name-template: '🚀 YYYY.MM.DD.#'
 tag-template: 'YYYY.MM.DD.#'
 
+# PRs with this label are kept out of the drafted changelog.
+exclude-labels:
+  - 'ignore-for-release'
+
 categories:
   - title: '🚀 Features'
     labels: ['feat']
