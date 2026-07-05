@@ -1,23 +1,35 @@
 name: Release Drafter
 
-# This workflow now ONLY autolabels PRs (branch prefix -> label) via
-# release-drafter's autolabeler; the release drafter/releaser is disabled
-# (`disable-releaser: true`) because release NOTES are generated natively by
-# GitHub from .github/release.yml (our date-based tags break release-drafter's
-# semver drafter).
+# Maintains a DRAFT "next release" whose body is the changelog of PRs merged
+# since the last release (see .github/release-drafter.yml). Runs on:
+#   - push to main   -> refresh the draft changelog
+#   - pull_request_target -> autolabel the PR (feeds the changelog categories)
+#
+# Date-based releases: the config intentionally avoids semver version-resolver,
+# so release-drafter drafts the changelog and the concrete date tag is set at
+# publish time. See .github/release-drafter.yml for details.
 #
 # NOTE: the workflow name ("Release Drafter") and job name ("Draft release")
-# are intentionally KEPT so the existing branch-protection ruleset required
-# status check "Draft release" keeps being produced. Renaming them would
-# require updating the ruleset context in lockstep, so we don't.
+# are the branch-protection ruleset's required status check — do NOT rename
+# without updating the ruleset context in lockstep.
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+      - '.envrc'
+      - 'config/**'
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 concurrency:
@@ -31,11 +43,10 @@ jobs:
     timeout-minutes: 5
     steps:
       # Pinned to a full commit SHA (not a mutable tag) to reduce supply-chain
-      # risk: this runs on pull_request_target with `pull-requests: write`.
+      # risk: this runs on pull_request_target with write permissions.
       # SHA below is release-drafter v7.2.1.
       - uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         with:
           config-name: release-drafter.yml
-          disable-releaser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
