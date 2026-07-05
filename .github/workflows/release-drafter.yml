@@ -1,10 +1,15 @@
-name: PR Autolabeler
+name: Release Drafter
 
-# Autolabels PRs by branch prefix (feat/ -> feat, fix/ -> fix, ...) using
-# release-drafter's autolabeler ONLY. Release NOTES are generated natively by
-# GitHub from .github/release.yml (our releases use date-based tags, which
-# release-drafter's semver drafter cannot handle) — so the drafter is disabled
-# here via `disable-releaser: true`.
+# This workflow now ONLY autolabels PRs (branch prefix -> label) via
+# release-drafter's autolabeler; the release drafter/releaser is disabled
+# (`disable-releaser: true`) because release NOTES are generated natively by
+# GitHub from .github/release.yml (our date-based tags break release-drafter's
+# semver drafter).
+#
+# NOTE: the workflow name ("Release Drafter") and job name ("Draft release")
+# are intentionally KEPT so the existing branch-protection ruleset required
+# status check "Draft release" keeps being produced. Renaming them would
+# require updating the ruleset context in lockstep, so we don't.
 
 on:
   pull_request_target:
@@ -16,12 +21,12 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: pr-autolabeler-${{ github.ref }}
+  group: release-drafter-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  autolabel:
-    name: Autolabel PR
+  draft:
+    name: Draft release
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
