@@ -1,0 +1,40 @@
+# GitHub native release notes generation.
+#
+# Consumed by GitHub when a release is created with "Generate release notes"
+# (Releases UI) or `gh release create --generate-notes`. Unlike release-drafter
+# (which is semver-centric and does not understand our date-based tags such as
+# 2026.07.05.1), native notes are built from the git history BETWEEN TAGS, so
+# they work with any tag scheme and always list the merged PRs of the range.
+#
+# PRs are grouped by the same labels our autolabeler applies (see
+# .github/release-drafter.yml). The final "*" category is a catch-all so a PR
+# without a mapped label still appears.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: 🚀 Features
+      labels: [feat]
+    - title: 🐛 Bug Fixes
+      labels: [fix]
+    - title: ♻️ Refactors
+      labels: [refactor]
+    - title: ⚡ Performance
+      labels: [perf]
+    - title: 📚 Documentation
+      labels: [docs]
+    - title: ✅ Tests
+      labels: [test]
+    - title: 🏗️ Build
+      labels: [build]
+    - title: ⚙️ CI/CD
+      labels: [ci]
+    - title: 🧹 Chores
+      labels: [chore]
+    - title: 💅 Styles
+      labels: [style]
+    - title: ⏪ Reverts
+      labels: [revert]
+    - title: 🔀 Other Changes
+      labels: ['*']
