@@ -38,6 +38,33 @@ pnpm dev
 
 ## Development Workflow
 
+### Issues and the Project Board
+
+Work is tracked in the **[financial-management GitHub Project](https://github.com/orgs/migu-developer/projects/2)**
+(org project #2, linked to this repo).
+
+Open issues with one of the templates (blank issues are disabled):
+
+| Template               | Title prefix | Label  |
+| ---------------------- | ------------ | ------ |
+| 🐛 **Bug Report**      | `fix: `      | `fix`  |
+| ✨ **Feature Request** | `feat: `     | `feat` |
+
+Security vulnerabilities go through a **private security advisory** (linked from
+the issue chooser), never a public issue.
+
+Project fields:
+
+| Field        | Values                                                      |
+| ------------ | ----------------------------------------------------------- |
+| **Status**   | Backlog · Todo · In Progress · In Review · Done             |
+| **Area**     | Client · Services · Packages · Infra · AI · DevOps · Design |
+| **Priority** | P0 · P1 · P2                                                |
+| **Size**     | XS · S · M · L · XL                                         |
+
+The project's built-in workflows add new issues to the board as **Todo** and move
+them to **Done** when closed.
+
 ### Branch Naming
 
 Use the following prefixes:
@@ -71,11 +98,16 @@ Format: `type(scope): description`
 
 ### Pull Requests
 
-1. Create a branch from `main`
+1. Create a branch from `main` (the prefix matters — see above)
 2. Make your changes
 3. Run all checks locally (see below)
 4. Push and create a PR
-5. Add one of the required labels: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+5. **Labels are applied automatically** from the branch prefix (`feat/` → `feat`,
+   `fix/` → `fix`, …) by the `Draft release` job. If your branch has no known
+   prefix, add one of the required labels manually: `feat`, `fix`, `docs`,
+   `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert` — the
+   `enforce-label` check requires exactly one of them, and the label determines
+   the release-notes category
 6. Wait for CI to pass
 7. Request review
 
@@ -203,11 +235,11 @@ Migrations use semantic versioning: `src/migrations/{major}/{minor}/{patch}/`
 
 ### CDK Stacks
 
-| Version | Stacks                                          | Purpose                                           |
-| ------- | ----------------------------------------------- | ------------------------------------------------- |
-| v1      | Assets, Auth                                    | S3 bucket, Cognito (4 IdPs, MFA, triggers)        |
-| v2      | ApiGateway, 5 Lambda services, ApiDocs, Amplify | REST API, business logic, exchange rates, hosting |
-| v3      | Monitoring                                      | Dashboard, 15 alarms, EventBridge, notifications  |
+| Version | Stacks                                                                          | Purpose                                                       |
+| ------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| v1      | Assets, Auth                                                                    | S3 bucket, Cognito (4 IdPs, MFA, triggers)                    |
+| v2      | ApiGateway, 6 Lambda stacks, StepFunctionsChat, AppSyncEvents, ApiDocs, Amplify | REST API, business logic, AI chat workflow, realtime, hosting |
+| v3      | Monitoring                                                                      | Dashboard, 34 alarms + composite, EventBridge, notifications  |
 
 ### Deploy
 
@@ -215,20 +247,26 @@ Migrations use semantic versioning: `src/migrations/{major}/{minor}/{patch}/`
 # Synthesize (validate templates)
 pnpm infra:cdk synth
 
-# Show changes
+# Show changes (always do this first)
 pnpm infra:cdk diff
 
-# Deploy all stacks
-pnpm infra:cdk deploy --all --require-approval never
+# Deploy all stacks — production is the only environment, so review
+# IAM/security changes instead of auto-approving them
+pnpm infra:cdk deploy --all --require-approval broadening
 ```
+
+Load `config/.env.production` and export `AWS_PROFILE=miguel.gutierrez-prod`
+first, and confirm the account is `108703089452` before deploying. See
+`docs/deployment.md` and the `fm-deploy-prod` skill.
 
 ### Environment Variables
 
 Environment files live in `config/`:
 
 - `.env.local` — local development
-- `.env.development` — dev environment (us-east-1)
-- `.env.production` — prod environment (us-east-2)
+- `.env.production` — prod environment (us-east-2) — **the only deployed environment**
+- `.env.development` — legacy dev config; that AWS environment was
+  decommissioned in July 2026 (see `docs/deployment.md`)
 
 Required additional variables for exchange rate functionality:
 
@@ -256,16 +294,31 @@ Templates are React Email components in `packages/transactional/`. Two locales: 
 
 All CI runs on GitHub Actions with OIDC authentication (no static AWS keys).
 
-| Workflow              | Trigger            | What it does                  |
-| --------------------- | ------------------ | ----------------------------- |
-| CI                    | PR + push to main  | lint, typecheck, format, test |
-| Integration Tests     | PR + push to main  | Database integration tests    |
-| Deploy Infrastructure | After CI on main   | CDK deploy to staging         |
-| Deploy Client         | After CI on main   | Amplify build trigger         |
-| Deploy Transactional  | After CI on main   | Email templates to S3         |
-| Publish API Docs      | After infra deploy | Swagger UI to S3              |
+| Workflow              | Trigger                    | What it does                                               |
+| --------------------- | -------------------------- | ---------------------------------------------------------- |
+| CI                    | PR + push to main          | lint, typecheck, format, test + Step Functions Local suite |
+| Integration Tests     | PR + push to main          | Database integration tests                                 |
+| Release Drafter       | push to main / PR          | Refreshes the draft release / autolabels the PR            |
+| Deploy Infrastructure | Release published / manual | CDK deploy to production                                   |
+| Deploy Client         | Release published / manual | Amplify build trigger                                      |
+| Deploy Transactional  | Release published / manual | Email templates to S3                                      |
+| Publish API Docs      | After infra deploy         | Swagger UI to S3                                           |
 
-Production deploys are triggered by GitHub releases (non-pre-release).
+**Production deploys are triggered by publishing a GitHub release**
+(non-pre-release). Merging to `main` does **not** deploy anything — staging
+deploys are manual-only (`workflow_dispatch`) and the staging AWS environment no
+longer exists.
+
+### Releases
+
+Tags are **date-based** (`YYYY.MM.DD.N`, e.g. `2026.07.05.1`), not semver.
+
+1. `release-drafter` keeps a **draft release** updated on every push to `main`,
+   listing the PRs merged since the last release, grouped by their label.
+2. To ship: open the draft in **Releases**, set the date tag, and **Publish**.
+3. Publishing fires the production deploy workflows.
+
+See `docs/deployment.md` for details.
 
 ## Security
 

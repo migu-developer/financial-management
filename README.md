@@ -12,7 +12,7 @@ A full-stack application with:
 
 - **Mobile + Web app** (React Native / Expo) with offline-capable auth and real-time expense tracking
 - **Serverless backend** (AWS Lambda) with cursor-based pagination and filtering
-- **Infrastructure as Code** (AWS CDK) with multi-region deployment, observability, and automated alerting
+- **Infrastructure as Code** (AWS CDK) with versioned stacks, observability, and automated alerting
 - **Multi-provider authentication** (Google, Facebook, Apple, Microsoft) via Cognito with TOTP MFA
 
 ## Architecture
@@ -54,7 +54,7 @@ A full-stack application with:
 | **Backend**       | AWS Lambda (Node.js 24), API Gateway REST, PostgreSQL (Supabase)                       |
 | **AI**            | Amazon Bedrock (Nova Micro/Lite + Claude Haiku), Step Functions, AppSync Events        |
 | **Auth**          | AWS Cognito (User Pool + Identity Pool), Google/Facebook/Apple/Microsoft OAuth         |
-| **Infra**         | AWS CDK (TypeScript), CloudFormation, multi-region (us-east-1, us-east-2)              |
+| **Infra**         | AWS CDK (TypeScript), CloudFormation, versioned stacks (v1/v2/v3), us-east-2           |
 | **Observability** | CloudWatch (dashboard + 34 alarms + composite), EMF metrics, X-Ray tracing, SNS alerts |
 | **Email**         | React Email templates, SES, S3-based template storage                                  |
 | **CI/CD**         | GitHub Actions (OIDC auth), Turbo, pnpm workspaces                                     |

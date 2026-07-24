@@ -10,7 +10,7 @@ The client application (Expo web export) is hosted on AWS Amplify. Amplify conne
 GitHub (push to main)
   |
   v
-Amplify (auto-build enabled for dev, manual trigger for prod)
+Amplify (auto-build disabled in prod -- release/manual trigger)
   |
   |-- Reads amplify.yml from client/main/
   |-- Sets AMPLIFY_MONOREPO_APP_ROOT = client/main
@@ -20,7 +20,7 @@ Amplify (auto-build enabled for dev, manual trigger for prod)
   v
 Static site deployed
   |-- SPA rewrite: all non-file paths -> /index.html
-  |-- Custom domain: {prefix}.financial-management.migudev.com
+  |-- Custom domain: financial-management.migudev.com (apex, empty prefix)
   |-- ACM certificate auto-provisioned by Amplify
   |
   v
@@ -31,14 +31,17 @@ EventBridge rule captures build status
 
 ## Stack Configuration
 
-| Setting              | Dev (us-east-1) | Prod (us-east-2)            |
-| -------------------- | --------------- | --------------------------- |
-| Platform             | WEB             | WEB                         |
-| Stage                | DEVELOPMENT     | PRODUCTION                  |
-| Auto-build on push   | Yes             | No (manual/release trigger) |
-| Branch               | main            | main                        |
-| App root             | `client/main`   | `client/main`               |
-| Branch auto-deletion | Enabled         | Enabled                     |
+Production is the only deployed environment (see [Deployment](deployment.md)).
+
+| Setting              | Production (us-east-2)        |
+| -------------------- | ----------------------------- |
+| App ID               | `d2rsmp0ta8dev7`              |
+| Platform             | WEB                           |
+| Stage                | PRODUCTION                    |
+| Auto-build on push   | No (release / manual trigger) |
+| Branch               | main                          |
+| App root             | `client/main`                 |
+| Branch auto-deletion | Enabled                       |
 
 ## Environment Variables (injected at build)
 
@@ -75,13 +78,21 @@ This means:
 
 ## Custom Domain
 
-| Setting       | Value                                                     |
-| ------------- | --------------------------------------------------------- |
-| Root domain   | `financial-management.migudev.com` (Route 53 hosted zone) |
-| Dev subdomain | `dev.financial-management.migudev.com`                    |
-| Prod domain   | `financial-management.migudev.com` (root)                 |
-| Certificate   | ACM auto-provisioned by Amplify                           |
-| DNS           | Amplify creates CNAME records in Route 53                 |
+| Setting     | Value                                                                    |
+| ----------- | ------------------------------------------------------------------------ |
+| Root domain | `financial-management.migudev.com` (Route 53 hosted zone)                |
+| Prod URL    | `financial-management.migudev.com` — the **apex**                        |
+| Subdomain   | Controlled by `AMPLIFY_CUSTOM_DOMAIN_PREFIX`; **empty = apex** (current) |
+| Certificate | ACM auto-provisioned by Amplify (SAN covers apex + `*.`)                 |
+| DNS         | Amplify creates records in Route 53                                      |
+
+> The apex mapping was restored in July 2026. Because CloudFormation had drifted
+> (the live association pointed at a `prod.` subdomain while the template already
+> said apex), the fix required a **two-step CDK deploy**: first deploy with
+> `AMPLIFY_CUSTOM_DOMAIN_PREFIX=prod` to make CloudFormation match reality, then
+> deploy again with the empty prefix so CFN applies `prod` → apex. A single
+> deploy is a no-op in that situation — `cdk diff` reports no changes because CFN
+> compares against its own recorded state, not the drifted resource.
 
 ## GitHub Token
 
