@@ -117,12 +117,15 @@ time. See `.github/release-drafter.yml`.
 ## Manual Deployment
 
 ```bash
-# 1. Load production environment variables
-source config/.env.production
+# 1. Load production environment variables.
+#    `set -a` (allexport) is REQUIRED: the env files hold plain KEY=value lines
+#    with no `export`, so a bare `source` would only create shell variables and
+#    CDK (a child process) would run with them UNSET.
+set -a && source config/.env.production && set +a
 
-# 2. Authenticate (AWS SSO)
-aws sso login --sso-session miguel     # profile: miguel.gutierrez-prod
-export AWS_PROFILE=miguel.gutierrez-prod
+# 2. Authenticate (AWS SSO) — replace with your own profile / sso-session
+aws sso login --sso-session <your-sso-session>
+export AWS_PROFILE=<your-prod-profile>
 
 # 3. Verify you are on the production account before deploying
 aws sts get-caller-identity --query Account --output text   # -> 108703089452

@@ -255,9 +255,12 @@ pnpm infra:cdk diff
 pnpm infra:cdk deploy --all --require-approval broadening
 ```
 
-Load `config/.env.production` and export `AWS_PROFILE=miguel.gutierrez-prod`
-first, and confirm the account is `108703089452` before deploying. See
-`docs/deployment.md` and the `fm-deploy-prod` skill.
+Before deploying: load the env file with `set -a && source
+config/.env.production && set +a` (plain `source` does **not** export to child
+processes, so CDK would run without the variables), export `AWS_PROFILE` for
+your own production profile, and confirm you are on the production account with
+`aws sts get-caller-identity`. See `docs/deployment.md` and the `fm-deploy-prod`
+skill.
 
 ### Environment Variables
 

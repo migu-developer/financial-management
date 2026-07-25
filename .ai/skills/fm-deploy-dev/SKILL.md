@@ -56,7 +56,8 @@ Set these in `config/.env.development` before deploying:
 ### 1. Load environment
 
 ```bash
-source config/.env.development
+# `set -a` is required: plain `source` would not export to child processes
+set -a && source config/.env.development && set +a
 ```
 
 ### 2. Install dependencies
@@ -105,7 +106,8 @@ Stacks deploy with dependencies resolved automatically by CDK:
 
 ## Critical Patterns
 
-- Always `source config/.env.development` before any CDK command
+- Always `set -a && source config/.env.development && set +a` before any CDK
+  command (a bare `source` does not export to child processes)
 - Run `pnpm infra:cdk synth` before deploying to catch template errors early
 - The monitoring stack (v3) imports cross-version outputs from v1 and v2 stacks
 
