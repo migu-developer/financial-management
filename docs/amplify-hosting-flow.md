@@ -78,13 +78,13 @@ This means:
 
 ## Custom Domain
 
-| Setting     | Value                                                                    |
-| ----------- | ------------------------------------------------------------------------ |
-| Root domain | `financial-management.migudev.com` (Route 53 hosted zone)                |
-| Prod URL    | `financial-management.migudev.com` — the **apex**                        |
-| Subdomain   | Controlled by `AMPLIFY_CUSTOM_DOMAIN_PREFIX`; **empty = apex** (current) |
-| Certificate | ACM auto-provisioned by Amplify (SAN covers apex + `*.`)                 |
-| DNS         | Amplify creates records in Route 53                                      |
+| Setting     | Value                                                                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Root domain | `financial-management.migudev.com` (Route 53 hosted zone)                                                                                 |
+| Prod URL    | `financial-management.migudev.com` — the **apex**                                                                                         |
+| Subdomain   | Controlled by `AMPLIFY_CUSTOM_DOMAIN_PREFIX`; **empty = apex** (current)                                                                  |
+| Certificate | ACM auto-provisioned by Amplify. SAN covers both `financial-management.migudev.com` and the wildcard `*.financial-management.migudev.com` |
+| DNS         | Amplify creates records in Route 53                                                                                                       |
 
 > The apex mapping was restored in July 2026. Because CloudFormation had drifted
 > (the live association pointed at a `prod.` subdomain while the template already
