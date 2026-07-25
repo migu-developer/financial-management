@@ -29,16 +29,18 @@ body:
     id: area
     attributes:
       label: Area
-      description: Which part of the project would this affect?
+      description: >
+        Which part of the project would this affect? Values match the `Area`
+        field of the project board exactly.
       options:
-        - Client (client/main)
-        - Services (backend)
-        - Packages (shared)
-        - Infra (CDK)
-        - AI (chat)
-        - DevOps / CI
+        - Client
+        - Services
+        - Packages
+        - Infra
+        - AI
+        - DevOps
         - Design
-        - Other / not sure
+        - Other
     validations:
       required: true
 
