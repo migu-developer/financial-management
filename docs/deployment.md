@@ -70,22 +70,25 @@ Domain-related variables worth calling out (they decide the public URL):
 
 All CI/CD runs on GitHub Actions with OIDC authentication (no static AWS keys).
 
-| Workflow                   | Trigger                                    | Environment             |
-| -------------------------- | ------------------------------------------ | ----------------------- |
-| **CI**                     | PR + push to main                          | -                       |
-| **Integration Tests**      | PR + push to main                          | -                       |
-| **Deploy Infrastructure**  | GitHub release published (non-pre-release) | production (us-east-2)  |
-| **Deploy Infrastructure**  | `workflow_dispatch` (manual)               | staging _or_ production |
-| **Deploy Client**          | Release published / `workflow_dispatch`    | production / manual     |
-| **Deploy Email Templates** | Release published / `workflow_dispatch`    | production / manual     |
-| **Publish API Docs**       | After infrastructure deploy                | production              |
-| **Release Drafter**        | push to main (draft) + PR (autolabel)      | -                       |
+| Workflow                   | Automatic trigger                                           | Manual (`workflow_dispatch`) |
+| -------------------------- | ----------------------------------------------------------- | ---------------------------- |
+| **CI**                     | PR + push to main                                           | —                            |
+| **Integration Tests**      | PR + push to main                                           | —                            |
+| **Release Drafter**        | push to main (refresh draft) + PR (autolabel)               | yes (no environment input)   |
+| **Deploy Infrastructure**  | GitHub release published (non-pre-release) → **production** | `staging` or `production`    |
+| **Deploy Client**          | GitHub release published → **production**                   | `staging` or `production`    |
+| **Deploy Email Templates** | GitHub release published → **production**                   | `staging` or `production`    |
+| **Publish API Docs**       | After the infrastructure deploy → **production**            | —                            |
 
-**Production deploys are automatic on a published GitHub release.** Staging
-deploys are **manual-only** (`workflow_dispatch`) — the previous
-"auto-deploy on every merge to main" behaviour was removed when the dev
-environment was decommissioned, and a job-level guard blocks staging unless the
-run was manually dispatched.
+**Production deploys are automatic on a published GitHub release.** The three
+deploy workflows also expose a manual `workflow_dispatch` whose `environment`
+input still offers **`staging` or `production`** — the input is intentionally
+kept even though the staging AWS account is decommissioned, so a future dev
+environment needs no workflow change. **Staging is manual-only**: the previous
+"auto-deploy on every merge to main" behaviour was removed, and a job-level
+guard skips the deploy when the resolved environment is `staging` unless the run
+came from `workflow_dispatch`. Dispatching `staging` today would fail at the AWS
+step — there is no account behind it.
 
 The **CI** workflow runs two jobs: `quality` (lint/typecheck/format/test) and
 `sfn-local` — which validates the AI chat state machine end-to-end against Step
