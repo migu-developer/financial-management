@@ -7,10 +7,10 @@ The client application (Expo web export) is hosted on AWS Amplify. Amplify conne
 ## Deployment Flow
 
 ```
-GitHub (push to main)
-  |
+Release published  /  manual trigger (workflow_dispatch or start-job)
+  |   (a plain push to main does NOT build: auto-build is disabled in prod)
   v
-Amplify (auto-build disabled in prod -- release/manual trigger)
+Amplify build -- checks out main from GitHub
   |
   |-- Reads amplify.yml from client/main/
   |-- Sets AMPLIFY_MONOREPO_APP_ROOT = client/main
