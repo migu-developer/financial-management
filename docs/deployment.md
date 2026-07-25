@@ -28,33 +28,33 @@ Consequences to keep in mind:
 
 Environment files are stored in `config/` and loaded via `.envrc` (direnv):
 
-| Variable                  | Description                                        | Required |
-| ------------------------- | -------------------------------------------------- | -------- |
-| `AWS_REGION`              | AWS region (`us-east-2` for production)            | Yes      |
-| `PROJECT_PREFIX`          | Stack name prefix (e.g. `FinancialManagementProd`) | Yes      |
-| `STAGE`                   | Environment stage (`prod`)                         | Yes      |
-| `DATABASE_URL`            | PostgreSQL write connection string                 | Yes      |
-| `DATABASE_READONLY_URL`   | PostgreSQL read-only connection string             | Yes      |
-| `ALLOWED_ORIGINS`         | CORS origins (comma-separated)                     | Yes      |
-| `ALLOWED_METHODS`         | Allowed HTTP methods (comma-separated)             | No       |
-| `SES_FROM_EMAIL`          | Verified SES sender email                          | Yes      |
-| `ALERT_EMAIL_TO`          | Alert notification recipient                       | Yes      |
-| `ALERT_EMAIL_FROM`        | Alert sender email                                 | Yes      |
-| `DASHBOARD_URL`           | CloudWatch dashboard URL (for alert emails)        | No       |
-| `GOOGLE_CLIENT_ID`        | Google OAuth client ID                             | Yes      |
-| `GOOGLE_CLIENT_SECRET`    | Google OAuth client secret                         | Yes      |
-| `FACEBOOK_APP_ID`         | Facebook OAuth app ID                              | Yes      |
-| `FACEBOOK_APP_SECRET`     | Facebook OAuth app secret                          | Yes      |
-| `APPLE_CLIENT_ID`         | Apple Sign-In service ID                           | Yes      |
-| `APPLE_TEAM_ID`           | Apple developer team ID                            | Yes      |
-| `APPLE_KEY_ID`            | Apple Sign-In key ID                               | Yes      |
-| `APPLE_PRIVATE_KEY`       | Apple Sign-In private key (PEM)                    | Yes      |
-| `MICROSOFT_CLIENT_ID`     | Microsoft OIDC client ID                           | Yes      |
-| `MICROSOFT_CLIENT_SECRET` | Microsoft OIDC client secret                       | Yes      |
-| `ASSETS_BUCKET_NAME`      | S3 bucket for email templates                      | Yes      |
-| `EMAILS_PREFIX`           | S3 key prefix for email templates                  | Yes      |
-| `GITHUB_TOKEN`            | GitHub PAT for Amplify source (SSM)                | Yes      |
-| `DEPLOY_VERSIONS`         | CDK stack versions to deploy (e.g. `v1,v2,v3`)     | No       |
+| Variable                  | Description                                                                                                                                                                                                                  | Required |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `AWS_REGION`              | AWS region (`us-east-2` for production)                                                                                                                                                                                      | Yes      |
+| `PROJECT_PREFIX`          | Stack name prefix (e.g. `FinancialManagementProd`)                                                                                                                                                                           | Yes      |
+| `STAGE`                   | Environment stage (`prod`)                                                                                                                                                                                                   | Yes      |
+| `DATABASE_URL`            | PostgreSQL write connection string                                                                                                                                                                                           | Yes      |
+| `DATABASE_READONLY_URL`   | PostgreSQL read-only connection string                                                                                                                                                                                       | Yes      |
+| `ALLOWED_ORIGINS`         | CORS origins (comma-separated)                                                                                                                                                                                               | Yes      |
+| `ALLOWED_METHODS`         | Allowed HTTP methods (comma-separated)                                                                                                                                                                                       | No       |
+| `SES_FROM_EMAIL`          | Verified SES sender email                                                                                                                                                                                                    | Yes      |
+| `ALERT_EMAIL_TO`          | Alert notification recipient                                                                                                                                                                                                 | Yes      |
+| `ALERT_EMAIL_FROM`        | Alert sender email                                                                                                                                                                                                           | Yes      |
+| `DASHBOARD_URL`           | CloudWatch dashboard URL (for alert emails)                                                                                                                                                                                  | No       |
+| `GOOGLE_CLIENT_ID`        | Google OAuth client ID                                                                                                                                                                                                       | Yes      |
+| `GOOGLE_CLIENT_SECRET`    | Google OAuth client secret                                                                                                                                                                                                   | Yes      |
+| `FACEBOOK_APP_ID`         | Facebook OAuth app ID                                                                                                                                                                                                        | Yes      |
+| `FACEBOOK_APP_SECRET`     | Facebook OAuth app secret                                                                                                                                                                                                    | Yes      |
+| `APPLE_CLIENT_ID`         | Apple Sign-In service ID                                                                                                                                                                                                     | Yes      |
+| `APPLE_TEAM_ID`           | Apple developer team ID                                                                                                                                                                                                      | Yes      |
+| `APPLE_KEY_ID`            | Apple Sign-In key ID                                                                                                                                                                                                         | Yes      |
+| `APPLE_PRIVATE_KEY`       | Apple Sign-In private key (PEM)                                                                                                                                                                                              | Yes      |
+| `MICROSOFT_CLIENT_ID`     | Microsoft OIDC client ID                                                                                                                                                                                                     | Yes      |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft OIDC client secret                                                                                                                                                                                                 | Yes      |
+| `ASSETS_BUCKET_NAME`      | S3 bucket for email templates                                                                                                                                                                                                | Yes      |
+| `EMAILS_PREFIX`           | S3 key prefix for email templates                                                                                                                                                                                            | Yes      |
+| `ACCESS_TOKEN_NAME`       | **Name** of the Secrets Manager secret holding the GitHub PAT for the Amplify source (e.g. `github-migudev-token`) — the value is resolved at deploy time via `{{resolve:secretsmanager:...}}`, never stored in the template | Yes      |
+| `DEPLOY_VERSIONS`         | CDK stack versions to deploy (e.g. `v1,v2,v3`)                                                                                                                                                                               | No       |
 
 Domain-related variables worth calling out (they decide the public URL):
 
