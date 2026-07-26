@@ -4,7 +4,7 @@
 
 ## Overview
 
-The monitoring stack (v3) provides a CloudWatch dashboard with widget sections for every subsystem, 34 alarms plus a composite "Chat-Unhealthy" alarm covering API Gateway, Lambda (services + AI chat), Step Functions, AppSync Events and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete. The chat Lambdas emit business metrics in EMF format (namespace `FinancialManagement`).
+The monitoring stack (v3) provides a CloudWatch dashboard with widget sections for every subsystem, 23 alarms plus a composite "Chat-Unhealthy" alarm covering API Gateway, Lambda (services + AI chat), Step Functions, AppSync Events and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete. The chat Lambdas emit business metrics in EMF format (namespace `FinancialManagement`).
 
 The AI chat workflow is hardened so it **never leaves the client hanging**: a catch-all error path publishes a friendly message to the user and then fails the execution (so alarms still fire). See the [Resilience model](#resilience-model-ai-chat) and [How to debug one conversation](#how-to-debug-one-failed-chat-conversation) below.
 
@@ -50,24 +50,29 @@ Dashboard sections:
 
 Additionally, a **Logs Insights** widget queries Lambda error logs across all service functions.
 
-## Alarms (34 total + 1 composite)
+## Alarms (23 total + 1 composite)
 
-### API Gateway alarms (3)
+Every alarm below is a billable **alarm-metric** ($0.10/month each); the
+composite is a flat $0.50/month. Total: **$2.80/month**. See
+[What is deliberately NOT alarmed](#what-is-deliberately-not-alarmed).
+
+### API Gateway alarms (2)
 
 | Alarm           | Metric          | Threshold  | Period | Eval Periods |
 | --------------- | --------------- | ---------- | ------ | ------------ |
 | API 5xx Errors  | `5XXError`      | >= 1       | 5 min  | 1            |
-| API 4xx Errors  | `4XXError`      | >= 10      | 5 min  | 1            |
 | API Latency p99 | `Latency` (p99) | >= 5000 ms | 5 min  | 2            |
 
-### Lambda alarms (21)
+### Lambda alarms (11)
 
-Each API-facing service (expenses, documents, currencies, users) and each AI chat Lambda (chat handler, execute-query, validate-fields, create-expense, save-and-publish, save-preview) has 2 alarms; the UpdateRates scheduler has errors only:
+One `Errors` alarm per function — the API-facing services (expenses, documents,
+currencies, users), the UpdateRates scheduler, and each AI chat Lambda (chat
+handler, execute-query, validate-fields, create-expense, save-and-publish,
+save-preview):
 
-| Alarm               | Metric      | Threshold | Period | Eval Periods |
-| ------------------- | ----------- | --------- | ------ | ------------ |
-| {Service} Errors    | `Errors`    | >= 1      | 5 min  | 1            |
-| {Service} Throttles | `Throttles` | >= 1      | 5 min  | 1            |
+| Alarm            | Metric   | Threshold | Period | Eval Periods |
+| ---------------- | -------- | --------- | ------ | ------------ |
+| {Service} Errors | `Errors` | >= 1      | 5 min  | 1            |
 
 ### AI Chat workflow alarms (4)
 
@@ -107,6 +112,25 @@ Dimension is `EventAPIId` (verified against the metrics the deployed Event API a
 | Pre-Signup Errors     | `fm-{stage}-pre-signup`     | `Errors` | >= 1      |
 | Custom-Message Errors | `fm-{stage}-custom-message` | `Errors` | >= 1      |
 | User-Sync Errors      | `fm-{stage}-user-sync`      | `Errors` | >= 1      |
+
+## What is deliberately NOT alarmed
+
+CloudWatch bills **$0.10 per alarm-metric per month**, and an alarm nobody can
+act on is pure cost plus noise. Two signals were intentionally dropped (July
+2026), taking the alarm bill from $3.90 to $2.80/month:
+
+| Dropped                         | Why                                                                                                                                                                                                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Per-Lambda `Throttles`** (10) | No function sets `reservedConcurrentExecutions`, so throttling could only come from the account-level limit of 1000 concurrent executions — unreachable at this workload. A throttled invocation also surfaces as `Errors` on the function and 5xx on API Gateway, both still alarmed. |
+| **`Api-4xx-Spike`** (1)         | 4xx means the **client** sent a bad request (expired token, validation failure). It is not a service fault and not actionable by an on-call alert. A genuine server-side problem appears as 5xx.                                                                                       |
+
+Both metrics remain on the **dashboard** widgets for trend analysis — dashboard
+widgets are free within the first three dashboards, so no visibility was lost.
+
+> Note: **consolidating** alarms does not reduce cost. Metric math alarms are
+> billed per metric referenced, so folding 10 alarms into one expression over 10
+> metrics costs the same $1.00. The only lever is removing metrics from
+> monitoring altogether, which is why these two were dropped rather than merged.
 
 ## Business Metrics (EMF)
 

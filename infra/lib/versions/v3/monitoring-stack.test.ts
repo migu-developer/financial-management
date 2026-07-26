@@ -140,7 +140,7 @@ describe('MonitoringStack', () => {
     expect(mockTopic.addSubscription).toHaveBeenCalledTimes(1);
   });
 
-  test('creates API Gateway alarms (5xx, 4xx, latency)', () => {
+  test('creates API Gateway alarms (5xx, latency) but no 4xx alarm', () => {
     const { Alarm: MockAlarm } = jest.requireMock(
       'aws-cdk-lib/aws-cloudwatch',
     ) as { Alarm: jest.Mock };
@@ -156,11 +156,12 @@ describe('MonitoringStack', () => {
       (c: unknown[]) => (c[2] as Record<string, unknown>).alarmName as string,
     );
     expect(alarmNames).toContain('Monitoring-Api-5xx-Errors');
-    expect(alarmNames).toContain('Monitoring-Api-4xx-Spike');
     expect(alarmNames).toContain('Monitoring-Api-Latency-High');
+    // 4xx is a CLIENT fault, not actionable by an alert — dashboard only.
+    expect(alarmNames).not.toContain('Monitoring-Api-4xx-Spike');
   });
 
-  test('creates Lambda alarms per service (errors + throttles)', () => {
+  test('creates Lambda error alarms per service, and no throttle alarms', () => {
     const { Alarm: MockAlarm } = jest.requireMock(
       'aws-cdk-lib/aws-cloudwatch',
     ) as { Alarm: jest.Mock };
@@ -178,12 +179,13 @@ describe('MonitoringStack', () => {
 
     for (const service of ['Expenses', 'Documents', 'Currencies', 'Users']) {
       expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Errors`);
-      expect(alarmNames).toContain(`Monitoring-Lambda-${service}-Throttles`);
     }
-
-    // UpdateRates has errors alarm but no throttle alarm (scheduler, not API)
     expect(alarmNames).toContain('Monitoring-Lambda-UpdateRates-Errors');
-    expect(alarmNames).not.toContain('Monitoring-Lambda-UpdateRates-Throttles');
+
+    // No Lambda sets reservedConcurrentExecutions, so throttling can only come
+    // from the 1000-concurrency account limit — unreachable here. Throttles
+    // stay on the dashboard widget instead of paying per alarm.
+    expect(alarmNames.filter((n) => n.endsWith('-Throttles'))).toHaveLength(0);
   });
 
   test('creates Cognito trigger alarms', () => {
@@ -243,15 +245,18 @@ describe('MonitoringStack', () => {
       defaultProps,
     );
 
-    // 3 API + (4 services × 2 each) + 1 UpdateRates-24h + 3 Cognito triggers
-    //   = 15
-    // + (6 chat Lambdas × 2 each: error + throttle) = 12
+    // Every alarm here is a billable alarm-metric ($0.10/month each), so the
+    // count is asserted explicitly to keep cost changes visible in review.
+    //
+    // 2 API (5xx + latency; no 4xx) + 11 Lambda errors (5 services + 6 chat)
+    // + 3 Cognito triggers
     // + 2 chat Step Functions (ExecutionsFailed + ExecutionsTimedOut)
     // + 2 AppSync Events (5XXError + FailedEvents)
     // + 3 chat resilience (LatencyP90High + ExecutionsAborted + PublishFailed)
-    // Total = 34
-    // (the CompositeAlarm "Chat-Unhealthy" is NOT pushed into this.alarms)
-    expect(stack.alarms).toHaveLength(34);
+    // Total = 23
+    // (the CompositeAlarm "Chat-Unhealthy" is NOT pushed into this.alarms;
+    //  it is billed separately at a flat $0.50/month)
+    expect(stack.alarms).toHaveLength(23);
   });
 
   test('creates AI chat workflow and AppSync Events alarms', () => {
