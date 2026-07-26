@@ -20,6 +20,7 @@ import {
   IntegrationPattern,
   JsonPath,
   LogLevel,
+  Pass,
   StateMachine,
   StateMachineType,
   Succeed,
@@ -154,6 +155,45 @@ export class StepFunctionsChatStack extends BaseStack {
       `fm-${stage}-chat-save-preview`,
       'src/handlers/sfn-save-preview.ts',
       { ...baseEnv, ...publisherEnv },
+    );
+
+    // ── Receipt attachments (Phase 2) ──────────────────────
+    const attachmentsBucketName = importFromVersion(
+      this,
+      version,
+      'ChatAttachments',
+      'AttachmentsBucketName',
+    );
+    const attachmentsBucketArn = importFromVersion(
+      this,
+      version,
+      'ChatAttachments',
+      'AttachmentsBucketArn',
+    );
+
+    // No DATABASE_* env: this task only reads an image and returns text.
+    const analyzeReceiptFn = this.makeLambda(
+      'AnalyzeReceiptFn',
+      `fm-${stage}-chat-analyze-receipt`,
+      'src/handlers/sfn-analyze-receipt.ts',
+      { CHAT_ATTACHMENTS_BUCKET: attachmentsBucketName },
+    );
+
+    // Textract reads the object itself, but the CALLER's credentials are used
+    // for the S3Object access, so the Lambda role needs GetObject too.
+    analyzeReceiptFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: [`${attachmentsBucketArn}/chat-attachments/*`],
+      }),
+    );
+    // AnalyzeExpense is not resource-scopable — Textract has no per-document
+    // ARN, so '*' is the only valid resource for this action.
+    analyzeReceiptFn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['textract:AnalyzeExpense'],
+        resources: ['*'],
+      }),
     );
 
     // Grant the publishers IAM EventPublish on the Event API.
@@ -675,7 +715,62 @@ export class StepFunctionsChatStack extends BaseStack {
       )
       .otherwise(generateUnknown.next(saveUnknownReply));
 
-    const definition = classifyIntent.next(intentChoice);
+    // Wire ClassifyIntent → Intent? BEFORE it is referenced as a branch
+    // target below. Without this the Choice is unreachable and Step Functions
+    // rejects the definition with MISSING_TRANSITION_TARGET.
+    classifyIntent.next(intentChoice);
+
+    // ── Attachment pre-processing branch (Phase 2) ─────────
+    // Runs BEFORE classification: Textract's reading is folded into $.content,
+    // so every downstream state is untouched by attachments — it just sees a
+    // longer message.
+    const analyzeReceipt = new LambdaInvoke(this, 'AnalyzeReceipt', {
+      lambdaFunction: analyzeReceiptFn,
+      payload: TaskInput.fromObject({
+        'uid.$': '$.userId',
+        'sessionId.$': '$.sessionId',
+        'messageId.$': '$.messageId',
+        'attachmentS3Key.$': '$.attachmentS3Key',
+        'content.$': '$.content',
+      }),
+      resultPath: '$.receipt',
+      payloadResponseOnly: true,
+      taskTimeout: LAMBDA_TASK_TIMEOUT,
+    });
+    addLambdaRetry(analyzeReceipt);
+    analyzeReceipt.addCatch(publishError, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    // Overwrite $.content with the enriched text. A Pass with inputPath +
+    // resultPath is enough — no intrinsic-function gymnastics needed.
+    const applyReceiptText = new Pass(this, 'ApplyReceiptText', {
+      inputPath: '$.receipt.enrichedContent',
+      resultPath: '$.content',
+    });
+
+    // Only IMAGE attachments are wired up. An `audio` attachment falls through
+    // to the normal text path (its caption is still processed) until the
+    // voice-note phase adds a Transcribe branch here.
+    // BOTH isPresent guards are load-bearing: a plain text message carries
+    // neither key (the use case omits them and JSON.stringify drops
+    // undefined), and `stringEquals` against a MISSING path raises a
+    // States.Runtime error that would fail the whole execution. `And` is
+    // documented to evaluate in order, but the guards are explicit rather
+    // than relying on short-circuiting.
+    const attachmentChoice = new Choice(this, 'HasImageAttachment?')
+      .when(
+        Condition.and(
+          Condition.isPresent('$.attachmentS3Key'),
+          Condition.isPresent('$.attachmentType'),
+          Condition.stringEquals('$.attachmentType', 'image'),
+        ),
+        analyzeReceipt.next(applyReceiptText).next(classifyIntent),
+      )
+      .otherwise(classifyIntent);
+
+    const definition = attachmentChoice;
 
     // ── State Machine ──────────────────────────────────────
     const logGroup = new LogGroup(this, `${stackName}-StateMachineLogs`, {
@@ -768,6 +863,13 @@ export class StepFunctionsChatStack extends BaseStack {
       this,
       'SavePreviewFnName',
       savePreviewFn.functionName,
+      version,
+      'StepFunctionsChat',
+    );
+    exportForCrossVersion(
+      this,
+      'AnalyzeReceiptFnName',
+      analyzeReceiptFn.functionName,
       version,
       'StepFunctionsChat',
     );

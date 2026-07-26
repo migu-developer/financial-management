@@ -77,6 +77,13 @@ ROLE_ARN="arn:aws:iam::123456789012:role/DummyRole"
 #   unknownIntent                        → SUCCEEDED (UNKNOWN branch)
 #   executeQueryFailsRoutesToPublishError→ FAILED (catch-all → PublishError → WorkflowFailed)
 #   bedrockThrottleRecovers              → SUCCEEDED (Retry recovers from throttle)
+#   receiptImageCreatesExpense           → SUCCEEDED (attachment branch → Textract → CREATE)
+#   receiptUnreadableAsksForData         → SUCCEEDED (unreadable photo → clarification)
+#   analyzeReceiptFailsRoutesToPublishError → FAILED (Textract task fails → catch-all)
+#   audioAttachmentSkipsReceiptBranch    → SUCCEEDED (audio not yet wired → text path)
+#
+# The third field selects the execution input (see INPUT_* below); it defaults
+# to `text` when omitted.
 declare -a CASES=(
   "queryHappyPath:SUCCEEDED"
   "createCompleteConfirmed:SUCCEEDED"
@@ -87,18 +94,50 @@ declare -a CASES=(
   "unknownIntent:SUCCEEDED"
   "executeQueryFailsRoutesToPublishError:FAILED"
   "bedrockThrottleRecovers:SUCCEEDED"
+  "receiptImageCreatesExpense:SUCCEEDED:image"
+  "receiptUnreadableAsksForData:SUCCEEDED:image"
+  "analyzeReceiptFailsRoutesToPublishError:FAILED:image"
+  "audioAttachmentSkipsReceiptBranch:SUCCEEDED:audio"
 )
 
 # A representative execution input. The mock config matches on STATE NAME, not
 # on input, so these values only need to satisfy the ASL's JsonPath references
 # ($.userId, $.sessionId, $.messageId, $.userEmail, $.content, $.history).
-EXECUTION_INPUT='{
+INPUT_text='{
   "userId": "user-123",
   "sessionId": "session-123",
   "messageId": "message-123",
   "userEmail": "test@example.com",
   "content": "¿cuánto gasté en comida este mes?",
   "history": "[]"
+}'
+
+# Attachment inputs additionally carry $.attachmentS3Key and $.attachmentType,
+# which is exactly what the HasImageAttachment? Choice branches on. A plain text
+# message omits BOTH keys — that absence is what the `otherwise` path relies on,
+# so do NOT add them to INPUT_text.
+INPUT_image='{
+  "userId": "user-123",
+  "sessionId": "session-123",
+  "messageId": "message-123",
+  "userEmail": "test@example.com",
+  "content": "registra este gasto",
+  "history": "[]",
+  "attachmentS3Key": "chat-attachments/user-123/8f14e45f.jpg",
+  "attachmentType": "image"
+}'
+
+# `audio` is accepted by the schema but has no Transcribe branch yet, so it must
+# fall through to the ordinary text path rather than entering AnalyzeReceipt.
+INPUT_audio='{
+  "userId": "user-123",
+  "sessionId": "session-123",
+  "messageId": "message-123",
+  "userEmail": "test@example.com",
+  "content": "gasté 20 mil en taxi",
+  "history": "[]",
+  "attachmentS3Key": "chat-attachments/user-123/8f14e45f.m4a",
+  "attachmentType": "audio"
 }'
 
 # ── Helpers ────────────────────────────────────────────────
@@ -169,10 +208,18 @@ aws stepfunctions create-state-machine \
 # ── 4. Run each test case ──────────────────────────────────
 FAILURES=0
 for entry in "${CASES[@]}"; do
-  CASE_NAME="${entry%%:*}"
-  EXPECTED="${entry##*:}"
+  IFS=':' read -r CASE_NAME EXPECTED INPUT_KIND <<<"${entry}"
+  INPUT_KIND="${INPUT_KIND:-text}"
+  # Indirect expansion picks INPUT_text / INPUT_image / INPUT_audio.
+  INPUT_VAR="INPUT_${INPUT_KIND}"
+  EXECUTION_INPUT="${!INPUT_VAR}"
+  if [[ -z "${EXECUTION_INPUT}" ]]; then
+    fail "${CASE_NAME}: unknown input kind '${INPUT_KIND}' (no ${INPUT_VAR})"
+    FAILURES=$((FAILURES + 1))
+    continue
+  fi
 
-  log "Test case: ${CASE_NAME} (expect ${EXPECTED})"
+  log "Test case: ${CASE_NAME} (expect ${EXPECTED}, input ${INPUT_KIND})"
 
   # Start the execution against the test-case-qualified ARN.
   EXEC_ARN="$(aws stepfunctions start-execution \

@@ -4,7 +4,7 @@
 
 ## Overview
 
-The monitoring stack (v3) provides a CloudWatch dashboard with widget sections for every subsystem, 23 alarms plus a composite "Chat-Unhealthy" alarm covering API Gateway, Lambda (services + AI chat), Step Functions, AppSync Events and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete. The chat Lambdas emit business metrics in EMF format (namespace `FinancialManagement`).
+The monitoring stack (v3) provides a CloudWatch dashboard with widget sections for every subsystem, 24 alarms plus a composite "Chat-Unhealthy" alarm covering API Gateway, Lambda (services + AI chat), Step Functions, AppSync Events and Cognito triggers, and an automated alert pipeline that delivers formatted emails via SES when alarms fire or Amplify builds complete. The chat Lambdas emit business metrics in EMF format (namespace `FinancialManagement`).
 
 The AI chat workflow is hardened so it **never leaves the client hanging**: a catch-all error path publishes a friendly message to the user and then fails the execution (so alarms still fire). See the [Resilience model](#resilience-model-ai-chat) and [How to debug one conversation](#how-to-debug-one-failed-chat-conversation) below.
 
@@ -50,10 +50,10 @@ Dashboard sections:
 
 Additionally, a **Logs Insights** widget queries Lambda error logs across all service functions.
 
-## Alarms (23 total + 1 composite)
+## Alarms (24 total + 1 composite)
 
 Every alarm below is a billable **alarm-metric** ($0.10/month each); the
-composite is a flat $0.50/month. Total: **$2.80/month**. See
+composite is a flat $0.50/month. Total: **$2.90/month**. See
 [What is deliberately NOT alarmed](#what-is-deliberately-not-alarmed).
 
 ### API Gateway alarms (2)
@@ -63,12 +63,12 @@ composite is a flat $0.50/month. Total: **$2.80/month**. See
 | API 5xx Errors  | `5XXError`      | >= 1       | 5 min  | 1            |
 | API Latency p99 | `Latency` (p99) | >= 5000 ms | 5 min  | 2            |
 
-### Lambda alarms (11)
+### Lambda alarms (12)
 
 One `Errors` alarm per function — the API-facing services (expenses, documents,
 currencies, users), the UpdateRates scheduler, and each AI chat Lambda (chat
 handler, execute-query, validate-fields, create-expense, save-and-publish,
-save-preview):
+save-preview, analyze-receipt):
 
 | Alarm            | Metric   | Threshold | Period | Eval Periods |
 | ---------------- | -------- | --------- | ------ | ------------ |
@@ -117,7 +117,8 @@ Dimension is `EventAPIId` (verified against the metrics the deployed Event API a
 
 CloudWatch bills **$0.10 per alarm-metric per month**, and an alarm nobody can
 act on is pure cost plus noise. Two signals were intentionally dropped (July
-2026), taking the alarm bill from $3.90 to $2.80/month:
+2026), taking the alarm bill from $3.90 to $2.80/month (now $2.90 with the
+receipt-analysis Lambda added):
 
 | Dropped                         | Why                                                                                                                                                                                                                                                                                    |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

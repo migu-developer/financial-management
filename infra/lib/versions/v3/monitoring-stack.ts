@@ -269,6 +269,21 @@ export class MonitoringStack extends BaseStack {
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
       },
+      // Receipt attachments (Phase 2). Textract failures do NOT fail the
+      // conversation — the use case degrades to "unreadable" — so an error here
+      // means the task itself broke (bad key, missing IAM, Textract outage).
+      ChatAnalyzeReceipt: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'AnalyzeReceiptFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+      },
     };
 
     const cognitoTriggers: Record<string, string> = {

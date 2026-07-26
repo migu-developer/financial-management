@@ -194,7 +194,7 @@ describe('StepFunctionsChatStack', () => {
   });
 
   describe('Task Lambdas', () => {
-    test('creates 5 task Lambdas with stage-prefixed function names', () => {
+    test('creates 6 task Lambdas with stage-prefixed function names', () => {
       createStack();
       const { NodejsFunction: MockFn } = jest.requireMock<
         Record<string, jest.Mock>
@@ -208,6 +208,7 @@ describe('StepFunctionsChatStack', () => {
         'fm-dev-chat-create-expense',
         'fm-dev-chat-save-and-publish',
         'fm-dev-chat-save-preview',
+        'fm-dev-chat-analyze-receipt',
       ]);
     });
 
@@ -493,8 +494,141 @@ describe('StepFunctionsChatStack', () => {
         return opts?.errors?.includes('Lambda.ServiceException');
       });
       // executeQuery, validateFields, 4×save*, saveUnknownReply, publishError,
-      // waitForConfirmation = 9. CreateExpense is intentionally excluded.
-      expect(lambdaRetries.length).toBe(9);
+      // waitForConfirmation, analyzeReceipt = 10. CreateExpense is
+      // intentionally excluded (a retry would duplicate the expense).
+      expect(lambdaRetries.length).toBe(10);
+    });
+  });
+
+  describe('Receipt attachments (Phase 2)', () => {
+    test('starts the definition at the attachment Choice, not at ClassifyIntent', () => {
+      createStack();
+      const { Choice: MockChoice } = jest.requireMock(
+        'aws-cdk-lib/aws-stepfunctions',
+      ) as { Choice: jest.Mock };
+      const choiceIds = MockChoice.mock.calls.map((c: unknown[]) => c[1]);
+      // The attachment Choice must be constructed — the pre-processing branch
+      // runs BEFORE classification so downstream states are untouched.
+      expect(choiceIds).toContain('HasImageAttachment?');
+    });
+
+    test('AnalyzeReceipt receives the attachment key and the raw caption', () => {
+      createStack();
+      const call = mockLambdaInvokeCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'AnalyzeReceipt',
+      );
+      expect(call).toBeDefined();
+      const props = call![1] as {
+        payload: { obj: Record<string, string> };
+        resultPath: string;
+        payloadResponseOnly: boolean;
+      };
+      expect(props.payload.obj['attachmentS3Key.$']).toBe('$.attachmentS3Key');
+      expect(props.payload.obj['content.$']).toBe('$.content');
+      expect(props.payload.obj['uid.$']).toBe('$.userId');
+      expect(props.resultPath).toBe('$.receipt');
+      expect(props.payloadResponseOnly).toBe(true);
+    });
+
+    test('ApplyReceiptText overwrites $.content with the enriched text', () => {
+      createStack();
+      const { Pass: MockPass } = jest.requireMock(
+        'aws-cdk-lib/aws-stepfunctions',
+      ) as { Pass: jest.Mock };
+      const call = MockPass.mock.calls.find(
+        (c: unknown[]) => c[1] === 'ApplyReceiptText',
+      );
+      expect(call).toBeDefined();
+      const props = call![2] as { inputPath: string; resultPath: string };
+      // This is what keeps every downstream state attachment-agnostic: it just
+      // sees a longer $.content.
+      expect(props.inputPath).toBe('$.receipt.enrichedContent');
+      expect(props.resultPath).toBe('$.content');
+    });
+
+    test('guards the Choice with isPresent on BOTH attachment fields', () => {
+      createStack();
+      const { Condition: MockCondition } = jest.requireMock(
+        'aws-cdk-lib/aws-stepfunctions',
+      ) as { Condition: Record<string, jest.Mock> };
+      const present = MockCondition.isPresent!.mock.calls.map(
+        (c: unknown[]) => c[0],
+      );
+      // `stringEquals` against a MISSING path raises States.Runtime and would
+      // fail every plain-text execution, so both presence guards are required.
+      expect(present).toContain('$.attachmentS3Key');
+      expect(present).toContain('$.attachmentType');
+      expect(MockCondition.stringEquals).toHaveBeenCalledWith(
+        '$.attachmentType',
+        'image',
+      );
+    });
+
+    test('grants the analyze Lambda textract:AnalyzeExpense and prefix-scoped GetObject', () => {
+      createStack();
+      const statements = mockAddToRolePolicy.mock.calls.map(
+        (c: unknown[]) => (c[0] as { props: Record<string, unknown> }).props,
+      );
+
+      const textract = statements.find((p) =>
+        (p['actions'] as string[])?.includes('textract:AnalyzeExpense'),
+      );
+      expect(textract).toBeDefined();
+      // Textract exposes no per-document ARN, so '*' is the only valid resource.
+      expect(textract!['resources']).toEqual(['*']);
+
+      const getObject = statements.find((p) =>
+        (p['actions'] as string[])?.includes('s3:GetObject'),
+      );
+      expect(getObject).toBeDefined();
+      // Scoped to the attachments prefix — not the whole bucket.
+      expect((getObject!['resources'] as string[])[0]).toContain(
+        '/chat-attachments/*',
+      );
+    });
+
+    test('passes the attachments bucket to the analyze Lambda and no database url', () => {
+      createStack();
+      const { NodejsFunction: MockFn } = jest.requireMock<
+        Record<string, jest.Mock>
+      >('aws-cdk-lib/aws-lambda-nodejs');
+      const call = (MockFn as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as { functionName: string }).functionName ===
+          'fm-dev-chat-analyze-receipt',
+      );
+      expect(call).toBeDefined();
+      const env = (call![2] as { environment: Record<string, string> })
+        .environment;
+      expect(env['CHAT_ATTACHMENTS_BUCKET']).toBeDefined();
+      // This task only reads an image; it must not carry database credentials.
+      expect(env['DATABASE_URL']).toBeUndefined();
+    });
+
+    test('retries AnalyzeReceipt on transient errors and catches terminal ones', () => {
+      createStack();
+      const analyzeCall = mockLambdaInvokeCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'AnalyzeReceipt',
+      );
+      expect(analyzeCall).toBeDefined();
+      // Reading an image is idempotent, so a transient retry is safe (unlike
+      // CreateExpense). Terminal failures route to the shared catch-all.
+      const retries = mockAddRetry.mock.calls.filter((c: unknown[]) => {
+        const opts = c[0] as { errors?: string[] };
+        return opts?.errors?.includes('Lambda.ServiceException');
+      });
+      expect(retries.length).toBe(10);
+    });
+
+    test('exports the analyze Lambda name so monitoring can alarm on it', () => {
+      createStack();
+      const { exportForCrossVersion } = jest.requireMock<
+        Record<string, jest.Mock>
+      >('@utils/cross-version');
+      const exportKeys = (exportForCrossVersion as jest.Mock).mock.calls.map(
+        (c: unknown[]) => c[1] as string,
+      );
+      expect(exportKeys).toContain('AnalyzeReceiptFnName');
     });
   });
 

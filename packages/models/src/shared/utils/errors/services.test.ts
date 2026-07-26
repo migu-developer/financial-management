@@ -1,6 +1,7 @@
 import {
   ServiceNotImplementedError,
   DataNotDefinedError,
+  BadRequestError,
   UnauthorizedError,
 } from './services';
 import { ModuleError } from './modules';
@@ -60,6 +61,35 @@ describe('DataNotDefinedError', () => {
   });
 });
 
+describe('BadRequestError', () => {
+  it('returns the custom message from getMessage()', () => {
+    expect(
+      new BadRequestError('unsupported content type: text/html').getMessage(),
+    ).toBe('unsupported content type: text/html');
+  });
+
+  it('returns BAD_REQUEST (400) from getCode()', () => {
+    expect(new BadRequestError('x').getCode()).toBe(HttpCode.BAD_REQUEST);
+  });
+
+  it('is distinct from DataNotDefinedError, which is a 500', () => {
+    expect(new BadRequestError('x').getCode()).not.toBe(
+      new DataNotDefinedError('x').getCode(),
+    );
+  });
+
+  it('preserves cause alongside custom message', () => {
+    const cause = new TypeError('bad mime');
+    const error = new BadRequestError('invalid attachment', cause);
+    expect(error.getMessage()).toBe('invalid attachment');
+    expect(error.cause).toBe(cause);
+  });
+
+  it('inherits from ModuleError', () => {
+    expect(new BadRequestError('test')).toBeInstanceOf(ModuleError);
+  });
+});
+
 describe('UnauthorizedError', () => {
   it('returns "Unauthorized" from getMessage()', () => {
     expect(new UnauthorizedError().getMessage()).toBe('Unauthorized');
@@ -84,11 +114,13 @@ describe('all service errors catchable as ModuleError', () => {
     const errors: ModuleError[] = [
       new ServiceNotImplementedError(),
       new DataNotDefinedError('test'),
+      new BadRequestError('test'),
       new UnauthorizedError(),
     ];
     expect(errors.map((e) => e.getCode())).toEqual([
       HttpCode.NOT_IMPLEMENTED,
       HttpCode.INTERNAL_SERVER_ERROR,
+      HttpCode.BAD_REQUEST,
       HttpCode.UNAUTHORIZED,
     ]);
   });

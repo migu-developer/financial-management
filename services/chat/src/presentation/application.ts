@@ -6,6 +6,7 @@ import type { DatabaseService } from '@services/shared/domain/services/database'
 import type { MetricsService } from '@services/shared/domain/services/metrics';
 import type { WorkflowStarterService } from '@services/chat/domain/services/workflow-starter.service';
 import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
+import type { AttachmentStorageService } from '@services/chat/domain/services/attachment-storage.service';
 import { ROUTES } from './router';
 
 interface ApplicationProps {
@@ -16,6 +17,7 @@ interface ApplicationProps {
   metrics: MetricsService;
   workflowStarter: WorkflowStarterService;
   workflowCallback: WorkflowCallbackService;
+  attachmentStorage: AttachmentStorageService;
 }
 
 export class Application {
@@ -30,6 +32,7 @@ export class Application {
   public readonly metrics: MetricsService;
   public readonly workflowStarter: WorkflowStarterService;
   public readonly workflowCallback: WorkflowCallbackService;
+  public readonly attachmentStorage: AttachmentStorageService;
 
   constructor({
     event,
@@ -39,6 +42,7 @@ export class Application {
     metrics,
     workflowStarter,
     workflowCallback,
+    attachmentStorage,
   }: ApplicationProps) {
     this.event = event;
     this.method = event.httpMethod;
@@ -52,5 +56,6 @@ export class Application {
     this.metrics = metrics;
     this.workflowStarter = workflowStarter;
     this.workflowCallback = workflowCallback;
+    this.attachmentStorage = attachmentStorage;
   }
 }
