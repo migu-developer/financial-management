@@ -10,6 +10,17 @@ jest.mock('@services/shared/infrastructure/decorators/trace', () => ({
 }));
 
 /**
+ * Generating AND re-encoding a >10000px image is genuinely slow — tens of
+ * megapixels through libvips. Jest's 5s default is enough on a fast laptop but
+ * not on a CI runner, so the oversized cases get an explicit budget. Sizes are
+ * kept just barely over the limit to do the least work that still proves the
+ * cap.
+ */
+const SLOW_IMAGE_TIMEOUT_MS = 60_000;
+/** Smallest 2:1 image that still exceeds MAX_DIMENSION (10000). */
+const OVERSIZED_LANDSCAPE = [10_400, 5_200] as const;
+
+/**
  * These tests run REAL sharp against REAL generated images rather than mocking
  * it. Mocking sharp would only assert that we call the API we think we call —
  * it would not have caught, for example, that a passthrough decision depends on
@@ -65,20 +76,30 @@ describe('SharpImageNormalizer.probe', () => {
     expect(probe.reasons).toContain('format-not-accepted');
   });
 
-  it('flags an image over the 10000px hard limit', async () => {
-    const probe = await normalizer.probe(await makeImage(10_500, 400, 'jpeg'));
+  it(
+    'flags an image over the 10000px hard limit',
+    async () => {
+      const probe = await normalizer.probe(
+        await makeImage(10_400, 400, 'jpeg'),
+      );
 
-    expect(probe.textractReady).toBe(false);
-    expect(probe.reasons).toContain('dimensions-too-large');
-  });
+      expect(probe.textractReady).toBe(false);
+      expect(probe.reasons).toContain('dimensions-too-large');
+    },
+    SLOW_IMAGE_TIMEOUT_MS,
+  );
 
-  it('accepts exactly 10000px — the limit is inclusive', async () => {
-    const probe = await normalizer.probe(
-      await makeImage(TEXTRACT_LIMITS.MAX_DIMENSION, 200, 'jpeg'),
-    );
+  it(
+    'accepts exactly 10000px — the limit is inclusive',
+    async () => {
+      const probe = await normalizer.probe(
+        await makeImage(TEXTRACT_LIMITS.MAX_DIMENSION, 200, 'jpeg'),
+      );
 
-    expect(probe.reasons).not.toContain('dimensions-too-large');
-  });
+      expect(probe.reasons).not.toContain('dimensions-too-large');
+    },
+    SLOW_IMAGE_TIMEOUT_MS,
+  );
 
   it('raises UnreadableImageError for bytes that are not an image', async () => {
     await expect(
@@ -110,24 +131,30 @@ describe('SharpImageNormalizer.normalize', () => {
     expect(result.height).toBe(700);
   });
 
-  it('downscales only the side that exceeds the limit, preserving the ratio', async () => {
-    const result = await normalizer.normalize(
-      await makeImage(12_000, 6_000, 'jpeg'),
-    );
+  it(
+    'downscales only the side that exceeds the limit, preserving the ratio',
+    async () => {
+      const [w, h] = OVERSIZED_LANDSCAPE;
+      const result = await normalizer.normalize(await makeImage(w, h, 'jpeg'));
 
-    expect(result.width).toBe(TEXTRACT_LIMITS.MAX_DIMENSION);
-    // 12000x6000 is 2:1, so the height must land at half the capped width.
-    expect(result.height).toBe(TEXTRACT_LIMITS.MAX_DIMENSION / 2);
-  });
+      expect(result.width).toBe(TEXTRACT_LIMITS.MAX_DIMENSION);
+      // The input is 2:1, so the height must land at half the capped width.
+      expect(result.height).toBe(TEXTRACT_LIMITS.MAX_DIMENSION / 2);
+    },
+    SLOW_IMAGE_TIMEOUT_MS,
+  );
 
-  it('caps the HEIGHT when the image is portrait', async () => {
-    const result = await normalizer.normalize(
-      await makeImage(6_000, 12_000, 'jpeg'),
-    );
+  it(
+    'caps the HEIGHT when the image is portrait',
+    async () => {
+      const [h, w] = OVERSIZED_LANDSCAPE;
+      const result = await normalizer.normalize(await makeImage(w, h, 'jpeg'));
 
-    expect(result.height).toBe(TEXTRACT_LIMITS.MAX_DIMENSION);
-    expect(result.width).toBe(TEXTRACT_LIMITS.MAX_DIMENSION / 2);
-  });
+      expect(result.height).toBe(TEXTRACT_LIMITS.MAX_DIMENSION);
+      expect(result.width).toBe(TEXTRACT_LIMITS.MAX_DIMENSION / 2);
+    },
+    SLOW_IMAGE_TIMEOUT_MS,
+  );
 
   it('never ENLARGES a small image', async () => {
     const result = await normalizer.normalize(
@@ -138,13 +165,21 @@ describe('SharpImageNormalizer.normalize', () => {
     expect(result.height).toBe(200);
   });
 
-  it('always lands under the 10 MB limit', async () => {
-    const result = await normalizer.normalize(
-      await makeImage(9_000, 9_000, 'png'),
-    );
+  it(
+    'always lands under the 10 MB limit',
+    async () => {
+      const [w, h] = OVERSIZED_LANDSCAPE;
+      const result = await normalizer.normalize(await makeImage(w, h, 'png'));
 
-    expect(result.bytes).toBeLessThanOrEqual(TEXTRACT_LIMITS.MAX_BYTES);
-  });
+      expect(result.bytes).toBeLessThanOrEqual(TEXTRACT_LIMITS.MAX_BYTES);
+    },
+    // NOTE: this asserts the invariant, but does not exercise the
+    // quality-stepping loop — a flat synthetic image compresses far too well to
+    // ever exceed 10 MB. Stressing that loop needs a real high-entropy photo,
+    // which does not belong in the repo; the loop's bound is enforced by the
+    // final size check in `normalize` instead.
+    SLOW_IMAGE_TIMEOUT_MS,
+  );
 
   it('raises UnreadableImageError instead of writing garbage', async () => {
     await expect(
