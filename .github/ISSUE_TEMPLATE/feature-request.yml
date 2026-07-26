@@ -1,5 +1,6 @@
-name: Feature Request
+name: ✨ Feature Request
 description: Suggest a new feature or improvement
+title: 'feat: '
 labels: ['feat']
 
 body:
@@ -28,13 +29,18 @@ body:
     id: area
     attributes:
       label: Area
-      description: Which part of the project would this affect?
+      description: >
+        Which part of the project would this affect? Values match the `Area`
+        field of the project board exactly.
       options:
-        - Client (Expo / React Native)
-        - Services (Lambda / API)
-        - Infrastructure (CDK)
-        - Packages (shared libraries)
-        - CI/CD (GitHub Actions)
+        - Client
+        - Services
+        - Packages
+        - Infra
+        - AI
+        - DevOps
+        - Design
+        - Other
     validations:
       required: true
 
