@@ -105,21 +105,41 @@ describe('ChatAttachmentsStack', () => {
     ]);
   });
 
-  test('expires attachments and aborts incomplete uploads', () => {
+  test('expires RAW uploads quickly and keeps normalized images for a year', () => {
     createStack();
     const rules = bucketProps().lifecycleRules as Array<{
+      id: string;
       prefix: string;
       expiration: { days: number };
       abortIncompleteMultipartUploadAfter: { days: number };
-      transitions: Array<{ storageClass: string; transitionAfter: unknown }>;
+      transitions?: Array<{ storageClass: string; transitionAfter: unknown }>;
     }>;
-    expect(rules).toHaveLength(1);
-    expect(rules[0]!.prefix).toBe('chat-attachments/');
-    // A year keeps receipts viewable in the conversation while still reclaiming
-    // orphaned uploads (presign succeeded, POST /chat never followed).
-    expect(rules[0]!.expiration).toEqual({ days: 365 });
-    expect(rules[0]!.abortIncompleteMultipartUploadAfter).toEqual({ days: 1 });
-    expect(rules[0]!.transitions[0]!.storageClass).toBe('STANDARD_IA');
+    expect(rules).toHaveLength(2);
+
+    const raw = rules.find((r) => r.prefix === 'chat-attachments/');
+    const ready = rules.find((r) => r.prefix === 'chat-ready/');
+    expect(raw).toBeDefined();
+    expect(ready).toBeDefined();
+
+    // The raw upload is dead weight once normalization has written the ready
+    // object — a week only exists so normalization can be re-run after a fix.
+    expect(raw!.expiration).toEqual({ days: 7 });
+    expect(raw!.transitions).toBeUndefined();
+
+    // The normalized image is what the conversation references, so it lives as
+    // long as the receipt stays viewable. Expiry is also the only cleanup path
+    // for an attachment whose POST /chat never followed.
+    expect(ready!.expiration).toEqual({ days: 365 });
+    expect(ready!.transitions![0]!.storageClass).toBe('STANDARD_IA');
+
+    for (const rule of rules) {
+      expect(rule.abortIncompleteMultipartUploadAfter).toEqual({ days: 1 });
+    }
+  });
+
+  test('enables EventBridge notifications so uploads can trigger normalization', () => {
+    createStack();
+    expect(bucketProps().eventBridgeEnabled).toBe(true);
   });
 
   test('does not enable versioning (attachments are written once)', () => {

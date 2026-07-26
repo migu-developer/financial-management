@@ -1,0 +1,258 @@
+{
+  "StartAt": "ProbeImage",
+  "States": {
+    "ProbeImage": {
+      "Next": "NeedsConversion?",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        },
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "ResolveOwnerFromKey"
+        }
+      ],
+      "Type": "Task",
+      "TimeoutSeconds": 130,
+      "ResultPath": "$.probe",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:ProbeImageFnF26DCDC5",
+      "Parameters": {
+        "uploadKey.$": "$.uploadKey"
+      }
+    },
+    "NeedsConversion?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.probe.decision",
+          "StringEquals": "unsupported",
+          "Next": "PublishRejected"
+        },
+        {
+          "Variable": "$.probe.decision",
+          "StringEquals": "convert",
+          "Next": "ConvertImage"
+        }
+      ],
+      "Default": "CopyOriginal"
+    },
+    "CopyOriginal": {
+      "Next": "PublishReady",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "ResolveOwnerFromKey"
+        }
+      ],
+      "Type": "Task",
+      "ResultPath": "$.copied",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:123456789012:function:CopyOriginal",
+        "Payload.$": "$"
+      }
+    },
+    "PublishReady": {
+      "Next": "AttachmentNormalized",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        },
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "ResolveOwnerFromKey"
+        }
+      ],
+      "Type": "Task",
+      "TimeoutSeconds": 130,
+      "ResultPath": "$.published",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:PublishAttachmentStatusFnEA602D8B",
+      "Parameters": {
+        "uid.$": "$.probe.userId",
+        "uploadKey.$": "$.probe.uploadKey",
+        "readyKey.$": "$.probe.readyKey",
+        "outcome": "ready"
+      }
+    },
+    "ConvertImage": {
+      "Next": "PublishReady",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        },
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "ResolveOwnerFromKey"
+        }
+      ],
+      "Type": "Task",
+      "TimeoutSeconds": 130,
+      "ResultPath": "$.converted",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:ConvertImageFn43CA614B",
+      "Parameters": {
+        "uploadKey.$": "$.probe.uploadKey",
+        "readyKey.$": "$.probe.readyKey"
+      }
+    },
+    "ResolveOwnerFromKey": {
+      "Type": "Pass",
+      "ResultPath": "$.owner",
+      "Parameters": {
+        "uploadKey.$": "$.uploadKey",
+        "userId.$": "States.ArrayGetItem(States.StringSplit($.uploadKey, '/'), 1)"
+      },
+      "Next": "PublishFailed"
+    },
+    "PublishFailed": {
+      "Next": "ImageProcessingFailed",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        },
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Type": "Task",
+      "TimeoutSeconds": 130,
+      "ResultPath": "$.published",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:PublishAttachmentStatusFnEA602D8B",
+      "Parameters": {
+        "uid.$": "$.owner.userId",
+        "uploadKey.$": "$.owner.uploadKey",
+        "outcome": "failed"
+      }
+    },
+    "ImageProcessingFailed": {
+      "Type": "Fail",
+      "Error": "ChatImageProcessingError",
+      "Cause": "Image normalization failed after retries; a friendly message was published to the user."
+    },
+    "AttachmentNormalized": {
+      "Type": "Succeed"
+    },
+    "PublishRejected": {
+      "Next": "AttachmentRejected",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ClientExecutionTimeoutException",
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        },
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Type": "Task",
+      "TimeoutSeconds": 130,
+      "ResultPath": "$.published",
+      "Resource": "arn:aws:lambda:us-east-1:123456789012:function:PublishAttachmentStatusFnEA602D8B",
+      "Parameters": {
+        "uid.$": "$.probe.userId",
+        "uploadKey.$": "$.probe.uploadKey",
+        "outcome": "unsupported"
+      }
+    },
+    "AttachmentRejected": {
+      "Type": "Succeed"
+    }
+  },
+  "TimeoutSeconds": 600
+}

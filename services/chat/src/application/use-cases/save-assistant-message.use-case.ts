@@ -2,7 +2,7 @@ import type { ChatMessage } from '@services/chat/domain/entities/chat-message';
 import type { ChatMessageRepository } from '@services/chat/domain/repositories/chat-message.repository';
 import type { ChatSessionRepository } from '@services/chat/domain/repositories/chat-session.repository';
 import type {
-  ChatEventPayload,
+  ChatMessageEventPayload,
   EventPublisherService,
 } from '@services/chat/domain/services/event-publisher.service';
 
@@ -25,7 +25,7 @@ export interface SaveAssistantMessageInput {
    * a `taskToken` is present, otherwise `'assistant_message'`. The workflow's
    * catch-all passes `'error'` so the client renders the failure gracefully.
    */
-  eventType?: ChatEventPayload['type'];
+  eventType?: ChatMessageEventPayload['type'];
 }
 
 export interface SaveAssistantMessageResult {
@@ -70,7 +70,7 @@ export class SaveAssistantMessageUseCase {
 
     await this.sessionRepository.touchLastMessage(input.sessionId, input.uid);
 
-    const payload: ChatEventPayload = {
+    const payload: ChatMessageEventPayload = {
       type:
         input.eventType ??
         (isPreview ? 'preview_pending' : 'assistant_message'),

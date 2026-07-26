@@ -1,12 +1,14 @@
 import type { ReceiptAnalyzerService } from '@services/chat/domain/services/receipt-analyzer.service';
 import { buildReceiptContent } from '@packages/prompts/chat/attachments';
-import { BadRequestError } from '@packages/models/shared/utils/errors';
-import { ATTACHMENT_PREFIX } from '@services/chat/infrastructure/services/s3-attachment-storage.service';
+import {
+  ATTACHMENT_READY_PREFIX,
+  assertKeyOwnedBy,
+} from '@packages/models/chat/attachment-keys';
 
 export interface AnalyzeReceiptInput {
   /** Owner of the conversation — must match the key's owner segment. */
   userId: string;
-  /** Key returned by `POST /chat/upload-url`. */
+  /** Normalized key from the `attachment_ready` event (`chat-ready/...`). */
   s3Key: string;
   /** The user's own caption; may be empty when they sent only a photo. */
   caption: string;
@@ -26,32 +28,6 @@ export interface AnalyzeReceiptOutput {
 }
 
 /**
- * Asserts the key was minted for this user by `createUploadUrl`.
- *
- * The key travels to the client and back, so it is untrusted input on the way
- * in. Without this check a caller could pass another user's key (or a key
- * pointing at an unrelated object in the bucket) and have its contents read
- * into their own conversation.
- */
-export const assertKeyOwnedBy = (s3Key: string, userId: string): void => {
-  const expectedPrefix = `${ATTACHMENT_PREFIX}/${userId}/`;
-
-  // Reject traversal before the prefix comparison: `chat-attachments/me/../you/x`
-  // starts with the right prefix but does not resolve inside it.
-  if (s3Key.includes('..') || !s3Key.startsWith(expectedPrefix)) {
-    throw new BadRequestError(
-      `Attachment key does not belong to the requesting user: ${s3Key}`,
-    );
-  }
-
-  // Exactly one path segment (the object name) may follow the owner prefix.
-  const remainder = s3Key.slice(expectedPrefix.length);
-  if (remainder.length === 0 || remainder.includes('/')) {
-    throw new BadRequestError(`Malformed attachment key: ${s3Key}`);
-  }
-};
-
-/**
  * Reads a receipt image and folds what it finds into the message text.
  *
  * Deliberately never throws on a poor reading: a blurry photo yields
@@ -63,7 +39,10 @@ export class AnalyzeReceiptUseCase {
   constructor(private readonly analyzer: ReceiptAnalyzerService) {}
 
   async execute(input: AnalyzeReceiptInput): Promise<AnalyzeReceiptOutput> {
-    assertKeyOwnedBy(input.s3Key, input.userId);
+    // Must be a NORMALIZED key. Only the image-processing workflow's role can
+    // write to that prefix, so a valid key is proof the image was normalized —
+    // the client cannot point Textract at a raw upload.
+    assertKeyOwnedBy(input.s3Key, input.userId, ATTACHMENT_READY_PREFIX);
 
     const receipt = await this.analyzer.analyze({ s3Key: input.s3Key });
 

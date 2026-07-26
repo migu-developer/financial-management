@@ -25,7 +25,8 @@
     "@packages/models": "workspace:*",
     "@packages/prompts": "workspace:*",
     "@services/expenses": "workspace:*",
-    "@services/shared": "workspace:*"
+    "@services/shared": "workspace:*",
+    "sharp": "catalog:"
   },
   "devDependencies": {
     "@packages/config": "workspace:*",

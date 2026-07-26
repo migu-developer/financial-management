@@ -253,30 +253,120 @@ Client
   |     → { uploadUrl, s3Key, expiresIn: 300, attachmentType: "image" }
   |
   |-- PUT <uploadUrl>  (raw bytes, SAME Content-Type header)   → S3, direct
+  |         |
+  |         v
+  |   S3 ObjectCreated → EventBridge → ImageProcess state machine
+  |         |   (normalize format / EXIF / size — see below)
+  |         v
+  |   AppSync Events: { type: "attachment_ready", uploadKey, readyKey }
   |
-  |-- POST /chat { content, attachmentS3Key: s3Key, attachmentType: "image" }
+  |-- POST /chat { content, attachmentS3Key: readyKey, attachmentType: "image" }
   v
 (normal async workflow, now entering through HasImageAttachment?)
 ```
+
+The client holds the Send action until `attachment_ready` arrives — the user can
+type their caption meanwhile, so the wait is usually invisible. On
+`attachment_rejected` it shows the message and clears the attachment.
 
 A phone photo is megabytes; API Gateway caps payloads at 10 MB and base64 would
 inflate it further, so the upload is a **presigned S3 PUT** straight from the
 device. `Content-Type` is part of the signature — the client MUST send the same
 value it requested, or S3 rejects the PUT.
 
+### Image normalization (ImageProcess state machine)
+
+Users upload whatever their device produces — HEIC from an iPhone, 48 MP
+photos, WebP, a rotated JPEG. Textract accepts **only JPEG, PNG, PDF and TIFF,
+at most 10 MB, at most 10000 px per side**
+([set quotas](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html)).
+A second state machine bridges that gap.
+
+```
+S3 ObjectCreated (prefix chat-attachments/) → EventBridge → fm-{stage}-image-process
+
+  ProbeImage ............ λ probe-image (sharp metadata → a decision)
+  NeedsConversion?
+    ├── unsupported ..... PublishRejected → Succeed      (user error — NO alarm)
+    ├── convert ......... ConvertImage (λ, sharp → JPEG) ─┐
+    └── passthrough ..... CopyOriginal (S3 CopyObject) ───┴→ PublishReady → Succeed
+  (any genuine fault) ─────────────────────────────────────→ PublishFailed → Fail
+```
+
+Two prefixes in one bucket, and the split is a **security property**:
+
+| Prefix              | Written by                    | Lifecycle              |
+| ------------------- | ----------------------------- | ---------------------- |
+| `chat-attachments/` | the CLIENT, via presigned PUT | expires after 7 days   |
+| `chat-ready/`       | ONLY the ImageProcess role    | IA at 30d, 365d expiry |
+
+`POST /chat` accepts **only** a `chat-ready/` key, and nothing but the workflow
+can write there — so a valid key is _proof_ the image was normalized. A client
+cannot point Textract at a raw upload, at a non-image, or at a 60 MP file.
+
+The raw upload is short-lived on purpose: once the normalized object exists the
+original is dead weight, and a week only exists so normalization can be re-run
+after a fix.
+
+> The EventBridge rule filters on the **upload** prefix. Without that filter the
+> normalized object — written to the same bucket — would emit its own
+> `ObjectCreated` and re-trigger the workflow forever.
+
+#### What "optimization" must NOT do
+
+Textract's minimum detectable text height is **15 px**. Shrinking a receipt to
+save bytes pushes its fine print under that and _destroys_ extraction accuracy.
+So normalization only ever:
+
+- **converts the format** (anything sharp reads → JPEG at q88),
+- **bakes in EXIF orientation** (`rotate()` with no args), so the stored image is
+  upright when shown back in the conversation,
+- **downscales only to reach 10000 px**, never below,
+- **steps JPEG quality down** (88 → 73 → 58 → 43) if it is still over 10 MB —
+  quality, not dimensions, because dimensions are what carry the text.
+
+`limitInputPixels` is capped at 100 MP to reject decompression bombs: a few-KB
+file can declare enormous dimensions and exhaust the Lambda on decode.
+
+#### HEIC is the one gap
+
+The **prebuilt sharp binaries cannot decode HEIC/HEIF** — its HEVC compression
+is patent-encumbered and needs a libvips built with libheif + libde265 + x265.
+So:
+
+- **Mobile** converts to JPEG before uploading (`expo-image-manipulator`; iOS
+  decodes HEIC natively for free). This is where HEIC actually comes from, and it
+  also makes the upload smaller and faster.
+- **Web** can still submit a `.heic` from disk; browsers cannot decode it either.
+  That upload is accepted, fails normalization, and the user gets an explicit
+  `attachment_rejected` message asking for JPG or PNG.
+
+Adding server-side HEIC means a Lambda **container image** (ECR + Dockerfile +
+CI build) — deliberately deferred until `ChatImageUnsupported` shows it matters.
+
+#### An unreadable image is NOT a failure
+
+`ProbeImage` returns `decision: "unsupported"` instead of throwing, and the
+workflow ends **SUCCEEDED**. That is deliberate: somebody's HEIC holiday photo
+must never page an on-call engineer. Only genuine faults (OOM, timeout, IAM, S3)
+reach the catch-all and fail the execution, which is what
+`ImageWorkflow-ExecutionsFailed` alarms on.
+
 ### Why the key is safe to trust on the way back
 
 The client echoes `attachmentS3Key` back to us, which makes it untrusted input.
-Two things make it safe:
+Three things make it safe:
 
 1. **The server mints the key**, never the client:
    `chat-attachments/{userId}/{uuid}.{ext}`, where `userId` comes from the
    Cognito authorizer and the extension from an allow-list of MIME types.
-2. **`AnalyzeReceiptUseCase` re-verifies ownership** from the key alone
-   (`assertKeyOwnedBy`) before calling Textract: the key must sit directly under
-   the caller's own prefix, with no `..` and no extra path segments. Without
-   this, a caller could pass another user's key and read its contents into their
-   own conversation.
+2. **Only the ImageProcess role can write `chat-ready/`**, so that prefix cannot
+   be forged by a client.
+3. **`AnalyzeReceiptUseCase` re-verifies ownership** from the key alone
+   (`assertKeyOwnedBy`, in `@packages/models/chat/attachment-keys`) before
+   calling Textract: it must sit directly under the caller's own `chat-ready/`
+   prefix, with no `..` and no extra path segments. Without this, a caller could
+   pass another user's key and read its contents into their own conversation.
 
 ### Workflow branch
 
@@ -387,7 +477,11 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
   / `ChatUnknownIntent`, `ChatWorkflowError` (catch-all), `ChatPublishFailed`, and
   for attachments `ChatAttachmentUploadUrlIssued`, `ChatReceiptExtracted` /
   `ChatReceiptUnreadable` (the ratio between the last two is the signal for how
-  well receipt reading is actually working).
+  well receipt reading is actually working), and for normalization
+  `ChatImagePassthrough` / `ChatImageNeedsConversion` / `ChatImageUnsupported`,
+  `ChatImageConverted`, `ChatAttachmentReady` / `ChatAttachmentRejected`.
+  `ChatImageUnsupported` is the number to watch before investing in server-side
+  HEIC support.
 - **Alarms**: per-Lambda errors; `ChatWorkflow-ExecutionsFailed`
   (thresholded — >2 in 2 of 3 windows, since the catch-all already replies to the
   user on a single failure), `ChatWorkflow-ExecutionsTimedOut`,
@@ -414,6 +508,9 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
     Runs as the `sfn-local` job in `.github/workflows/ci.yml`. Test cases pick an
     execution input via a third field (`case:STATUS:image`) — `text` (default),
     `image` and `audio` — because the attachment branch is selected by the
-    presence of `$.attachmentS3Key`/`$.attachmentType` in the input.
+    presence of `$.attachmentS3Key`/`$.attachmentType` in the input. The same
+    run also exercises the **ImageProcess** machine (both are defined in one
+    `mock-config.json`, keyed by state-machine name), so the coverage guard is
+    invoked once per machine.
   - `pnpm --filter @infra test:sfn-teststate` — TestState API for single-state
     routing (DEV only, narrow IAM role).

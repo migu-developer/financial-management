@@ -13,6 +13,7 @@ import { LambdaExchangeRatesStack } from './lambda-exchange-rates-stack';
 import { LambdaChatStack } from './lambda-chat-stack';
 import { ChatAttachmentsStack } from './chat-attachments-stack';
 import { StepFunctionsChatStack } from './step-functions-chat-stack';
+import { StepFunctionsImageProcessStack } from './step-functions-image-process-stack';
 import { ApiDocsStack } from './api-docs-stack';
 
 const createApiGatewayStack: NamedStackFactory = {
@@ -233,6 +234,29 @@ const createStepFunctionsChatStack: NamedStackFactory = {
     ),
 };
 
+const createStepFunctionsImageProcessStack: NamedStackFactory = {
+  name: 'StepFunctionsImageProcess',
+  create: (scope: Construct, version: string) =>
+    new StepFunctionsImageProcessStack(
+      scope,
+      fullStackResource(
+        version,
+        `${ActiveStack.STEP_FUNCTIONS_IMAGE_PROCESS}Stack`,
+      ),
+      {
+        version,
+        stackName: fullStackResource(
+          version,
+          ActiveStack.STEP_FUNCTIONS_IMAGE_PROCESS,
+        ),
+        dependsOn: [ActiveStack.CHAT_ATTACHMENTS, ActiveStack.APPSYNC_EVENTS],
+        description:
+          'ImageProcess state machine: normalizes uploaded attachments (format, EXIF, size limits) before Textract reads them',
+        stage: process.env.STAGE ?? 'dev',
+      },
+    ),
+};
+
 const createAppSyncEventsStack: NamedStackFactory = {
   name: 'AppSyncEvents',
   create: (scope: Construct, version: string) =>
@@ -269,9 +293,10 @@ const createApiDocsStack: NamedStackFactory = {
 // 2. Lambda stacks (add resources to the API)
 // 3. LambdaExchangeRates (standalone Lambda + EventBridge schedule, no API Gateway)
 // 4. AppSyncEvents (standalone — imports Cognito UserPool from v1)
-// 5. ChatAttachments (bucket both chat stacks import the name of)
-// 6. ApiDocs (documents the fully-built API)
-// 7. AmplifyHosting last (references the API URL)
+// 5. ChatAttachments (bucket the chat + image stacks import the name of)
+// 6. StepFunctionsImageProcess (attachment normalization; needs bucket + AppSync)
+// 7. ApiDocs (documents the fully-built API)
+// 8. AmplifyHosting last (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,
@@ -281,6 +306,7 @@ export const v2Stacks: NamedStackFactory[] = [
   createLambdaExchangeRatesStack,
   createAppSyncEventsStack,
   createChatAttachmentsStack,
+  createStepFunctionsImageProcessStack,
   createStepFunctionsChatStack,
   createLambdaChatStack,
   createApiDocsStack,

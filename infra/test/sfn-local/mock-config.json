@@ -101,6 +101,48 @@
           "SaveCreatedExpense": "SavedOk"
         }
       }
+    },
+    "ImageProcessTest": {
+      "TestCases": {
+        "jpegPassthrough": {
+          "ProbeImage": "ProbePassthrough",
+          "CopyOriginal": "CopiedOk",
+          "PublishReady": "PublishedOk"
+        },
+        "webpNeedsConversion": {
+          "ProbeImage": "ProbeConvert",
+          "ConvertImage": "ConvertedOk",
+          "PublishReady": "PublishedOk"
+        },
+        "oversizedNeedsConversion": {
+          "ProbeImage": "ProbeConvertOversized",
+          "ConvertImage": "ConvertedDownscaled",
+          "PublishReady": "PublishedOk"
+        },
+        "heicRejectedWithoutFailing": {
+          "ProbeImage": "ProbeUnsupported",
+          "PublishRejected": "PublishedOk"
+        },
+        "probeFailsRoutesToPublishFailed": {
+          "ProbeImage": "ProbeTaskFailed",
+          "PublishFailed": "PublishedOk"
+        },
+        "convertFailsRoutesToPublishFailed": {
+          "ProbeImage": "ProbeConvert",
+          "ConvertImage": "ConvertTaskFailed",
+          "PublishFailed": "PublishedOk"
+        },
+        "copyFailsRoutesToPublishFailed": {
+          "ProbeImage": "ProbePassthrough",
+          "CopyOriginal": "CopyTaskFailed",
+          "PublishFailed": "PublishedOk"
+        },
+        "probeThrottleRecovers": {
+          "ProbeImage": "ProbeThrottleThenPassthrough",
+          "CopyOriginal": "CopiedOk",
+          "PublishReady": "PublishedOk"
+        }
+      }
     }
   },
   "MockedResponses": {
@@ -416,6 +458,149 @@
         "Throw": {
           "Error": "States.TaskFailed",
           "Cause": "AnalyzeReceipt Lambda threw: attachment key does not belong to the requesting user."
+        }
+      }
+    },
+    "ProbePassthrough": {
+      "0": {
+        "Return": {
+          "userId": "user-123",
+          "uploadKey": "chat-attachments/user-123/8f14e45f.jpg",
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "format": "jpeg",
+          "width": 1200,
+          "height": 1600,
+          "bytes": 480000,
+          "decision": "passthrough",
+          "reasons": []
+        }
+      }
+    },
+    "ProbeConvert": {
+      "0": {
+        "Return": {
+          "userId": "user-123",
+          "uploadKey": "chat-attachments/user-123/8f14e45f.webp",
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "format": "webp",
+          "width": 900,
+          "height": 700,
+          "bytes": 120000,
+          "decision": "convert",
+          "reasons": ["format-not-accepted"]
+        }
+      }
+    },
+    "ProbeConvertOversized": {
+      "0": {
+        "Return": {
+          "userId": "user-123",
+          "uploadKey": "chat-attachments/user-123/8f14e45f.jpg",
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "format": "jpeg",
+          "width": 12000,
+          "height": 6000,
+          "bytes": 18000000,
+          "decision": "convert",
+          "reasons": ["too-many-bytes", "dimensions-too-large"]
+        }
+      }
+    },
+    "ProbeUnsupported": {
+      "0": {
+        "Return": {
+          "userId": "user-123",
+          "uploadKey": "chat-attachments/user-123/8f14e45f.heic",
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "format": "unknown",
+          "width": 0,
+          "height": 0,
+          "bytes": 2400000,
+          "decision": "unsupported",
+          "reasons": [
+            "Could not decode the uploaded image: unsupported image format"
+          ]
+        }
+      }
+    },
+    "ProbeThrottleThenPassthrough": {
+      "0": {
+        "Throw": {
+          "Error": "Lambda.TooManyRequestsException",
+          "Cause": "Rate exceeded"
+        }
+      },
+      "1-2": {
+        "Return": {
+          "userId": "user-123",
+          "uploadKey": "chat-attachments/user-123/8f14e45f.jpg",
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "format": "jpeg",
+          "width": 1200,
+          "height": 1600,
+          "bytes": 480000,
+          "decision": "passthrough",
+          "reasons": []
+        }
+      }
+    },
+    "ProbeTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "ProbeImage Lambda threw: S3 object chat-attachments/user-123/8f14e45f.jpg has no body."
+        }
+      }
+    },
+    "ConvertedOk": {
+      "0": {
+        "Return": {
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "width": 900,
+          "height": 700,
+          "bytes": 96000
+        }
+      }
+    },
+    "ConvertedDownscaled": {
+      "0": {
+        "Return": {
+          "readyKey": "chat-ready/user-123/8f14e45f.jpg",
+          "width": 10000,
+          "height": 5000,
+          "bytes": 8900000
+        }
+      }
+    },
+    "ConvertTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "ConvertImage Lambda ran out of memory decoding the bitmap."
+        }
+      }
+    },
+    "CopiedOk": {
+      "0": {
+        "Return": {
+          "CopyObjectResult": {
+            "ETag": "\"9b2cf535f27731c974343645a3985328\""
+          }
+        }
+      }
+    },
+    "CopyTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "S3 CopyObject denied: the source object does not exist."
+        }
+      }
+    },
+    "PublishedOk": {
+      "0": {
+        "Return": {
+          "published": true
         }
       }
     }

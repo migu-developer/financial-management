@@ -9,15 +9,19 @@
 // silently going untested. Choice / Succeed / Fail / Pass states need no mock
 // and are ignored.
 //
-// Usage: node assert-coverage.mjs <chat-process.asl.json> <mock-config.json>
+// The mock config holds SEVERAL state machines, so the check is SCOPED to one:
+// without that, every ImageProcess state would look "stale" while checking the
+// ChatProcess ASL, and vice versa.
+//
+// Usage: node assert-coverage.mjs <asl.json> <mock-config.json> <stateMachineName>
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const [, , aslArg, mockArg] = process.argv;
-if (!aslArg || !mockArg) {
+const [, , aslArg, mockArg, smArg] = process.argv;
+if (!aslArg || !mockArg || !smArg) {
   console.error(
-    'Usage: node assert-coverage.mjs <asl.json> <mock-config.json>',
+    'Usage: node assert-coverage.mjs <asl.json> <mock-config.json> <stateMachineName>',
   );
   process.exit(2);
 }
@@ -30,25 +34,30 @@ const taskStates = Object.entries(asl.States ?? {})
   .filter(([, s]) => s?.Type === 'Task')
   .map(([name]) => name);
 
-// Every state name referenced across all TestCases of every state machine.
+const stateMachine = (mock.StateMachines ?? {})[smArg];
+if (!stateMachine) {
+  console.error(
+    `\n✘ No "${smArg}" entry under StateMachines in ${mockArg}. Found: ${Object.keys(
+      mock.StateMachines ?? {},
+    ).join(', ')}`,
+  );
+  process.exit(1);
+}
+
+// Every state name referenced across this state machine's TestCases.
 const referenced = new Set();
-const testCasesBySm = {};
-for (const [smName, sm] of Object.entries(mock.StateMachines ?? {})) {
-  testCasesBySm[smName] = Object.keys(sm.TestCases ?? {});
-  for (const tc of Object.values(sm.TestCases ?? {})) {
-    for (const stateName of Object.keys(tc)) referenced.add(stateName);
-  }
+const testCases = Object.keys(stateMachine.TestCases ?? {});
+for (const tc of Object.values(stateMachine.TestCases ?? {})) {
+  for (const stateName of Object.keys(tc)) referenced.add(stateName);
 }
 
 // Every mocked-response name referenced by a test case must exist.
 const mockedResponses = new Set(Object.keys(mock.MockedResponses ?? {}));
 const danglingResponses = [];
-for (const sm of Object.values(mock.StateMachines ?? {})) {
-  for (const [tcName, tc] of Object.entries(sm.TestCases ?? {})) {
-    for (const [stateName, respName] of Object.entries(tc)) {
-      if (!mockedResponses.has(respName)) {
-        danglingResponses.push(`${tcName}.${stateName} → "${respName}"`);
-      }
+for (const [tcName, tc] of Object.entries(stateMachine.TestCases ?? {})) {
+  for (const [stateName, respName] of Object.entries(tc)) {
+    if (!mockedResponses.has(respName)) {
+      danglingResponses.push(`${tcName}.${stateName} → "${respName}"`);
     }
   }
 }
@@ -83,6 +92,6 @@ if (danglingResponses.length > 0) {
 if (failed) process.exit(1);
 
 console.log(
-  `✔ Mock coverage complete: all ${taskStates.length} Task states are exercised ` +
-    `by ${Object.values(testCasesBySm).flat().length} test case(s).`,
+  `✔ ${smArg}: all ${taskStates.length} Task states are exercised by ` +
+    `${testCases.length} test case(s).`,
 );

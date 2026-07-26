@@ -55,7 +55,15 @@ if [[ -z "${STACK:-}" ]]; then
   printf '\033[1;31mX Could not resolve the StepFunctionsChat stack via cdk list\033[0m\n%s\n' "${CDK_LIST_OUT}" >&2
   exit 1
 fi
+IMAGE_STACK="$(printf '%s\n' "${CDK_LIST_OUT}" | awk '/StepFunctionsImageProcessStack/{print $1; exit}')"
+if [[ -z "${IMAGE_STACK:-}" ]]; then
+  printf '\033[1;31mX Could not resolve the StepFunctionsImageProcess stack via cdk list\033[0m\n%s\n' "${CDK_LIST_OUT}" >&2
+  exit 1
+fi
 ASL_FILE="${SFN_LOCAL_DIR}/chat-process.asl.json"
+IMAGE_ASL_FILE="${SFN_LOCAL_DIR}/image-process.asl.json"
+# ONE mock config holds BOTH state machines — Step Functions Local accepts a
+# single SFN_MOCK_CONFIG, and its StateMachines map is keyed by name.
 MOCK_CONFIG="${SFN_LOCAL_DIR}/mock-config.json"
 
 ENDPOINT="http://localhost:8083"
@@ -63,7 +71,9 @@ CONTAINER_NAME="sfn-local-chat-test"
 # The state-machine name here MUST match the key under "StateMachines" in
 # mock-config.json ("ChatProcessTest"), so the mocked responses are applied.
 SM_NAME="ChatProcessTest"
+IMAGE_SM_NAME="ImageProcessTest"
 SM_ARN="arn:aws:states:us-east-1:123456789012:stateMachine:${SM_NAME}"
+IMAGE_SM_ARN="arn:aws:states:us-east-1:123456789012:stateMachine:${IMAGE_SM_NAME}"
 ROLE_ARN="arn:aws:iam::123456789012:role/DummyRole"
 
 # Test case → expected execution status. Every case here MUST exist as a
@@ -129,6 +139,23 @@ INPUT_image='{
 
 # `audio` is accepted by the schema but has no Transcribe branch yet, so it must
 # fall through to the ordinary text path rather than entering AnalyzeReceipt.
+# ImageProcess cases. Its only input is the S3 key EventBridge extracts, so one
+# input shape covers every case — the mock config branches on state name.
+declare -a IMAGE_CASES=(
+  "jpegPassthrough:SUCCEEDED"
+  "webpNeedsConversion:SUCCEEDED"
+  "oversizedNeedsConversion:SUCCEEDED"
+  "heicRejectedWithoutFailing:SUCCEEDED"
+  "probeFailsRoutesToPublishFailed:FAILED"
+  "convertFailsRoutesToPublishFailed:FAILED"
+  "copyFailsRoutesToPublishFailed:FAILED"
+  "probeThrottleRecovers:SUCCEEDED"
+)
+
+IMAGE_EXECUTION_INPUT='{
+  "uploadKey": "chat-attachments/user-123/8f14e45f.jpg"
+}'
+
 INPUT_audio='{
   "userId": "user-123",
   "sessionId": "session-123",
@@ -171,7 +198,22 @@ node "${SFN_LOCAL_DIR}/extract-asl.mjs" "${TEMPLATE}" "${ASL_FILE}"
 # test case (so a newly added state can't slip through untested), or if a test
 # case references a stale state / undefined mocked response.
 log "Asserting mock coverage of all Task states"
-node "${SFN_LOCAL_DIR}/assert-coverage.mjs" "${ASL_FILE}" "${MOCK_CONFIG}"
+node "${SFN_LOCAL_DIR}/assert-coverage.mjs" "${ASL_FILE}" "${MOCK_CONFIG}" "${SM_NAME}"
+
+log "Synthesizing ${IMAGE_STACK} with cdk synth"
+(
+  cd "${INFRA_DIR}"
+  pnpm exec cdk synth "${IMAGE_STACK}" --output cdk.out >/dev/null
+)
+IMAGE_TEMPLATE="${INFRA_DIR}/cdk.out/${IMAGE_STACK}.template.json"
+if [[ ! -f "${IMAGE_TEMPLATE}" ]]; then
+  fail "Synth did not produce ${IMAGE_TEMPLATE}"
+  exit 1
+fi
+
+log "Extracting resolved image ASL → ${IMAGE_ASL_FILE}"
+node "${SFN_LOCAL_DIR}/extract-asl.mjs" "${IMAGE_TEMPLATE}" "${IMAGE_ASL_FILE}"
+node "${SFN_LOCAL_DIR}/assert-coverage.mjs" "${IMAGE_ASL_FILE}" "${MOCK_CONFIG}" "${IMAGE_SM_NAME}"
 
 # ── 2. Boot Step Functions Local with the mock config ──────
 log "Starting amazon/aws-stepfunctions-local with mock config"
@@ -205,8 +247,57 @@ aws stepfunctions create-state-machine \
   --role-arn "${ROLE_ARN}" \
   --definition "file://${ASL_FILE}" >/dev/null
 
+log "Creating state machine ${IMAGE_SM_NAME}"
+aws stepfunctions create-state-machine \
+  --endpoint-url "${ENDPOINT}" \
+  --name "${IMAGE_SM_NAME}" \
+  --role-arn "${ROLE_ARN}" \
+  --definition "file://${IMAGE_ASL_FILE}" >/dev/null
+
 # ── 4. Run each test case ──────────────────────────────────
 FAILURES=0
+
+# Starts one test-case-qualified execution, polls to a terminal status and
+# compares it. Shared by both state machines so the polling/reporting logic
+# exists once.
+#   run_case <sm-arn> <case-name> <expected-status> <input-json> <label>
+run_case() {
+  local sm_arn="$1" case_name="$2" expected="$3" input="$4" label="$5"
+
+  log "Test case: ${case_name} (expect ${expected}${label:+, ${label}})"
+
+  local exec_arn status
+  exec_arn="$(aws stepfunctions start-execution \
+    --endpoint-url "${ENDPOINT}" \
+    --state-machine-arn "${sm_arn}#${case_name}" \
+    --name "${case_name}-$(date +%s)" \
+    --input "${input}" \
+    --query 'executionArn' --output text)"
+
+  status="RUNNING"
+  for _ in $(seq 1 30); do
+    status="$(aws stepfunctions describe-execution \
+      --endpoint-url "${ENDPOINT}" \
+      --execution-arn "${exec_arn}" \
+      --query 'status' --output text)"
+    [[ "${status}" != "RUNNING" ]] && break
+    sleep 1
+  done
+
+  if [[ "${status}" == "${expected}" ]]; then
+    ok "${case_name}: ${status}"
+    return 0
+  fi
+
+  fail "${case_name}: expected ${expected}, got ${status}"
+  aws stepfunctions get-execution-history \
+    --endpoint-url "${ENDPOINT}" \
+    --execution-arn "${exec_arn}" \
+    --query 'events[?contains(type, `Failed`) || contains(type, `Succeeded`)]' \
+    --output json || true
+  FAILURES=$((FAILURES + 1))
+}
+
 for entry in "${CASES[@]}"; do
   IFS=':' read -r CASE_NAME EXPECTED INPUT_KIND <<<"${entry}"
   INPUT_KIND="${INPUT_KIND:-text}"
@@ -219,38 +310,14 @@ for entry in "${CASES[@]}"; do
     continue
   fi
 
-  log "Test case: ${CASE_NAME} (expect ${EXPECTED}, input ${INPUT_KIND})"
+  run_case "${SM_ARN}" "${CASE_NAME}" "${EXPECTED}" "${EXECUTION_INPUT}" \
+    "input ${INPUT_KIND}"
+done
 
-  # Start the execution against the test-case-qualified ARN.
-  EXEC_ARN="$(aws stepfunctions start-execution \
-    --endpoint-url "${ENDPOINT}" \
-    --state-machine-arn "${SM_ARN}#${CASE_NAME}" \
-    --name "${CASE_NAME}-$(date +%s)" \
-    --input "${EXECUTION_INPUT}" \
-    --query 'executionArn' --output text)"
-
-  # Poll for a terminal status.
-  STATUS="RUNNING"
-  for i in $(seq 1 30); do
-    STATUS="$(aws stepfunctions describe-execution \
-      --endpoint-url "${ENDPOINT}" \
-      --execution-arn "${EXEC_ARN}" \
-      --query 'status' --output text)"
-    [[ "${STATUS}" != "RUNNING" ]] && break
-    sleep 1
-  done
-
-  if [[ "${STATUS}" == "${EXPECTED}" ]]; then
-    ok "${CASE_NAME}: ${STATUS}"
-  else
-    fail "${CASE_NAME}: expected ${EXPECTED}, got ${STATUS}"
-    aws stepfunctions get-execution-history \
-      --endpoint-url "${ENDPOINT}" \
-      --execution-arn "${EXEC_ARN}" \
-      --query 'events[?contains(type, `Failed`) || contains(type, `Succeeded`)]' \
-      --output json || true
-    FAILURES=$((FAILURES + 1))
-  fi
+for entry in "${IMAGE_CASES[@]}"; do
+  IFS=':' read -r CASE_NAME EXPECTED <<<"${entry}"
+  run_case "${IMAGE_SM_ARN}" "${CASE_NAME}" "${EXPECTED}" \
+    "${IMAGE_EXECUTION_INPUT}" "ImageProcess"
 done
 
 # ── 5. Report ──────────────────────────────────────────────
@@ -259,4 +326,4 @@ if [[ "${FAILURES}" -gt 0 ]]; then
   fail "${FAILURES} test case(s) failed"
   exit 1
 fi
-ok "All ${#CASES[@]} test cases passed"
+ok "All $((${#CASES[@]} + ${#IMAGE_CASES[@]})) test cases passed (${#CASES[@]} ChatProcess + ${#IMAGE_CASES[@]} ImageProcess)"
