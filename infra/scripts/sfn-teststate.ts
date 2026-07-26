@@ -10,6 +10,12 @@
  * the `Intent?` Choice — routes to the next state we expect given a concrete
  * input, using the live state-machine role and (optionally) live task invokes.
  *
+ * ⚠️ CURRENTLY UNUSABLE: the dev environment was decommissioned in July 2026, so
+ * there is no dev account to run this against (the guard below refuses anything
+ * other than stage "dev"). It is kept for the day a dev account is recreated.
+ * Until then, workflow coverage comes from the Step Functions Local mock suite
+ * (scripts/sfn-local-test.sh), which runs in CI. See docs/deployment.md.
+ *
  * SAFETY: This runs against DEV ONLY. TestState can really invoke the task
  * resources referenced by a state, so never point it at prod. The script
  * refuses to run unless SFN_TESTSTATE_STAGE is explicitly "dev".

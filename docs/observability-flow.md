@@ -147,12 +147,12 @@ The `parseAlarmMessage()` function handles two event types:
 
 ```json
 {
-  "AlarmName": "fm-dev-expenses-errors",
+  "AlarmName": "fm-prod-expenses-errors",
   "NewStateReason": "Threshold crossed: 1 error in 5 minutes",
   "Trigger": {
     "Namespace": "AWS/Lambda",
     "MetricName": "Errors",
-    "Dimensions": [{ "name": "FunctionName", "value": "fm-dev-expenses" }]
+    "Dimensions": [{ "name": "FunctionName", "value": "fm-prod-expenses" }]
   }
 }
 ```
@@ -242,9 +242,9 @@ Example log entry:
   "service": "alarm-notifications",
   "timestamp": "2026-04-28T10:30:00.000Z",
   "xray_trace_id": "1-abc-def",
-  "alarmName": "fm-dev-expenses-errors",
+  "alarmName": "fm-prod-expenses-errors",
   "severity": "CRITICAL",
-  "resolvedService": "Lambda (fm-dev-expenses)"
+  "resolvedService": "Lambda (fm-prod-expenses)"
 }
 ```
 

@@ -22,7 +22,11 @@ allowed-tools: [Read, Edit, Write, Glob, Grep, Bash]
 When Lambda `functionName` values have NOT changed, deploy is straightforward:
 
 ```bash
-source config/.env.production
+# `set -a` is REQUIRED — the env file has plain KEY=value lines with no
+# `export`, so a bare `source` leaves CDK (a child process) without them.
+set -a && source config/.env.production && set +a
+export AWS_PROFILE=<your-prod-profile>
+aws sts get-caller-identity --query Account --output text   # confirm prod first
 pnpm infra:cdk synth
 pnpm infra:cdk deploy --all --require-approval broadening
 ```
@@ -57,7 +61,7 @@ exported function name. Use this two-phase process:
 
 4. Deploy in order:
    ```bash
-   source config/.env.production
+   set -a && source config/.env.production && set +a
    pnpm infra:cdk deploy fm-v3-MonitoringStack --require-approval broadening
    pnpm infra:cdk deploy fm-v2-LambdaExpensesStack fm-v2-LambdaDocumentsStack \
      fm-v2-LambdaCurrenciesStack fm-v2-LambdaUsersStack --require-approval broadening

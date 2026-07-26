@@ -1,23 +1,39 @@
 ---
 name: fm-deploy-dev
 description: |
-  Deploy the financial-management infrastructure to the development environment.
-  TRIGGER when: deploying to development, running CDK synth/deploy for dev, or updating dev stacks.
+  ARCHIVED — the development environment was decommissioned in July 2026 and no
+  dev AWS account exists. Kept only as a reference for recreating one. For real
+  deployments use fm-deploy-prod.
 metadata:
-  version: '1.0'
+  version: '2.0'
   scope: [infra]
-  auto_invoke: 'Deploying to development'
+  status: archived
 allowed-tools: [Read, Edit, Write, Glob, Grep, Bash]
 ---
 
-# fm-deploy-dev -- Development Deployment
+# fm-deploy-dev -- Development Deployment (ARCHIVED)
+
+> ## ⚠️ This environment no longer exists
+>
+> The development/staging AWS account (`376218549964`, us-east-1) was
+> **decommissioned in July 2026** for cost reasons: all 14 stacks, the assets
+> bucket, retained log groups and the CDK bootstrap were destroyed (verified
+> empty across every enabled region). **Production is the only environment** —
+> see `docs/deployment.md`.
+>
+> Do **not** follow these steps as-is. To deploy, use **`fm-deploy-prod`**.
+>
+> To recreate a dev environment you would additionally need to: provision a new
+> AWS account, run `cdk bootstrap`, recreate the Route 53 records / social-login
+> app registrations, and repopulate `config/.env.development`.
 
 ## Version
 
-1.0
+2.0 (archived)
 
 ## Prerequisites
 
+- A dev AWS account (does not currently exist — see the notice above)
 - AWS CLI configured with dev account credentials
 - Node.js >= 24, pnpm installed
 - Environment file `config/.env.development` populated with required variables
@@ -40,7 +56,8 @@ Set these in `config/.env.development` before deploying:
 ### 1. Load environment
 
 ```bash
-source config/.env.development
+# `set -a` is required: plain `source` would not export to child processes
+set -a && source config/.env.development && set +a
 ```
 
 ### 2. Install dependencies
@@ -89,7 +106,8 @@ Stacks deploy with dependencies resolved automatically by CDK:
 
 ## Critical Patterns
 
-- Always `source config/.env.development` before any CDK command
+- Always `set -a && source config/.env.development && set +a` before any CDK
+  command (a bare `source` does not export to child processes)
 - Run `pnpm infra:cdk synth` before deploying to catch template errors early
 - The monitoring stack (v3) imports cross-version outputs from v1 and v2 stacks
 

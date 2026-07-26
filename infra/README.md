@@ -411,10 +411,10 @@ All environment variables are read at synth time from `process.env` in the stack
 
 ### General
 
-| Variable         | Used by      | Description                                                                          |
-| ---------------- | ------------ | ------------------------------------------------------------------------------------ |
-| `PROJECT_PREFIX` | entry-config | Prefix for full stack resource names                                                 |
-| `STAGE`          | v1, v2, v3   | Stage name (e.g. `dev`, `prod`). Used in Lambda function names and API Gateway stage |
+| Variable         | Used by      | Description                                                                                        |
+| ---------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| `PROJECT_PREFIX` | entry-config | Prefix for full stack resource names                                                               |
+| `STAGE`          | v1, v2, v3   | Stage name (`prod` — the only deployed stage). Used in Lambda function names and API Gateway stage |
 
 ### V1 -- Assets
 
@@ -457,7 +457,7 @@ All environment variables are read at synth time from `process.env` in the stack
 | `ALLOWED_ORIGINS`              | Comma-separated CORS allowed origins                                       |
 | `CUSTOM_DOMAIN`                | Route 53 hosted zone root domain (e.g. `financial-management.migudev.com`) |
 | `CUSTOM_DOMAIN_HOSTED_ZONE_ID` | Route 53 hosted zone ID (required when `CUSTOM_DOMAIN` is set)             |
-| `API_CUSTOM_DOMAIN_PREFIX`     | API subdomain prefix (e.g. `dev-api`)                                      |
+| `API_CUSTOM_DOMAIN_PREFIX`     | API subdomain prefix (prod: `api`)                                         |
 
 ### V2 -- Lambda Services
 
@@ -482,7 +482,7 @@ All environment variables are read at synth time from `process.env` in the stack
 | `ASSETS_BUCKET_URL`            | Assets bucket URL (for frontend env)                 |
 | `APPLICATION_URL`              | Application URL (for frontend env)                   |
 | `AMPLIFY_CUSTOM_DOMAIN`        | Custom domain for Amplify (Route 53 zone)            |
-| `AMPLIFY_CUSTOM_DOMAIN_PREFIX` | Subdomain prefix (e.g. `dev`). Empty string for root |
+| `AMPLIFY_CUSTOM_DOMAIN_PREFIX` | Subdomain prefix. **Empty = apex** (prod uses empty) |
 
 ### V3 -- Monitoring
 
@@ -543,7 +543,10 @@ pnpm --filter @infra test
 # `sfn-local` job in .github/workflows/ci.yml.
 pnpm --filter @infra test:sfn-local
 
-# TestState API — single-state routing against DEV only (narrow IAM role)
+# TestState API — single-state routing, DEV-only by design (narrow IAM role).
+# ⚠️ CURRENTLY UNUSABLE: the dev environment was decommissioned (July 2026), and
+# the script refuses to run unless SFN_TESTSTATE_STAGE=dev. Kept for the day a
+# dev account is recreated; use the Step Functions Local suite above instead.
 pnpm --filter @infra test:sfn-teststate
 ```
 
@@ -613,7 +616,7 @@ infra/
 │       └── v3/
 │           ├── index.ts                  # v3 stack registration (Monitoring)
 │           ├── stacks.ts                 # ActiveStack enum for v3
-│           └── monitoring-stack.ts       # Dashboard, 15 alarms, SNS, EventBridge
+│           └── monitoring-stack.ts       # Dashboard, 34 alarms + composite, SNS, EventBridge
 ├── cdk.json
 └── package.json
 ```
