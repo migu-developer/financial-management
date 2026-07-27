@@ -434,6 +434,58 @@ user cancelled) is referenced by no message row.
 `textract:AnalyzeExpense` cannot be resource-scoped — Textract exposes no
 per-document ARN — so `*` is the only valid resource for that action.
 
+### Client (WEB)
+
+The attach action is **web-only** for now: the file picker and the in-browser
+optimizer both rely on browser APIs. The mic button is hidden until the
+voice-note phase exists.
+
+```
+camera icon → pickImageFile()          browser file chooser
+            → optimizeImageForUpload() canvas: format + EXIF + 10000px cap
+            → POST /chat/upload-url    presign
+            → PUT to S3                bytes never touch API Gateway
+            → wait for attachment_ready on the EXISTING chat channel
+            → POST /chat { attachmentS3Key: readyKey }
+```
+
+The Send button is disabled while the attachment is `preparing` / `uploading` /
+`processing`, and a **photo with no caption is a valid message** — a receipt
+speaks for itself.
+
+**Client-side optimization follows the SAME policy as the server**, on purpose:
+convert the format, apply EXIF orientation, and downscale only to reach
+10000 px. It deliberately does not shrink images to save bandwidth, for the same
+15 px reason. The win that matters is FORMAT — a 12 MP PNG is ~20 MB, the same
+image as JPEG q88 is ~2 MB. An already-compliant JPEG is uploaded untouched, and
+the server then takes its cheap passthrough path.
+
+**HEIC is caught before the upload.** `isHeicFile()` checks the MIME type and
+the extension, so a user who picks one from disk gets the explanation instantly
+instead of after an upload plus a server round trip.
+
+Two failure modes the UI must not have, and how they are prevented:
+
+| Risk                                                            | Guard                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------ |
+| Send stays disabled forever after a lost `attachment_ready`     | 60s timeout → `attachTimedOut`                         |
+| A slow first upload overwrites the attachment the user replaced | events correlate on `uploadKey`; a mismatch is ignored |
+
+Object URLs used for the thumbnail are revoked on clear AND on unmount — a
+48 MP preview holds real memory.
+
+**Where the logic lives.** The transitions and the upload orchestration are pure
+functions in `@features/dashboard/application/chat-attachment.ts`, not the hook.
+The repo has no React testing library and mocks `react-native` wholesale, so a
+hook exercised through a renderer is not testable here; keeping the risky parts
+pure makes them testable with plain Jest, and `useChatAttachment` stays thin
+wiring around state, refs and timers.
+
+`handleAttachmentEvent` is typed as a **type predicate**, which is what lets the
+drawer keep reading `event.sessionId` on the remaining events without a cast —
+the compiler enforces that attachment events are handled before the
+session filter.
+
 ### Audio is accepted by the schema but not yet wired
 
 `chat_messages.attachment_type` allows `'audio'`, and an audio attachment is

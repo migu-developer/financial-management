@@ -1,6 +1,8 @@
 import type {
   ChatHistoryMessage,
   ChatRepositoryPort,
+  CreateUploadUrlInput,
+  CreateUploadUrlResult,
   ChatSessionSummary,
   ChatTaskTokenStatus,
   ConfirmExpenseInput,
@@ -49,11 +51,47 @@ export class ChatApiRepository implements ChatRepositoryPort {
     if (input.sessionId !== undefined) {
       body.sessionId = input.sessionId;
     }
+    if (input.attachmentS3Key !== undefined) {
+      body.attachmentS3Key = input.attachmentS3Key;
+      body.attachmentType = input.attachmentType ?? 'image';
+    }
     const response = await this.api.post<ApiResponse<SendChatMessageAck>>(
       '/chat',
       body,
     );
     return response.data;
+  }
+
+  async createUploadUrl(
+    input: CreateUploadUrlInput,
+  ): Promise<CreateUploadUrlResult> {
+    const response = await this.api.post<ApiResponse<CreateUploadUrlResult>>(
+      '/chat/upload-url',
+      { contentType: input.contentType },
+    );
+    return response.data;
+  }
+
+  async uploadAttachment(
+    uploadUrl: string,
+    blob: Blob,
+    contentType: string,
+  ): Promise<void> {
+    // Deliberately NOT through `ApiClient`: this goes straight to S3, so it
+    // must carry no Authorization header (the signature is in the URL) and no
+    // JSON Content-Type. `Content-Type` MUST match what was presigned, or S3
+    // rejects the PUT with a signature mismatch.
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: blob,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Attachment upload failed with ${response.status} ${response.statusText}`,
+      );
+    }
   }
 
   async confirmExpense(

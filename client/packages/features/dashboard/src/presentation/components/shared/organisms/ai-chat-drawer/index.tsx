@@ -18,6 +18,8 @@ import { useTranslation } from '@packages/i18n';
 import { isWeb, preferenceStorage } from '@packages/utils';
 
 import { ChatInput } from '@features/ui/components/shared/atoms/chat-input';
+import { AttachmentPreview } from '@features/ui/components/shared/atoms/attachment-preview';
+import { useChatAttachment } from '@features/dashboard/presentation/hooks/use-chat-attachment';
 import { Skeleton } from '@features/ui/components/shared/atoms/skeleton';
 import { TypingIndicator } from '@features/ui/components/shared/atoms/typing-indicator';
 import { ChatMessageList } from '@features/ui/components/shared/molecules/chat-message-list';
@@ -91,6 +93,38 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const isPlatformWeb = useMemo(() => isWeb(), []);
+
+  // Attachment copy is resolved here so the hook and the atom stay free of i18n.
+  const attachmentMessages = useMemo(
+    () => ({
+      unsupported: t('aiChat.attachUnsupported'),
+      uploadFailed: t('aiChat.attachUploadFailed'),
+      timedOut: t('aiChat.attachTimedOut'),
+    }),
+    [t],
+  );
+  const {
+    attachment,
+    pickAttachment,
+    clearAttachment,
+    handleAttachmentEvent,
+    isBusy: attachmentBusy,
+  } = useChatAttachment({ chatRepository, messages: attachmentMessages });
+
+  const attachmentStatusLabel = useMemo(() => {
+    switch (attachment.status) {
+      case 'preparing':
+        return t('aiChat.attachPreparing');
+      case 'uploading':
+        return t('aiChat.attachUploading');
+      case 'processing':
+        return t('aiChat.attachProcessing');
+      case 'ready':
+        return t('aiChat.attachReady');
+      default:
+        return '';
+    }
+  }, [attachment.status, t]);
 
   const drawerWidth = isPlatformWeb
     ? 380
@@ -245,6 +279,11 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     });
 
     const onEvent = (event: ChatEvent) => {
+      // Attachment events come FIRST: they are emitted before any chat message
+      // exists, so they carry no `sessionId` and the filter below would drop
+      // them outright.
+      if (handleAttachmentEvent(event)) return;
+
       // The channel (`${userId}/responses`) carries events for ALL of the
       // user's sessions, so render an event only when it belongs to the
       // session the drawer is currently showing. `sessionIdRef` is kept in
@@ -295,18 +334,24 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     userId,
     getAuthToken,
     handleRealtimeReconnect,
+    handleAttachmentEvent,
     t,
   ]);
 
   // ── Send message ──────────────────────────────────────────
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
-    if (!trimmed) return;
+    const readyKey =
+      attachment.status === 'ready' ? attachment.readyKey : undefined;
+
+    // A photo on its own is a valid message; text alone still is too.
+    if (!trimmed && !readyKey) return;
 
     setErrorBanner(null);
     const userMessage: InternalMessage = {
       id: `user-${Date.now()}`,
-      message: trimmed,
+      // Give the bubble something to show when the user sent only a photo.
+      message: trimmed || t('aiChat.attachReady'),
       timestamp: formatTimestamp(),
       isUser: true,
     };
@@ -316,12 +361,17 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
       userMessage,
     ]);
     setInputText('');
+    clearAttachment();
     setIsWaitingForAssistant(true);
 
     try {
       const ack = await chatRepository.sendMessage({
         ...(sessionId !== undefined && { sessionId }),
         content: trimmed,
+        ...(readyKey !== undefined && {
+          attachmentS3Key: readyKey,
+          attachmentType: 'image' as const,
+        }),
       });
       if (!sessionId) {
         // Set the ref synchronously (before the state re-render) so the
@@ -336,7 +386,16 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
       setErrorBanner(t('aiChat.error'));
       setIsWaitingForAssistant(false);
     }
-  }, [inputText, sessionId, chatRepository, userId, t]);
+  }, [
+    inputText,
+    attachment.status,
+    attachment.readyKey,
+    clearAttachment,
+    sessionId,
+    chatRepository,
+    userId,
+    t,
+  ]);
 
   // ── Session management ────────────────────────────────────
   const handleNewChat = useCallback(() => {
@@ -633,17 +692,44 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
               )}
             </View>
 
-            {/* Input — camera + mic are placeholders until Phase 2 (multimedia). */}
+            {/* Attachments are WEB-only for now: the picker and the image
+                optimizer both rely on browser APIs. Mic stays hidden until the
+                voice-note phase adds a Transcribe branch. */}
             <ChatInput
               value={inputText}
               onChangeText={setInputText}
               onSend={() => void handleSend()}
-              onCamera={() => undefined}
+              onCamera={() => void pickAttachment()}
               onMic={() => undefined}
               placeholder={t('aiChat.placeholder')}
-              cameraLabel={t('aiChat.cameraLabel', { defaultValue: 'Camera' })}
+              cameraLabel={t('aiChat.attachLabel')}
               micLabel={t('aiChat.micLabel', { defaultValue: 'Microphone' })}
               sendLabel={t('aiChat.send')}
+              showCamera={isPlatformWeb}
+              showMic={false}
+              canSend={
+                !attachmentBusy &&
+                (Boolean(inputText.trim()) || attachment.status === 'ready')
+              }
+              {...(attachment.status !== 'idle' && {
+                attachmentSlot: (
+                  <AttachmentPreview
+                    status={attachment.status}
+                    {...(attachment.previewUri !== undefined && {
+                      previewUri: attachment.previewUri,
+                    })}
+                    {...(attachment.fileName !== undefined && {
+                      fileName: attachment.fileName,
+                    })}
+                    {...(attachment.errorMessage !== undefined && {
+                      errorMessage: attachment.errorMessage,
+                    })}
+                    statusLabel={attachmentStatusLabel}
+                    onRemove={clearAttachment}
+                    removeLabel={t('aiChat.attachRemoveLabel')}
+                  />
+                ),
+              })}
             />
           </>
         )}
