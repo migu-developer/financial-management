@@ -30,6 +30,10 @@ catalog:
   '@commitlint/config-conventional': ^20.5.0
   '@commitlint/types': ^20.5.0
   '@expo/vector-icons': ^15.1.1
+  # Native binary (libvips). Marked external + installed by CDK inside the
+  # Docker bundling image so the linux binary matches the Lambda architecture —
+  # a local macOS install would bundle darwin-arm64 and fail at runtime.
+  sharp: ^0.35.3
   '@react-email/components': ^1.0.11
   '@react-email/preview-server': ^5.2.10
   '@react-email/tailwind': ^2.0.7

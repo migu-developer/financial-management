@@ -12,6 +12,7 @@ export enum ActiveStack {
   LAMBDA_CHAT = 'LambdaChat',
   CHAT_ATTACHMENTS = 'ChatAttachments',
   STEP_FUNCTIONS_CHAT = 'StepFunctionsChat',
+  STEP_FUNCTIONS_IMAGE_PROCESS = 'StepFunctionsImageProcess',
   API_DOCS = 'ApiDocs',
   APPSYNC_EVENTS = 'AppSyncEvents',
 }

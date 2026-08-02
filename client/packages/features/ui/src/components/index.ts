@@ -65,6 +65,11 @@ export { ChatBubble } from './shared/atoms/chat-bubble';
 export type { ChatBubbleProps } from './shared/atoms/chat-bubble';
 export { ChatInput } from './shared/atoms/chat-input';
 export type { ChatInputProps } from './shared/atoms/chat-input';
+export { AttachmentPreview } from './shared/atoms/attachment-preview';
+export type {
+  AttachmentPreviewProps,
+  AttachmentPreviewStatus,
+} from './shared/atoms/attachment-preview';
 export { ChatMessageList } from './shared/molecules/chat-message-list';
 export type { ChatMessageListProps } from './shared/molecules/chat-message-list';
 export { TypingIndicator } from './shared/atoms/typing-indicator';

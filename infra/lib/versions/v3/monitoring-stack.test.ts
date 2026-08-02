@@ -248,15 +248,16 @@ describe('MonitoringStack', () => {
     // Every alarm here is a billable alarm-metric ($0.10/month each), so the
     // count is asserted explicitly to keep cost changes visible in review.
     //
-    // 2 API (5xx + latency; no 4xx) + 12 Lambda errors (5 services + 7 chat)
+    // 2 API (5xx + latency; no 4xx) + 15 Lambda errors (5 services + 10 chat)
     // + 3 Cognito triggers
     // + 2 chat Step Functions (ExecutionsFailed + ExecutionsTimedOut)
+    // + 1 image Step Function (ExecutionsFailed)
     // + 2 AppSync Events (5XXError + FailedEvents)
     // + 3 chat resilience (LatencyP90High + ExecutionsAborted + PublishFailed)
-    // Total = 24
+    // Total = 28
     // (the CompositeAlarm "Chat-Unhealthy" is NOT pushed into this.alarms;
     //  it is billed separately at a flat $0.50/month)
-    expect(stack.alarms).toHaveLength(24);
+    expect(stack.alarms).toHaveLength(28);
   });
 
   test('creates AI chat workflow and AppSync Events alarms', () => {

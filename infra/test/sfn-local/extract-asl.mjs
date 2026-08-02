@@ -91,6 +91,14 @@ function resolveIntrinsic(node) {
     const sub = node['Fn::Sub'];
     return Array.isArray(sub) ? sub[0] : sub;
   }
+  if ('Fn::ImportValue' in node) {
+    // A cross-stack import (e.g. the attachments bucket name embedded in a
+    // States.Format). Its real value is irrelevant locally — every task that
+    // would use it is mocked — so collapse it to a stable placeholder derived
+    // from the export name, which keeps distinct imports distinguishable.
+    const exportName = resolveIntrinsic(node['Fn::ImportValue']);
+    return `imported-${exportName.replace(/[^A-Za-z0-9-]/g, '-')}`;
+  }
 
   console.error(
     `Unhandled intrinsic: ${JSON.stringify(node)} — extend resolveIntrinsic.`,
@@ -112,16 +120,21 @@ try {
 
 // Step Functions Local cannot execute the Bedrock optimized integration
 // (`arn:aws:states:::bedrock:invokeModel`) — StartExecution 500s even when the
-// task is mocked. For LOCAL TESTING ONLY, rewrite every Bedrock task into a
-// mockable `lambda:invoke` task: the MockConfigFile matches on STATE NAME and
-// returns a Bedrock-shaped `Body`, so each task's ResultSelector still resolves
-// and its Retry/Catch are preserved (mock can still Throw `Bedrock.*` errors).
-// The deployed ASL is untouched — this rewrite lives only in the extracted copy.
+// task is mocked. The same applies to the generic AWS SDK integrations
+// (`arn:aws:states:::aws-sdk:<service>:<action>`, e.g. s3:copyObject), which
+// would try to reach the real service.
+//
+// For LOCAL TESTING ONLY, rewrite both into a mockable `lambda:invoke` task:
+// the MockConfigFile matches on STATE NAME, so each task's ResultSelector still
+// resolves and its Retry/Catch are preserved (a mock can still Throw
+// `Bedrock.*` or `States.*` errors). The deployed ASL is untouched — this
+// rewrite lives only in the extracted copy.
+const NON_LOCAL_INTEGRATIONS = ['bedrock:invokeModel', 'aws-sdk:'];
 let rewritten = 0;
 for (const [name, state] of Object.entries(asl.States ?? {})) {
   if (
     typeof state?.Resource === 'string' &&
-    state.Resource.includes('bedrock:invokeModel')
+    NON_LOCAL_INTEGRATIONS.some((marker) => state.Resource.includes(marker))
   ) {
     state.Resource = 'arn:aws:states:::lambda:invoke';
     state.Parameters = {
@@ -134,5 +147,5 @@ for (const [name, state] of Object.entries(asl.States ?? {})) {
 
 writeFileSync(outPath, `${JSON.stringify(asl, null, 2)}\n`, 'utf8');
 console.log(
-  `Wrote resolved ASL (${asl.States ? Object.keys(asl.States).length : 0} states, ${rewritten} Bedrock tasks rewritten to lambda:invoke for local mocking) to ${outPath}`,
+  `Wrote resolved ASL (${asl.States ? Object.keys(asl.States).length : 0} states, ${rewritten} non-local integration task(s) rewritten to lambda:invoke for mocking) to ${outPath}`,
 );

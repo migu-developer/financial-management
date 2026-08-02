@@ -131,6 +131,17 @@ export const dashboard = {
     noSessions: 'No conversations yet',
     untitledSession: 'Conversation',
     loadingSessions: 'Loading conversations...',
+    attachLabel: 'Attach a receipt photo',
+    attachRemoveLabel: 'Remove attachment',
+    attachPreparing: 'Preparing image...',
+    attachUploading: 'Uploading...',
+    attachProcessing: 'Processing image...',
+    attachReady: 'Ready to send',
+    attachUnsupported:
+      'That image format cannot be processed. Try a JPG or PNG — on iPhone, turn on Settings > Camera > Formats > Most Compatible.',
+    attachUploadFailed: "Couldn't upload the image. Please try again.",
+    attachTimedOut:
+      'The image is taking too long to process. Please try again.',
   },
 } as const;
 

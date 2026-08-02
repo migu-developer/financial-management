@@ -235,11 +235,11 @@ Migrations use semantic versioning: `src/migrations/{major}/{minor}/{patch}/`
 
 ### CDK Stacks
 
-| Version | Stacks                                                                                           | Purpose                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| v1      | Assets, Auth                                                                                     | S3 bucket, Cognito (4 IdPs, MFA, triggers)                                        |
-| v2      | ApiGateway, 6 Lambda stacks, StepFunctionsChat, ChatAttachments, AppSyncEvents, ApiDocs, Amplify | REST API, business logic, AI chat workflow, attachments bucket, realtime, hosting |
-| v3      | Monitoring                                                                                       | Dashboard, 24 alarms + composite, EventBridge, notifications                      |
+| Version | Stacks                                                                                                                      | Purpose                                                                                                |
+| ------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| v1      | Assets, Auth                                                                                                                | S3 bucket, Cognito (4 IdPs, MFA, triggers)                                                             |
+| v2      | ApiGateway, 6 Lambda stacks, StepFunctionsChat, StepFunctionsImageProcess, ChatAttachments, AppSyncEvents, ApiDocs, Amplify | REST API, business logic, AI chat workflow, image normalization, attachments bucket, realtime, hosting |
+| v3      | Monitoring                                                                                                                  | Dashboard, 28 alarms + composite, EventBridge, notifications                                           |
 
 ### Deploy
 

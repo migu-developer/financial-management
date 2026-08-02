@@ -131,6 +131,17 @@ export const dashboard = {
     noSessions: 'Aún no tienes conversaciones',
     untitledSession: 'Conversación',
     loadingSessions: 'Cargando conversaciones...',
+    attachLabel: 'Adjuntar foto de un recibo',
+    attachRemoveLabel: 'Quitar adjunto',
+    attachPreparing: 'Preparando imagen...',
+    attachUploading: 'Subiendo...',
+    attachProcessing: 'Procesando imagen...',
+    attachReady: 'Lista para enviar',
+    attachUnsupported:
+      'Ese formato de imagen no se puede procesar. Prueba con JPG o PNG — en iPhone activa Ajustes > Camara > Formatos > Mas compatible.',
+    attachUploadFailed: 'No se pudo subir la imagen. Intentalo de nuevo.',
+    attachTimedOut:
+      'La imagen esta tardando demasiado en procesarse. Intentalo de nuevo.',
   },
 } as const;
 

@@ -269,6 +269,46 @@ export class MonitoringStack extends BaseStack {
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
       },
+      // Attachment image normalization (Phase 2). `convert-image` runs sharp on
+      // a full bitmap, so an error here is usually OOM or a timeout rather than
+      // a bad photo — an unreadable image is reported to the user and the
+      // execution SUCCEEDS, so it never reaches these alarms.
+      ChatProbeImage: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsImageProcess',
+          'ProbeImageFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+      },
+      ChatConvertImage: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsImageProcess',
+          'ConvertImageFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+      },
+      ChatPublishAttachment: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsImageProcess',
+          'PublishAttachmentFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+      },
       // Receipt attachments (Phase 2). Textract failures do NOT fail the
       // conversation — the use case degrades to "unreadable" — so an error here
       // means the task itself broke (bad key, missing IAM, Textract outage).
@@ -455,6 +495,41 @@ export class MonitoringStack extends BaseStack {
     );
     chatExecutionsFailedAlarm.addAlarmAction(snsAction);
     this.alarms.push(chatExecutionsFailedAlarm);
+
+    // ── Image-processing workflow ──────────────────────────
+    // Only GENUINE faults reach here: an image the user sent that we cannot
+    // decode ends SUCCEEDED (the user is told), precisely so somebody's HEIC
+    // holiday photo never pages anyone. A failure therefore means our own
+    // problem — OOM, timeout, IAM, or S3.
+    const imageStateMachineArn = importFromVersion(
+      this,
+      'v2',
+      'StepFunctionsImageProcess',
+      'StateMachineArn',
+    );
+    const imageWorkflowFailedAlarm = new Alarm(
+      this,
+      `${stackName}-ImageWorkflowFailedAlarm`,
+      {
+        alarmName: `${stackName}-ImageWorkflow-ExecutionsFailed`,
+        alarmDescription:
+          'Attachment image normalization is failing — unreadable user images end SUCCEEDED by design, so this means an infrastructure fault (OOM, timeout, IAM, S3)',
+        metric: new Metric({
+          namespace: 'AWS/States',
+          metricName: 'ExecutionsFailed',
+          dimensionsMap: { StateMachineArn: imageStateMachineArn },
+          statistic: 'Sum',
+          period: Duration.minutes(5),
+        }),
+        threshold: 2,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      },
+    );
+    imageWorkflowFailedAlarm.addAlarmAction(snsAction);
+    this.alarms.push(imageWorkflowFailedAlarm);
 
     // HITL previews now wait up to 7 days and an abandoned one is caught
     // (States.Timeout) and ends cleanly, so ExecutionsTimedOut should be ~0.

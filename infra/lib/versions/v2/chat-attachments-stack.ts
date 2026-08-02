@@ -6,6 +6,10 @@ import {
   HttpMethods,
   StorageClass,
 } from 'aws-cdk-lib/aws-s3';
+import {
+  ATTACHMENT_READY_PREFIX,
+  ATTACHMENT_UPLOAD_PREFIX,
+} from '@packages/models/chat/attachment-keys';
 import { BaseStack, BaseStackProps } from '@core/base-stack';
 import { exportForCrossVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
@@ -58,6 +62,11 @@ export class ChatAttachmentsStack extends BaseStack {
       // Versioning is off on purpose — an attachment is written once and never
       // updated, so versions would only accumulate cost.
       versioned: false,
+      // ObjectCreated events go to EventBridge, which starts the
+      // image-processing state machine. The rule filters on the UPLOAD prefix
+      // only, so the normalized object this workflow writes back into the same
+      // bucket cannot re-trigger it — that would be an infinite loop.
+      eventBridgeEnabled: true,
       cors: [
         {
           // Only PUT is needed: the client uploads through a presigned URL and
@@ -70,22 +79,34 @@ export class ChatAttachmentsStack extends BaseStack {
       ],
       lifecycleRules: [
         {
-          id: 'chat-attachments-lifecycle',
+          // RAW uploads. Short-lived by design: once normalization has written
+          // the `chat-ready/` object, the original is dead weight — the
+          // conversation only ever references the normalized key. A week gives
+          // room to re-run normalization if we ship a bug in it.
+          id: 'chat-attachments-raw-uploads',
           enabled: true,
-          prefix: 'chat-attachments/',
+          prefix: `${ATTACHMENT_UPLOAD_PREFIX}/`,
+          expiration: Duration.days(7),
+          // A phone upload interrupted mid-flight otherwise leaves billable
+          // parts behind forever.
+          abortIncompleteMultipartUploadAfter: Duration.days(1),
+        },
+        {
+          // NORMALIZED images — the ones the conversation references, so they
+          // live as long as the receipt stays viewable in the chat history.
+          // Expiry is also the only cleanup path for an attachment whose
+          // `POST /chat` never followed (user cancelled): it is referenced by
+          // no message row.
+          id: 'chat-attachments-normalized',
+          enabled: true,
+          prefix: `${ATTACHMENT_READY_PREFIX}/`,
           transitions: [
             {
               storageClass: StorageClass.INFREQUENT_ACCESS,
               transitionAfter: Duration.days(30),
             },
           ],
-          // A receipt stays viewable in the conversation for a year. This also
-          // eventually reclaims ORPHANED uploads — an object whose presigned
-          // PUT succeeded but whose `POST /chat` never followed (user cancelled)
-          // is unreferenced by any message row and has no other cleanup path.
           expiration: Duration.days(365),
-          // A phone upload interrupted mid-flight otherwise leaves billable
-          // parts behind forever.
           abortIncompleteMultipartUploadAfter: Duration.days(1),
         },
       ],
