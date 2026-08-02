@@ -306,7 +306,7 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 
 Subscribed to the SNS alert topic via `LambdaSubscription`.
 
-**Alarms (23 total + 1 composite):** the table below lists the foundation
+**Alarms (24 total + 1 composite):** the table below lists the foundation
 service alarms; the AI chat subsystem adds the rest — see the chat alarms note
 after the table.
 
@@ -337,7 +337,7 @@ lever is removing metrics from monitoring. See
 `docs/observability-flow.md#what-is-deliberately-not-alarmed`.
 
 **AI chat alarms** (in addition to the table above): per-Lambda errors
-for the 6 chat Lambdas (handler + 5 SFN task Lambdas); state-machine
+for the 7 chat Lambdas (handler + 6 SFN task Lambdas, including analyze-receipt); state-machine
 `ChatWorkflow-ExecutionsFailed` (thresholded: >2 in 2 of 3 windows, since the
 workflow catch-all already replies to the user on a single failure),
 `ExecutionsTimedOut`, `ExecutionsAborted`, `LatencyP90High` (p90 > 60s); AppSync
@@ -622,7 +622,7 @@ infra/
 │       └── v3/
 │           ├── index.ts                  # v3 stack registration (Monitoring)
 │           ├── stacks.ts                 # ActiveStack enum for v3
-│           └── monitoring-stack.ts       # Dashboard, 23 alarms + composite, SNS, EventBridge
+│           └── monitoring-stack.ts       # Dashboard, 24 alarms + composite, SNS, EventBridge
 ├── cdk.json
 └── package.json
 ```
