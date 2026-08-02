@@ -496,13 +496,22 @@ means a `StartTranscriptionJob` + `Wait`/`GetTranscriptionJob` polling loop
 
 ## Environment Variables
 
-| Variable                                                                 | Lambda(s)                      | Source                                                 |
-| ------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------ |
-| `CHAT_STATE_MACHINE_ARN`                                                 | chat handler                   | LambdaChat stack (cross-version import)                |
-| `CHAT_ATTACHMENTS_BUCKET`                                                | chat handler, analyze-receipt  | ChatAttachments stack (cross-version import)           |
-| `APPSYNC_HTTP_DNS`, `APPSYNC_CHAT_NAMESPACE`                             | save-and-publish, save-preview | StepFunctionsChat stack (imports from AppSyncEvents)   |
-| `DATABASE_URL`, `DATABASE_READONLY_URL`                                  | all task Lambdas               | stack props                                            |
-| `EXPO_PUBLIC_APPSYNC_REALTIME_DNS`, `EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE` | client bundle                  | Amplify build env (written to `.env` by `amplify.yml`) |
+| Variable                                                                 | Lambda(s)                                                 | Source                                                 |
+| ------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------ |
+| `CHAT_STATE_MACHINE_ARN`                                                 | chat handler                                              | LambdaChat stack (cross-version import)                |
+| `CHAT_ATTACHMENTS_BUCKET`                                                | chat handler, analyze-receipt, probe-image, convert-image | ChatAttachments stack (cross-version import)           |
+| `APPSYNC_HTTP_DNS`, `APPSYNC_CHAT_NAMESPACE`                             | save-and-publish, save-preview                            | StepFunctionsChat stack (imports from AppSyncEvents)   |
+| `DATABASE_URL`, `DATABASE_READONLY_URL`                                  | all task Lambdas                                          | stack props                                            |
+| `EXPO_PUBLIC_APPSYNC_REALTIME_DNS`, `EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE` | client bundle                                             | Amplify build env (written to `.env` by `amplify.yml`) |
+
+> `CHAT_ATTACHMENTS_BUCKET` also appears in `config/.env.*`, but ONLY so the
+> local runner scripts in `services/chat/src/exec/` can reach the bucket. The
+> deployed Lambdas ignore those files entirely — CDK sets the variable from a
+> CloudFormation cross-stack import, deriving the name as
+> `${ASSETS_BUCKET_PREFIX}-${AWS_REGION}-chat-attachments`. For the same reason
+> there is **no** `CHAT_ATTACHMENTS_BUCKET` GitHub environment variable: CI
+> already provides `ASSETS_BUCKET_PREFIX` and `AWS_REGION`, and adding the
+> derived name would be dead config that silently does nothing when changed.
 
 All required variables are validated at Lambda init with `requireEnv` from
 `@packages/models/shared/utils/require-env` — a missing variable crashes with
