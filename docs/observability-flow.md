@@ -58,10 +58,14 @@ composite is a flat $0.50/month. Total: **$3.30/month**. See
 
 ### API Gateway alarms (2)
 
-| Alarm           | Metric          | Threshold  | Period | Eval Periods |
-| --------------- | --------------- | ---------- | ------ | ------------ |
-| API 5xx Errors  | `5XXError`      | >= 1       | 5 min  | 1            |
-| API Latency p99 | `Latency` (p99) | >= 5000 ms | 5 min  | 2            |
+| Alarm           | Metric          | Threshold | Period | Eval / Datapoints |
+| --------------- | --------------- | --------- | ------ | ----------------- |
+| API 5xx Errors  | `5XXError` Sum  | > 5       | 1 min  | 3 eval / 2 dp     |
+| API Latency p99 | `Latency` (p99) | > 5000 ms | 1 min  | 5 eval / 3 dp     |
+
+Both require a SUSTAINED signal rather than a single datapoint: one 5xx or one
+slow request is noise at this volume, so alarming on it would only cause alert
+fatigue.
 
 ### Lambda alarms (15)
 
@@ -71,9 +75,19 @@ handler, execute-query, validate-fields, create-expense, save-and-publish,
 save-preview, analyze-receipt, probe-image, convert-image,
 publish-attachment):
 
-| Alarm            | Metric   | Threshold | Period | Eval Periods |
-| ---------------- | -------- | --------- | ------ | ------------ |
-| {Service} Errors | `Errors` | >= 1      | 5 min  | 1            |
+Settings differ by role, so they are listed per group rather than averaged into
+one misleading row:
+
+| Group                                                        | Threshold | Period | Eval / Datapoints |
+| ------------------------------------------------------------ | --------- | ------ | ----------------- |
+| API-facing services (expenses, documents, currencies, users) | > 3       | 1 min  | 3 eval / 2 dp     |
+| Chat handler (synchronous, must ACK in under a second)       | > 3       | 1 min  | 3 eval / 2 dp     |
+| Chat workflow task Lambdas (background)                      | > 3       | 5 min  | 3 eval / 2 dp     |
+| UpdateRates (runs once a day)                                | > 2       | 24 h   | 1 eval / 1 dp     |
+
+The background task Lambdas use a longer period so an LLM cold start does not
+look like an outage. UpdateRates is single-datapoint because it only runs once
+a day — waiting for three windows would mean a three-day delay.
 
 ### Image normalization alarms (1)
 
@@ -88,20 +102,20 @@ for the user-facing side.
 
 ### AI Chat workflow alarms (4)
 
-| Alarm                           | Namespace    | Metric               | Trigger                  |
-| ------------------------------- | ------------ | -------------------- | ------------------------ |
-| ChatWorkflow-ExecutionsFailed   | `AWS/States` | `ExecutionsFailed`   | >= 1 datapoint           |
-| ChatWorkflow-ExecutionsTimedOut | `AWS/States` | `ExecutionsTimedOut` | sustained (3 datapoints) |
-| ChatWorkflow-ExecutionsAborted  | `AWS/States` | `ExecutionsAborted`  | >= 1 datapoint           |
-| ChatWorkflow-LatencyP90High     | `AWS/States` | `ExecutionTime` p90  | > 60 s (3 eval / 2 dp)   |
+| Alarm                           | Namespace    | Metric               | Trigger                      |
+| ------------------------------- | ------------ | -------------------- | ---------------------------- |
+| ChatWorkflow-ExecutionsFailed   | `AWS/States` | `ExecutionsFailed`   | > 2 per 5-min, 3 eval / 2 dp |
+| ChatWorkflow-ExecutionsTimedOut | `AWS/States` | `ExecutionsTimedOut` | > 0, 3 eval / 3 dp           |
+| ChatWorkflow-ExecutionsAborted  | `AWS/States` | `ExecutionsAborted`  | > 0, 1 eval / 1 dp           |
+| ChatWorkflow-LatencyP90High     | `AWS/States` | `ExecutionTime` p90  | > 60 s, 3 eval / 2 dp        |
 
-A Bedrock failure kills the conversation without touching any Lambda — `ExecutionsFailed` watches the workflow itself. Abandoned HITL previews are now caught at the 7-day mark and end gracefully, so `ExecutionsTimedOut` should stay ~0; a non-zero value means the 8-day execution backstop fired (a real anomaly), hence it requires a sustained signal before paging. `ExecutionTime` p90 alarms when conversations get slow.
+A Bedrock failure kills the conversation without touching any Lambda — `ExecutionsFailed` watches the workflow itself. It is deliberately NOT single-datapoint: the catch-all already publishes a friendly message to the user on every failure, so one failed execution is not a silent hang. It alarms on a sustained PATTERN instead (>2 failures in 2 of 3 five-minute windows). The cases where the user truly got nothing stay single-datapoint sensitive: `Chat-PublishFailed` (the error publish itself failed) and `ExecutionsAborted`. Abandoned HITL previews are now caught at the 7-day mark and end gracefully, so `ExecutionsTimedOut` should stay ~0; a non-zero value means the 8-day execution backstop fired (a real anomaly), hence it requires a sustained signal before paging. `ExecutionTime` p90 alarms when conversations get slow.
 
 ### AI Chat business-metric alarm (1) + composite
 
-| Alarm              | Namespace             | Metric              | Trigger        |
-| ------------------ | --------------------- | ------------------- | -------------- |
-| Chat-PublishFailed | `FinancialManagement` | `ChatPublishFailed` | >= 1 datapoint |
+| Alarm              | Namespace             | Metric              | Trigger            |
+| ------------------ | --------------------- | ------------------- | ------------------ |
+| Chat-PublishFailed | `FinancialManagement` | `ChatPublishFailed` | > 0, 1 eval / 1 dp |
 
 **`Chat-Unhealthy` (CompositeAlarm)** is the single actionable chat-health
 signal — it ORs `ChatWorkflow-ExecutionsFailed`, AppSync `FailedEvents`,
@@ -110,20 +124,22 @@ Lambdas). Page/escalate on this one.
 
 ### AppSync Events alarms (2)
 
-| Alarm                      | Namespace     | Metric         | Threshold |
-| -------------------------- | ------------- | -------------- | --------- |
-| AppSyncEvents-5xx-Errors   | `AWS/AppSync` | `5XXError`     | >= 1      |
-| AppSyncEvents-FailedEvents | `AWS/AppSync` | `FailedEvents` | >= 1      |
+| Alarm                      | Namespace     | Metric         | Trigger            |
+| -------------------------- | ------------- | -------------- | ------------------ |
+| AppSyncEvents-5xx-Errors   | `AWS/AppSync` | `5XXError`     | > 0, 1 eval / 1 dp |
+| AppSyncEvents-FailedEvents | `AWS/AppSync` | `FailedEvents` | > 0, 1 eval / 1 dp |
 
 Dimension is `EventAPIId` (verified against the metrics the deployed Event API actually emits).
 
 ### Cognito trigger alarms (3)
 
-| Alarm                 | Lambda                      | Metric   | Threshold |
-| --------------------- | --------------------------- | -------- | --------- |
-| Pre-Signup Errors     | `fm-{stage}-pre-signup`     | `Errors` | >= 1      |
-| Custom-Message Errors | `fm-{stage}-custom-message` | `Errors` | >= 1      |
-| User-Sync Errors      | `fm-{stage}-user-sync`      | `Errors` | >= 1      |
+All three: `Errors` Sum over a 5-minute period, `> 1`, 3 eval / 2 datapoints.
+
+| Alarm                 | Lambda                      |
+| --------------------- | --------------------------- |
+| Pre-Signup Errors     | `fm-{stage}-pre-signup`     |
+| Custom-Message Errors | `fm-{stage}-custom-message` |
+| User-Sync Errors      | `fm-{stage}-user-sync`      |
 
 ## What is deliberately NOT alarmed
 
