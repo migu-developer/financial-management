@@ -306,7 +306,7 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 
 Subscribed to the SNS alert topic via `LambdaSubscription`.
 
-**Alarms (24 total + 1 composite):** the table below lists the foundation
+**Alarms (28 total + 1 composite):** the table below lists the foundation
 service alarms; the AI chat subsystem adds the rest — see the chat alarms note
 after the table.
 
@@ -337,12 +337,15 @@ lever is removing metrics from monitoring. See
 `docs/observability-flow.md#what-is-deliberately-not-alarmed`.
 
 **AI chat alarms** (in addition to the table above): per-Lambda errors
-for the 7 chat Lambdas (handler + 6 SFN task Lambdas, including analyze-receipt); state-machine
+for the 10 chat Lambdas (handler + 6 chat workflow task Lambdas + 3 image-normalization Lambdas); state-machine
 `ChatWorkflow-ExecutionsFailed` (thresholded: >2 in 2 of 3 windows, since the
 workflow catch-all already replies to the user on a single failure),
 `ExecutionsTimedOut`, `ExecutionsAborted`, `LatencyP90High` (p90 > 60s); AppSync
 Events `5XXError`/`FailedEvents`; the EMF `Chat-PublishFailed` (namespace
-`FinancialManagement`, dim `service=chat`); and a **composite `Chat-Unhealthy`**
+`FinancialManagement`, dim `service=chat`); the image-normalization state
+machine's `ImageWorkflow-ExecutionsFailed` (an image the user sent that we
+cannot decode ends SUCCEEDED by design, so a failure there always means an
+infrastructure fault); and a **composite `Chat-Unhealthy`**
 that ORs the above into a single actionable page. The notification Lambda handles
 composite alarms (which have no `Trigger`/metric). See `docs/observability-flow.md`.
 
@@ -622,7 +625,7 @@ infra/
 │       └── v3/
 │           ├── index.ts                  # v3 stack registration (Monitoring)
 │           ├── stacks.ts                 # ActiveStack enum for v3
-│           └── monitoring-stack.ts       # Dashboard, 24 alarms + composite, SNS, EventBridge
+│           └── monitoring-stack.ts       # Dashboard, 28 alarms + composite, SNS, EventBridge
 ├── cdk.json
 └── package.json
 ```
