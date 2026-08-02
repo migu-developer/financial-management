@@ -306,23 +306,18 @@ CloudWatch dashboard, alarms, SNS notifications, and EventBridge rules for full-
 
 Subscribed to the SNS alert topic via `LambdaSubscription`.
 
-**Alarms (34 total + 1 composite):** the table below lists the foundation
+**Alarms (23 total + 1 composite):** the table below lists the foundation
 service alarms; the AI chat subsystem adds the rest — see the chat alarms note
 after the table.
 
 | Alarm                        | Metric                     | Threshold | Eval Periods | Datapoints |
 | ---------------------------- | -------------------------- | --------- | ------------ | ---------- |
 | Api-5xx-Errors               | ApiGateway 5XXError        | > 5       | 3            | 2          |
-| Api-4xx-Spike                | ApiGateway 4XXError        | > 50      | 5            | 3          |
 | Api-Latency-High             | ApiGateway Latency p99     | > 5000ms  | 5            | 3          |
 | Lambda-Expenses-Errors       | Lambda Errors              | > 3       | 3            | 2          |
-| Lambda-Expenses-Throttles    | Lambda Throttles           | > 0       | 1            | 1          |
 | Lambda-Documents-Errors      | Lambda Errors              | > 3       | 3            | 2          |
-| Lambda-Documents-Throttles   | Lambda Throttles           | > 0       | 1            | 1          |
 | Lambda-Currencies-Errors     | Lambda Errors              | > 3       | 3            | 2          |
-| Lambda-Currencies-Throttles  | Lambda Throttles           | > 0       | 1            | 1          |
 | Lambda-Users-Errors          | Lambda Errors              | > 3       | 3            | 2          |
-| Lambda-Users-Throttles       | Lambda Throttles           | > 0       | 1            | 1          |
 | Lambda-UpdateRates-Errors    | Lambda Errors (24h period) | > 2       | 1            | 1          |
 | Cognito-PreSignUp-Errors     | Lambda Errors (5m period)  | > 1       | 3            | 2          |
 | Cognito-CustomMessage-Errors | Lambda Errors (5m period)  | > 1       | 3            | 2          |
@@ -330,7 +325,18 @@ after the table.
 
 All alarms use `TreatMissingData.NOT_BREACHING` and trigger the SNS alert topic.
 
-**AI chat alarms** (in addition to the table above): per-Lambda errors/throttles
+**Deliberately NOT alarmed:** per-Lambda `Throttles` (no function sets
+`reservedConcurrentExecutions`, so throttling could only come from the
+account-level 1000-concurrency limit — unreachable at this workload, and a
+throttled invocation also surfaces as `Errors` plus API 5xx) and
+`Api-4xx-Spike` (a 4xx is a CLIENT fault, not a service fault, so it is not
+actionable by an on-call alert). Both remain on the dashboard for trend
+analysis. CloudWatch bills $0.10 per alarm-metric per month, and consolidating
+alarms does NOT help — metric math is billed per metric referenced — so the only
+lever is removing metrics from monitoring. See
+`docs/observability-flow.md#what-is-deliberately-not-alarmed`.
+
+**AI chat alarms** (in addition to the table above): per-Lambda errors
 for the 6 chat Lambdas (handler + 5 SFN task Lambdas); state-machine
 `ChatWorkflow-ExecutionsFailed` (thresholded: >2 in 2 of 3 windows, since the
 workflow catch-all already replies to the user on a single failure),
@@ -343,7 +349,7 @@ composite alarms (which have no `Trigger`/metric). See `docs/observability-flow.
 **CloudWatch Dashboard sections:**
 
 1. **API Gateway** -- Requests, Errors (4xx/5xx), Latency (p50/p90/p99)
-2. **Lambda Services** -- Invocations, Errors, Duration (p90), Throttles, Concurrent Executions (for all 5 service Lambdas including UpdateRates)
+2. **Lambda Services** -- Invocations, Errors, Duration (p90), Throttles, Concurrent Executions (for all 5 service Lambdas including UpdateRates). Throttles are graphed but NOT alarmed — see above.
 3. **Cognito Triggers** -- Invocations, Errors, Duration (for PreSignUp, CustomMessage, UserSync; 5-minute period)
 4. **Cognito Trigger Errors (Logs Insights)** -- LogQueryWidget querying `/aws/lambda/{fnName}` log groups for recent ERROR entries
 5. **Amplify Hosting** -- Requests, Errors (4xx/5xx), Latency (p50/p90)
@@ -616,7 +622,7 @@ infra/
 │       └── v3/
 │           ├── index.ts                  # v3 stack registration (Monitoring)
 │           ├── stacks.ts                 # ActiveStack enum for v3
-│           └── monitoring-stack.ts       # Dashboard, 34 alarms + composite, SNS, EventBridge
+│           └── monitoring-stack.ts       # Dashboard, 23 alarms + composite, SNS, EventBridge
 ├── cdk.json
 └── package.json
 ```
