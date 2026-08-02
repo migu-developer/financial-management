@@ -239,7 +239,7 @@ Migrations use semantic versioning: `src/migrations/{major}/{minor}/{patch}/`
 | ------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | v1      | Assets, Auth                                                                    | S3 bucket, Cognito (4 IdPs, MFA, triggers)                    |
 | v2      | ApiGateway, 6 Lambda stacks, StepFunctionsChat, AppSyncEvents, ApiDocs, Amplify | REST API, business logic, AI chat workflow, realtime, hosting |
-| v3      | Monitoring                                                                      | Dashboard, 34 alarms + composite, EventBridge, notifications  |
+| v3      | Monitoring                                                                      | Dashboard, 23 alarms + composite, EventBridge, notifications  |
 
 ### Deploy
 

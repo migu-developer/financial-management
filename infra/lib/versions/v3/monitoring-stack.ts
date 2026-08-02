@@ -144,7 +144,6 @@ export class MonitoringStack extends BaseStack {
       evaluationPeriods: number;
       datapointsToAlarm: number;
       period: ReturnType<typeof Duration.minutes>;
-      includeThrottleAlarm: boolean;
     }
 
     const lambdaFunctions: Record<string, LambdaAlarmConfig> = {
@@ -154,7 +153,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(1),
-        includeThrottleAlarm: true,
       },
       Documents: {
         fnName: importFromVersion(
@@ -167,7 +165,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(1),
-        includeThrottleAlarm: true,
       },
       Currencies: {
         fnName: importFromVersion(
@@ -180,7 +177,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(1),
-        includeThrottleAlarm: true,
       },
       Users: {
         fnName: importFromVersion(this, 'v2', 'LambdaUsers', 'FunctionName'),
@@ -188,7 +184,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(1),
-        includeThrottleAlarm: true,
       },
       UpdateRates: {
         fnName: importFromVersion(
@@ -201,7 +196,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 1,
         datapointsToAlarm: 1,
         period: Duration.hours(24),
-        includeThrottleAlarm: false,
       },
       // ── AI Chat Lambdas (Phase 1) ───────────────────────
       // The chat handler is on the synchronous path (API Gateway) and must
@@ -214,7 +208,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(1),
-        includeThrottleAlarm: true,
       },
       ChatExecuteQuery: {
         fnName: importFromVersion(
@@ -227,7 +220,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
-        includeThrottleAlarm: true,
       },
       ChatValidateFields: {
         fnName: importFromVersion(
@@ -240,7 +232,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
-        includeThrottleAlarm: true,
       },
       ChatCreateExpense: {
         fnName: importFromVersion(
@@ -253,7 +244,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
-        includeThrottleAlarm: true,
       },
       ChatSaveAndPublish: {
         fnName: importFromVersion(
@@ -266,7 +256,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
-        includeThrottleAlarm: true,
       },
       ChatSavePreview: {
         fnName: importFromVersion(
@@ -279,7 +268,6 @@ export class MonitoringStack extends BaseStack {
         evaluationPeriods: 3,
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
-        includeThrottleAlarm: true,
       },
     };
 
@@ -333,18 +321,10 @@ export class MonitoringStack extends BaseStack {
     api5xxAlarm.addAlarmAction(snsAction);
     this.alarms.push(api5xxAlarm);
 
-    const api4xxAlarm = new Alarm(this, `${stackName}-Api4xxAlarm`, {
-      alarmName: `${stackName}-Api-4xx-Spike`,
-      alarmDescription: 'API Gateway 4xx errors spike',
-      metric: apiMetric('4XXError'),
-      threshold: 50,
-      evaluationPeriods: 5,
-      datapointsToAlarm: 3,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-    });
-    api4xxAlarm.addAlarmAction(snsAction);
-    this.alarms.push(api4xxAlarm);
+    // NOTE: there is deliberately NO 4xx alarm. 4xx means the CLIENT sent a bad
+    // request (expired token, validation failure) — it is not a service fault
+    // and is not actionable by an on-call alert. 4xx stays on the dashboard
+    // widget for trend analysis; a real server-side problem shows up as 5xx.
 
     const apiLatencyAlarm = new Alarm(this, `${stackName}-ApiLatencyAlarm`, {
       alarmName: `${stackName}-Api-Latency-High`,
@@ -383,26 +363,15 @@ export class MonitoringStack extends BaseStack {
       if (service.startsWith('Chat')) {
         chatLambdaErrorAlarms.set(service, errAlarm);
       }
-
-      if (config.includeThrottleAlarm) {
-        const throttleAlarm = new Alarm(
-          this,
-          `${stackName}-${service}-ThrottlesAlarm`,
-          {
-            alarmName: `${stackName}-Lambda-${service}-Throttles`,
-            alarmDescription: `Lambda ${service} is being throttled`,
-            metric: lambdaMetric(config.fnName, 'Throttles'),
-            threshold: 0,
-            evaluationPeriods: 1,
-            datapointsToAlarm: 1,
-            comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-            treatMissingData: TreatMissingData.NOT_BREACHING,
-          },
-        );
-        throttleAlarm.addAlarmAction(snsAction);
-        this.alarms.push(throttleAlarm);
-      }
     }
+
+    // NOTE: there are deliberately NO per-Lambda `Throttles` alarms.
+    // No function sets `reservedConcurrentExecutions`, so throttling could only
+    // come from the account-level concurrency limit (1000 concurrent
+    // executions) — unreachable at this workload. A throttled invocation also
+    // surfaces through the signals we already alarm on: `Errors` on the
+    // function and 5xx on API Gateway. Throttles remain visible on the
+    // dashboard widget (free) instead of costing $0.10/alarm/month each.
 
     // ── Cognito Trigger Alarms ─────────────────────────────
     for (const [trigger, fnName] of Object.entries(cognitoTriggers)) {

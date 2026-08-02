@@ -184,7 +184,7 @@ All on **`nodejs24.x`**, ESM bundles, X-Ray active.
 | Cognito         | User Pool + Identity Pool             | Pool `us-east-2_y9tmPJMRP`; IdPs: **Google, Facebook, Microsoft, SignInWithApple**                                               |
 | Amplify         | 1 hosting app                         | `d2rsmp0ta8dev7` → **`financial-management.migudev.com`** (apex, ACM cert covers apex + wildcard)                                |
 | S3              | 1 assets bucket                       | `migudev-fm-prod-us-east-2-assets` (email templates, API docs) — `RemovalPolicy.RETAIN`                                          |
-| CloudWatch      | 1 dashboard + 34 alarms + 1 composite | API Gateway, Lambda (incl. chat), Cognito triggers, Step Functions chat workflow, AppSync Events; composite `Chat-Unhealthy`     |
+| CloudWatch      | 1 dashboard + 23 alarms + 1 composite | API Gateway, Lambda (incl. chat), Cognito triggers, Step Functions chat workflow, AppSync Events; composite `Chat-Unhealthy`     |
 | CloudWatch Logs | 18 log groups                         | Stage-aware retention (1 month dev / 3 months prod; some AWS-managed groups differ)                                              |
 | EventBridge     | 2 rules                               | Amplify build status → SNS; `fm-prod-update-rates-schedule` (exchange-rate cron)                                                 |
 | SNS             | 1 topic                               | Alert topic → `fm-prod-notifications` Lambda → SES email                                                                         |
@@ -201,18 +201,26 @@ Real spend from Cost Explorer (single account, production only):
 | June 2026          | $5.55  |
 | July 2026 (MTD)    | ~$3.13 |
 
-**Run-rate ≈ $5.5–6.5 / month.** Breakdown of the drivers:
+**Run-rate ≈ $4.5–5.5 / month** after the July 2026 alarm cleanup. Breakdown of
+the drivers:
 
-| Service                                                            | ~$/month | Note                                                      |
-| ------------------------------------------------------------------ | -------- | --------------------------------------------------------- |
-| CloudWatch                                                         | ~4.00    | **35 alarms ≈ $3.90** + log ingestion — the dominant cost |
-| Route 53                                                           | ~0.50    | 1 hosted zone ($0.50/zone)                                |
-| Secrets Manager                                                    | ~0.40    | $0.40/secret/month                                        |
-| Bedrock (Nova / Claude)                                            | ~0.20    | Token-based — **scales with chat usage**                  |
-| Amplify                                                            | ~0.10    | Build minutes + hosting                                   |
-| S3                                                                 | ~0.01    | Assets                                                    |
-| Lambda, API GW, Step Functions, AppSync, Cognito, ACM, EventBridge | ~0       | Within free tier at current volume                        |
+| Service                                                            | ~$/month | Note                                                |
+| ------------------------------------------------------------------ | -------- | --------------------------------------------------- |
+| CloudWatch                                                         | ~2.90    | **23 alarms + 1 composite = $2.80** + log ingestion |
+| Route 53                                                           | ~0.50    | 1 hosted zone ($0.50/zone)                          |
+| Secrets Manager                                                    | ~0.40    | $0.40/secret/month                                  |
+| Bedrock (Nova / Claude)                                            | ~0.20    | Token-based — **scales with chat usage**            |
+| Amplify                                                            | ~0.10    | Build minutes + hosting                             |
+| S3                                                                 | ~0.01    | Assets                                              |
+| Lambda, API GW, Step Functions, AppSync, Cognito, ACM, EventBridge | ~0       | Within free tier at current volume                  |
 
-The cost levers, in order: **number of CloudWatch alarms** (65% of the bill),
-then **Step Functions log level** (stage-aware: `ERROR` in prod) and **Bedrock
-tokens**, which are the two that grow with traffic.
+Alarms were reduced from 34 to 23 in July 2026 by dropping the 10 per-Lambda
+`Throttles` alarms and `Api-4xx-Spike` — neither was actionable, and both stay
+visible on the dashboard. See
+[Observability](observability-flow.md#what-is-deliberately-not-alarmed).
+
+The remaining cost levers, in order: **CloudWatch alarms + log ingestion**
+(~60% of the bill), then **Step Functions log level** (stage-aware: `ERROR` in
+prod) and **Bedrock tokens** — the two that grow with traffic. Note that
+_consolidating_ alarms saves nothing (metric math bills per metric referenced);
+only removing monitored metrics does.
