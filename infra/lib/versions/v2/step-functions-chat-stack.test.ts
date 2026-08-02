@@ -1,5 +1,6 @@
 import { Construct } from 'constructs';
 import { StepFunctionsChatStack } from './step-functions-chat-stack';
+import { THROTTLE_ERROR_NAMES } from '@packages/models/shared/utils/throttle-errors';
 
 jest.mock('@utils/cross-version', () => ({
   exportForCrossVersion: jest.fn(),
@@ -618,6 +619,100 @@ describe('StepFunctionsChatStack', () => {
         return opts?.errors?.includes('Lambda.ServiceException');
       });
       expect(retries.length).toBe(10);
+    });
+
+    test('caps AnalyzeReceipt at one concurrent execution to honour the TPS quota', () => {
+      createStack();
+      const { NodejsFunction: MockFn } = jest.requireMock<
+        Record<string, jest.Mock>
+      >('aws-cdk-lib/aws-lambda-nodejs');
+      const call = (MockFn as jest.Mock).mock.calls.find(
+        (c: unknown[]) =>
+          (c[2] as { functionName: string }).functionName ===
+          'fm-dev-chat-analyze-receipt',
+      );
+      // Textract's AnalyzeExpense is 1 TPS per account in us-east-2. Reserving
+      // concurrency is what makes exceeding it structurally impossible; the
+      // overflow then surfaces as Lambda.TooManyRequestsException, which the
+      // retrier below backs off on.
+      expect(
+        (call![2] as Record<string, unknown>)['reservedConcurrentExecutions'],
+      ).toBe(1);
+    });
+
+    test('retries AnalyzeReceipt on throttling with a much wider window', () => {
+      createStack();
+      const throttleRetry = mockAddRetry.mock.calls.find((c: unknown[]) => {
+        const opts = c[0] as { errors?: string[] };
+        return opts?.errors?.includes('ThrottlingException');
+      });
+      expect(throttleRetry).toBeDefined();
+
+      const opts = throttleRetry![0] as {
+        errors: string[];
+        interval: unknown;
+        maxAttempts: number;
+        backoffRate: number;
+      };
+      // Must cover BOTH sources: our own reserved concurrency rejecting a
+      // second receipt, and Textract itself refusing.
+      expect(opts.errors).toEqual(
+        expect.arrayContaining([
+          'Lambda.TooManyRequestsException',
+          'ThrottlingException',
+          'ProvisionedThroughputExceededException',
+        ]),
+      );
+      // 2s → 4s → 8s → 16s → 32s ≈ a minute, enough to absorb a burst of
+      // ~5-6 simultaneous uploads at 1 TPS without the user seeing an error.
+      expect(opts.maxAttempts).toBe(5);
+      expect(opts.backoffRate).toBe(2);
+      expect(opts.interval).toEqual(2); // the Duration mock returns raw seconds
+    });
+
+    test('registers the throttle retrier BEFORE the shared one', () => {
+      createStack();
+      const calls = mockAddRetry.mock.calls.map(
+        (c: unknown[]) => (c[0] as { errors: string[] }).errors,
+      );
+      const throttleIdx = calls.findIndex((e) =>
+        e.includes('ThrottlingException'),
+      );
+      expect(throttleIdx).toBeGreaterThanOrEqual(0);
+
+      // Step Functions uses the FIRST matching retrier. Both lists contain
+      // `Lambda.TooManyRequestsException`, so if the shared helper were
+      // registered first it would win with its 3-attempt window and the wide
+      // throttle backoff would never apply — silently, with every test still
+      // green. The very next registration must therefore be the shared one.
+      const next = calls[throttleIdx + 1];
+      expect(next).toBeDefined();
+      expect(next).toEqual(
+        expect.arrayContaining([
+          'Lambda.ServiceException',
+          'Lambda.TooManyRequestsException',
+        ]),
+      );
+      expect(next).not.toContain('ThrottlingException');
+    });
+
+    test('the retrier and the runtime classifier list the same throttle errors', () => {
+      createStack();
+      const throttleRetry = mockAddRetry.mock.calls.find((c: unknown[]) =>
+        (c[0] as { errors?: string[] })?.errors?.includes(
+          'ThrottlingException',
+        ),
+      );
+      const retried = (throttleRetry![0] as { errors: string[] }).errors;
+
+      // If these drift, a throttle would be retried but never counted by the
+      // ChatReceiptThrottled metric — the very signal used to decide whether a
+      // queue is needed. Lambda.* names are Step-Functions-only, so they are
+      // excluded from the comparison.
+      const serviceErrors = retried.filter((e) => !e.startsWith('Lambda.'));
+      for (const name of serviceErrors) {
+        expect(THROTTLE_ERROR_NAMES as readonly string[]).toContain(name);
+      }
     });
 
     test('exports the analyze Lambda name so monitoring can alarm on it', () => {

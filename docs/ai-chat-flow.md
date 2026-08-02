@@ -384,6 +384,51 @@ which would fail every text conversation.
 image straight from S3 and returns labelled summary fields in one call, so the
 state machine needs no polling loop.
 
+### Textract capacity (1 TPS in us-east-2)
+
+`AnalyzeExpense` is capped **per AWS account and region**, and the cap is not
+uniform: 5 TPS in us-east-1 / us-west-2, but **1 TPS in us-east-2**, where this
+stack runs
+([quotas](https://docs.aws.amazon.com/general/latest/gr/textract.html)). One
+receipt equals one call, so the ceiling is literally "more than one receipt per
+second across the whole account".
+
+Two mechanisms keep a user from ever losing a receipt to that ceiling:
+
+| Mechanism                                                   | What it does                                                                          |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `reservedConcurrentExecutions: 1` on `chat-analyze-receipt` | Makes exceeding the quota **structurally impossible** — one receipt is read at a time |
+| A throttle retrier on the `AnalyzeReceipt` task             | 2 → 4 → 8 → 16 → 32 s, about a minute of backoff                                      |
+
+The two compose: reserving concurrency turns a would-be Textract throttle into
+`Lambda.TooManyRequestsException`, which the retrier backs off on, so concurrent
+uploads are **serialised instead of failing**. Roughly 5-6 simultaneous uploads
+are absorbed with no user-visible error — the chat reply is already asynchronous
+behind a typing indicator, so the cost is a slower answer, not a failure.
+
+> **Retrier order matters.** Step Functions uses the FIRST retrier whose
+> `ErrorEquals` matches. The throttle rule is registered BEFORE the shared
+> `addLambdaRetry` helper, because that helper also lists
+> `Lambda.TooManyRequestsException` and would otherwise win with its much
+> shorter 3-attempt window — silently. A unit test locks the order in.
+
+`THROTTLE_ERROR_NAMES` lives in `@packages/models` so the CDK retrier and the
+runtime metric cannot drift: if they did, a throttle would be retried but never
+counted, or counted but never retried.
+
+Trade-off worth knowing: with concurrency reserved at 1, a wedged
+`chat-analyze-receipt` stalls **all** receipt reading. That is the intended cost
+of serialising.
+
+**When to revisit.** The `ChatReceiptThrottled` EMF counter exists to answer this
+with data rather than guesswork. If it starts appearing — or a bulk-upload
+feature lands — the next step is a real queue: SQS behind `.waitForTaskToken`,
+consumer at concurrency 1, `maxReceiveCount: 3` → DLQ. Note that a queue does
+NOT limit TPS on its own (a Lambda consumer fans out); the concurrency cap is
+what does. And a DLQ is only an improvement **with** a consumer plus a way to
+notify the user later — otherwise a failed receipt disappears silently, which is
+worse than today's explicit error.
+
 ### Degradation, not failure
 
 A blurry or unreadable photo does **not** fail the execution. `AnalyzeReceipt`
@@ -540,7 +585,8 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
   `ChatReceiptUnreadable` (the ratio between the last two is the signal for how
   well receipt reading is actually working), and for normalization
   `ChatImagePassthrough` / `ChatImageNeedsConversion` / `ChatImageUnsupported`,
-  `ChatImageConverted`, `ChatAttachmentReady` / `ChatAttachmentRejected`.
+  `ChatImageConverted`, `ChatAttachmentReady` / `ChatAttachmentRejected`, and
+  `ChatReceiptThrottled` (Textract rate-limited a read; Step Functions retried).
   `ChatImageUnsupported` is the number to watch before investing in server-side
   HEIC support.
 - **Alarms**: per-Lambda errors; `ChatWorkflow-ExecutionsFailed`
