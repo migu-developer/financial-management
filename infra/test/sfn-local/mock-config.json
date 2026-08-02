@@ -66,6 +66,39 @@
           "ExecuteQuery": "QueryRows",
           "GenerateQueryNL": "NLAnswer",
           "SaveQueryAnswer": "SavedOk"
+        },
+        "receiptImageCreatesExpense": {
+          "AnalyzeReceipt": "ReceiptExtracted",
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationConfirmed",
+          "CreateExpense": "ExpenseCreated",
+          "GenerateConfirmation": "ConfirmationText",
+          "SaveCreatedExpense": "SavedOk"
+        },
+        "receiptUnreadableAsksForData": {
+          "AnalyzeReceipt": "ReceiptUnreadable",
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsIncomplete",
+          "GenerateClarification": "ClarificationText",
+          "SaveClarification": "SavedOk"
+        },
+        "analyzeReceiptFailsRoutesToPublishError": {
+          "AnalyzeReceipt": "AnalyzeReceiptTaskFailed",
+          "PublishError": "SavedOk"
+        },
+        "audioAttachmentSkipsReceiptBranch": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationConfirmed",
+          "CreateExpense": "ExpenseCreated",
+          "GenerateConfirmation": "ConfirmationText",
+          "SaveCreatedExpense": "SavedOk"
         }
       }
     }
@@ -358,6 +391,31 @@
       "0": {
         "Return": {
           "ok": true
+        }
+      }
+    },
+    "ReceiptExtracted": {
+      "0": {
+        "Return": {
+          "enrichedContent": "registra este gasto\n\nDatos extraídos del recibo adjunto:\n- Comercio: Crepes & Waffles\n- Total: 48900\n- Moneda: COP\n- Fecha: 2026-07-20",
+          "extracted": true,
+          "confidence": 96.4
+        }
+      }
+    },
+    "ReceiptUnreadable": {
+      "0": {
+        "Return": {
+          "enrichedContent": "registra este gasto\n\nNo se pudieron leer datos del recibo adjunto; pide los datos al usuario.",
+          "extracted": false
+        }
+      }
+    },
+    "AnalyzeReceiptTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "AnalyzeReceipt Lambda threw: attachment key does not belong to the requesting user."
         }
       }
     }

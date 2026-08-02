@@ -20,7 +20,10 @@ const mockConfirmAddMethod = jest.fn();
 const mockSessionsAddMethod = jest.fn();
 const mockSessionMessagesAddMethod = jest.fn();
 
+const mockUploadUrlAddMethod = jest.fn();
+
 const mockConfirmResource = { addMethod: mockConfirmAddMethod };
+const mockUploadUrlResource = { addMethod: mockUploadUrlAddMethod };
 const mockSessionMessagesResource = { addMethod: mockSessionMessagesAddMethod };
 const mockSessionIdResource = {
   addResource: jest.fn().mockReturnValue(mockSessionMessagesResource),
@@ -31,7 +34,9 @@ const mockSessionsResource = {
 };
 
 function chatAddResource(name: string) {
-  return name === 'sessions' ? mockSessionsResource : mockConfirmResource;
+  if (name === 'sessions') return mockSessionsResource;
+  if (name === 'upload-url') return mockUploadUrlResource;
+  return mockConfirmResource;
 }
 
 const mockChatResource = {
@@ -200,6 +205,28 @@ describe('LambdaChatStack', () => {
         'https://dev-financial-management.migudev.com',
       );
       expect(env.CHAT_STATE_MACHINE_ARN).toBe(IMPORTED_SFN_ARN);
+      // Needed to presign attachment uploads; the handler requireEnv()s it, so
+      // a missing value crashes the Lambda at init rather than at request time.
+      expect(env.CHAT_ATTACHMENTS_BUCKET).toBeDefined();
+    });
+
+    test('imports the attachments bucket name and arn from the ChatAttachments stack', () => {
+      createStack();
+      const { importFromVersion } = jest.requireMock<Record<string, jest.Mock>>(
+        '@utils/cross-version',
+      );
+      expect(importFromVersion).toHaveBeenCalledWith(
+        expect.anything(),
+        'v2',
+        'ChatAttachments',
+        'AttachmentsBucketName',
+      );
+      expect(importFromVersion).toHaveBeenCalledWith(
+        expect.anything(),
+        'v2',
+        'ChatAttachments',
+        'AttachmentsBucketArn',
+      );
     });
 
     test('imports StateMachineArn from the StepFunctionsChat stack', () => {
@@ -230,6 +257,22 @@ describe('LambdaChatStack', () => {
         props: { resources: string[] };
       };
       expect(stmt.props.resources).toEqual([IMPORTED_SFN_ARN]);
+    });
+
+    test('grants s3:PutObject ONLY, scoped to the attachments prefix', () => {
+      createStack();
+      const putCall = mockAddToRolePolicy.mock.calls.find((c: unknown[]) => {
+        const stmt = c[0] as { props: { actions?: string[] } };
+        return stmt.props.actions?.includes('s3:PutObject');
+      });
+      expect(putCall).toBeDefined();
+      const props = (putCall![0] as { props: Record<string, unknown> }).props;
+      // The Lambda only SIGNS uploads — it must not be able to read or delete
+      // user attachments (Textract reads them under the state machine's role).
+      expect(props['actions']).toEqual(['s3:PutObject']);
+      expect((props['resources'] as string[])[0]).toContain(
+        '/chat-attachments/*',
+      );
     });
 
     test('grants states:SendTaskSuccess and SendTaskFailure with resource *', () => {
@@ -279,10 +322,18 @@ describe('LambdaChatStack', () => {
       const allMethods = [
         ...mockChatAddMethod.mock.calls.map((c: unknown[]) => c[0]),
         ...mockConfirmAddMethod.mock.calls.map((c: unknown[]) => c[0]),
+        ...mockUploadUrlAddMethod.mock.calls.map((c: unknown[]) => c[0]),
       ];
       ['GET', 'PUT', 'PATCH', 'DELETE'].forEach((m) =>
         expect(allMethods).not.toContain(m),
       );
+    });
+
+    test('creates /chat/upload-url sub-resource with POST', () => {
+      createStack();
+      expect(mockChatResource.addResource).toHaveBeenCalledWith('upload-url');
+      expect(mockUploadUrlAddMethod).toHaveBeenCalledTimes(1);
+      expect(mockUploadUrlAddMethod.mock.calls[0]![0]).toBe('POST');
     });
 
     test('creates /chat/sessions sub-resource', () => {
@@ -326,6 +377,7 @@ describe('LambdaChatStack', () => {
       const allCalls = [
         ...(mockChatAddMethod.mock.calls as unknown[][]),
         ...(mockConfirmAddMethod.mock.calls as unknown[][]),
+        ...(mockUploadUrlAddMethod.mock.calls as unknown[][]),
       ];
       for (const call of allCalls) {
         const opts = call[2] as Record<string, unknown>;

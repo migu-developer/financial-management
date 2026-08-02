@@ -11,6 +11,7 @@ import { LambdaCurrenciesStack } from './lambda-currencies-stack';
 import { LambdaUsersStack } from './lambda-users-stack';
 import { LambdaExchangeRatesStack } from './lambda-exchange-rates-stack';
 import { LambdaChatStack } from './lambda-chat-stack';
+import { ChatAttachmentsStack } from './chat-attachments-stack';
 import { StepFunctionsChatStack } from './step-functions-chat-stack';
 import { ApiDocsStack } from './api-docs-stack';
 
@@ -170,6 +171,26 @@ const createLambdaExchangeRatesStack: NamedStackFactory = {
     ),
 };
 
+const createChatAttachmentsStack: NamedStackFactory = {
+  name: 'ChatAttachments',
+  create: (scope: Construct, version: string, deps: StackDeps) =>
+    new ChatAttachmentsStack(
+      scope,
+      fullStackResource(version, `${ActiveStack.CHAT_ATTACHMENTS}Stack`),
+      {
+        version,
+        stackName: fullStackResource(version, ActiveStack.CHAT_ATTACHMENTS),
+        deps,
+        description:
+          'S3 bucket for user-uploaded chat attachments (receipt photos) with CORS for presigned PUT',
+        assetsBucketPrefix: process.env.ASSETS_BUCKET_PREFIX ?? '',
+        allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
+          .split(',')
+          .map((origin) => origin.trim()),
+      },
+    ),
+};
+
 const createLambdaChatStack: NamedStackFactory = {
   name: 'LambdaChat',
   create: (scope: Construct, version: string, deps: StackDeps) =>
@@ -180,8 +201,9 @@ const createLambdaChatStack: NamedStackFactory = {
         version,
         stackName: fullStackResource(version, ActiveStack.LAMBDA_CHAT),
         deps,
+        dependsOn: [ActiveStack.CHAT_ATTACHMENTS],
         description:
-          'Lambda for AI chat: POST /chat and POST /chat/confirm (HITL callback)',
+          'Lambda for AI chat: POST /chat, POST /chat/upload-url and POST /chat/confirm (HITL callback)',
         databaseUrl: process.env.DATABASE_URL ?? '',
         databaseReadonlyUrl: process.env.DATABASE_READONLY_URL ?? '',
         allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
@@ -201,6 +223,7 @@ const createStepFunctionsChatStack: NamedStackFactory = {
       {
         version,
         stackName: fullStackResource(version, ActiveStack.STEP_FUNCTIONS_CHAT),
+        dependsOn: [ActiveStack.CHAT_ATTACHMENTS],
         description:
           'ChatProcess Standard state machine: orchestrates Bedrock + business Lambdas with HITL confirmation',
         databaseUrl: process.env.DATABASE_URL ?? '',
@@ -246,8 +269,9 @@ const createApiDocsStack: NamedStackFactory = {
 // 2. Lambda stacks (add resources to the API)
 // 3. LambdaExchangeRates (standalone Lambda + EventBridge schedule, no API Gateway)
 // 4. AppSyncEvents (standalone — imports Cognito UserPool from v1)
-// 5. ApiDocs (documents the fully-built API)
-// 6. AmplifyHosting last (references the API URL)
+// 5. ChatAttachments (bucket both chat stacks import the name of)
+// 6. ApiDocs (documents the fully-built API)
+// 7. AmplifyHosting last (references the API URL)
 export const v2Stacks: NamedStackFactory[] = [
   createApiGatewayStack,
   createLambdaExpensesStack,
@@ -256,6 +280,7 @@ export const v2Stacks: NamedStackFactory[] = [
   createLambdaUsersStack,
   createLambdaExchangeRatesStack,
   createAppSyncEventsStack,
+  createChatAttachmentsStack,
   createStepFunctionsChatStack,
   createLambdaChatStack,
   createApiDocsStack,

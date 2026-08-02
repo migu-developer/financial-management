@@ -1,5 +1,6 @@
 export * from './bedrock/models';
 export * from './bedrock/builders';
+export * from './chat/attachments';
 export * from './chat/contracts';
 export * from './chat/intent';
 export * from './chat/extraction';

@@ -21,16 +21,17 @@ placeholders and is region-portable by design (see Bedrock routing).
 ## Request Surface (API Gateway)
 
 The client only ever talks to **API Gateway** (one Lambda, `fm-{stage}-chat`,
-routes all four). It never calls Step Functions directly — the Lambda's IAM
+routes all five). It never calls Step Functions directly — the Lambda's IAM
 role is the only principal allowed to start/resume the workflow. Every route is
 authenticated with the **Cognito** authorizer.
 
-| Method & Route                     | Purpose                                                | What it triggers                      |
-| ---------------------------------- | ------------------------------------------------------ | ------------------------------------- |
-| `POST /chat`                       | Send a message (`{ content, sessionId? }`)             | **StartExecution** (new workflow run) |
-| `POST /chat/confirm`               | Resolve a pending preview (`{ taskToken, confirmed }`) | **SendTaskSuccess** (resumes the run) |
-| `GET /chat/sessions`               | List the user's sessions for the sidebar               | DB read (no workflow)                 |
-| `GET /chat/sessions/{id}/messages` | Restore a conversation (oldest → newest)               | DB read (no workflow)                 |
+| Method & Route                     | Purpose                                                                       | What it triggers                      |
+| ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------- |
+| `POST /chat`                       | Send a message (`{ content, sessionId?, attachmentS3Key?, attachmentType? }`) | **StartExecution** (new workflow run) |
+| `POST /chat/upload-url`            | Presign an attachment upload (`{ contentType }`)                              | S3 presign only (no workflow)         |
+| `POST /chat/confirm`               | Resolve a pending preview (`{ taskToken, confirmed }`)                        | **SendTaskSuccess** (resumes the run) |
+| `GET /chat/sessions`               | List the user's sessions for the sidebar                                      | DB read (no workflow)                 |
+| `GET /chat/sessions/{id}/messages` | Restore a conversation (oldest → newest)                                      | DB read (no workflow)                 |
 
 ## Request Flow
 
@@ -46,6 +47,11 @@ API Gateway → Lambda fm-{stage}-chat
   |-- returns { status: "processing" } immediately (HTTP 202)
   v
 Step Function "ChatProcess" (Standard):
+  |
+  |-- HasImageAttachment? ........ Choice — only when attachmentType == "image"
+  |     AnalyzeReceipt ........... λ fm-{stage}-chat-analyze-receipt (Textract AnalyzeExpense)
+  |     ApplyReceiptText ......... Pass — overwrites $.content with caption + extracted fields
+  |     (then falls into ClassifyIntent, exactly like a typed message)
   |
   |-- ClassifyIntent ............. Bedrock Nova Micro → QUERY | CREATE | UNKNOWN
   |
@@ -104,13 +110,14 @@ X-Ray-instrumented Step Functions client):
 
 ## Components
 
-| Component     | Resource                                                                                           | Notes                                                                                                                 |
-| ------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Chat handler  | `fm-{stage}-chat` (LambdaChat stack)                                                               | Routes the 4 chat routes; only principal allowed to start/resume SF                                                   |
-| State machine | `fm-{stage}-chat-process` (StepFunctionsChat stack)                                                | Standard; 8-day execution timeout (backstop); X-Ray; stage-aware logging (ALL dev / ERROR prod); catch-all error path |
-| Task Lambdas  | `fm-{stage}-chat-{execute-query, validate-fields, create-expense, save-and-publish, save-preview}` | All Node.js 24 ESM                                                                                                    |
-| Realtime API  | `fm-{stage}-chat-events` (AppSyncEvents stack)                                                     | Cognito auth for clients, IAM SigV4 for backend                                                                       |
-| Tables        | `chat_sessions`, `chat_messages` (migrations 4.0.0 + 4.1.0)                                        | RLS + audit triggers; `task_token`/`task_token_status` drive HITL                                                     |
+| Component     | Resource                                                                                                            | Notes                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Chat handler  | `fm-{stage}-chat` (LambdaChat stack)                                                                                | Routes the 5 chat routes; only principal allowed to start/resume SF; presigns attachment uploads                      |
+| State machine | `fm-{stage}-chat-process` (StepFunctionsChat stack)                                                                 | Standard; 8-day execution timeout (backstop); X-Ray; stage-aware logging (ALL dev / ERROR prod); catch-all error path |
+| Task Lambdas  | `fm-{stage}-chat-{execute-query, validate-fields, create-expense, save-and-publish, save-preview, analyze-receipt}` | All Node.js 24 ESM. `analyze-receipt` carries NO database credentials — it only reads an image                        |
+| Attachments   | `{assetsBucketPrefix}-{region}-chat-attachments` (ChatAttachments stack)                                            | Receipt photos; `PUT`-only CORS, 365-day expiry. See [Receipt attachments](#receipt-attachments-phase-2)              |
+| Realtime API  | `fm-{stage}-chat-events` (AppSyncEvents stack)                                                                      | Cognito auth for clients, IAM SigV4 for backend                                                                       |
+| Tables        | `chat_sessions`, `chat_messages` (migrations 4.0.0 + 4.1.0)                                                         | RLS + audit triggers; `task_token`/`task_token_status` drive HITL                                                     |
 
 ## Bedrock Model Routing (2-tier)
 
@@ -231,11 +238,126 @@ down after its retries) no event reaches the client — a client-side
   session from the DB (Events doesn't replay messages missed while offline), so
   the user never has to reload to see a reply.
 
+## Receipt attachments (Phase 2)
+
+A user can photograph a receipt instead of typing the expense. The image is read
+by **Amazon Textract `AnalyzeExpense`** and the result is spliced into the
+message text _before_ intent classification, so the rest of the pipeline is
+completely unaware that an attachment was involved.
+
+### Upload path — the bytes never touch Lambda
+
+```
+Client
+  |-- POST /chat/upload-url { contentType: "image/jpeg" }     (Cognito JWT)
+  |     → { uploadUrl, s3Key, expiresIn: 300, attachmentType: "image" }
+  |
+  |-- PUT <uploadUrl>  (raw bytes, SAME Content-Type header)   → S3, direct
+  |
+  |-- POST /chat { content, attachmentS3Key: s3Key, attachmentType: "image" }
+  v
+(normal async workflow, now entering through HasImageAttachment?)
+```
+
+A phone photo is megabytes; API Gateway caps payloads at 10 MB and base64 would
+inflate it further, so the upload is a **presigned S3 PUT** straight from the
+device. `Content-Type` is part of the signature — the client MUST send the same
+value it requested, or S3 rejects the PUT.
+
+### Why the key is safe to trust on the way back
+
+The client echoes `attachmentS3Key` back to us, which makes it untrusted input.
+Two things make it safe:
+
+1. **The server mints the key**, never the client:
+   `chat-attachments/{userId}/{uuid}.{ext}`, where `userId` comes from the
+   Cognito authorizer and the extension from an allow-list of MIME types.
+2. **`AnalyzeReceiptUseCase` re-verifies ownership** from the key alone
+   (`assertKeyOwnedBy`) before calling Textract: the key must sit directly under
+   the caller's own prefix, with no `..` and no extra path segments. Without
+   this, a caller could pass another user's key and read its contents into their
+   own conversation.
+
+### Workflow branch
+
+| State                 | Type   | Behaviour                                                                                                                                                   |
+| --------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HasImageAttachment?` | Choice | `isPresent($.attachmentS3Key)` **and** `isPresent($.attachmentType)` **and** `$.attachmentType == "image"` → branch; otherwise straight to `ClassifyIntent` |
+| `AnalyzeReceipt`      | Task   | λ `fm-{stage}-chat-analyze-receipt` → Textract `AnalyzeExpense`                                                                                             |
+| `ApplyReceiptText`    | Pass   | `inputPath: $.receipt.enrichedContent` → `resultPath: $.content`                                                                                            |
+
+Both `isPresent` guards are load-bearing: a plain text message carries neither
+key, and `stringEquals` against a **missing** path raises `States.Runtime`,
+which would fail every text conversation.
+
+`AnalyzeExpense` is the **synchronous** Textract API — it takes a single-page
+image straight from S3 and returns labelled summary fields in one call, so the
+state machine needs no polling loop.
+
+### Degradation, not failure
+
+A blurry or unreadable photo does **not** fail the execution. `AnalyzeReceipt`
+returns `extracted: false` plus a note telling the model to ask the user for the
+data, which lands the conversation in the ordinary clarification branch. Only a
+broken _task_ (bad key, missing IAM, Textract outage) routes to the catch-all →
+`PublishError` → `WorkflowFailed`.
+
+Field normalization worth knowing about:
+
+- **Amounts**: `.` and `,` swap roles between locales, so the decimal separator
+  is inferred from the number's shape. A single separator with exactly 3
+  trailing digits is treated as **thousands** — `$48.900` in es-CO is forty-eight
+  thousand nine hundred, not 48.9.
+- **Dates**: slashed dates are read **day-first** (`20/07/2026` → `2026-07-20`),
+  matching the target locale. An unrecognized shape is dropped rather than
+  guessed, so the model asks instead of inventing a date.
+- **Confidence** is the _weakest_ per-field score among the fields actually
+  kept, so one crisp field can't mask a barely-legible total.
+
+### Storage
+
+Attachments live in a **dedicated bucket** (`ChatAttachments`, v2), separate
+from the v1 assets bucket: v1 is frozen once deployed, presigned PUTs from the
+web build need a CORS policy that the email-templates bucket should not have,
+and user content deserves its own lifecycle and least-privilege grants. A bucket
+itself is free, so the split costs nothing.
+
+| Setting    | Value                                                                         |
+| ---------- | ----------------------------------------------------------------------------- |
+| Name       | `{assetsBucketPrefix}-{region}-chat-attachments`                              |
+| CORS       | `PUT` only, restricted to `ALLOWED_ORIGINS`                                   |
+| Lifecycle  | → `STANDARD_IA` at 30 days, expire at 365 days, abort incomplete MPU at 1 day |
+| Removal    | `RETAIN` (user content survives a stack teardown)                             |
+| Versioning | Off — an attachment is written once and never updated                         |
+
+The 365-day expiry is also the only cleanup path for **orphaned** uploads: an
+object whose presigned PUT succeeded but whose `POST /chat` never followed (the
+user cancelled) is referenced by no message row.
+
+### IAM split
+
+| Principal                         | Grant                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| `fm-{stage}-chat`                 | `s3:PutObject` on `chat-attachments/*` — signs uploads, cannot read       |
+| `fm-{stage}-chat-analyze-receipt` | `s3:GetObject` on `chat-attachments/*` + `textract:AnalyzeExpense` on `*` |
+
+`textract:AnalyzeExpense` cannot be resource-scoped — Textract exposes no
+per-document ARN — so `*` is the only valid resource for that action.
+
+### Audio is accepted by the schema but not yet wired
+
+`chat_messages.attachment_type` allows `'audio'`, and an audio attachment is
+persisted, but there is **no Transcribe branch yet**: the Choice sends it down
+the ordinary text path so the caption is still processed. Adding voice notes
+means a `StartTranscriptionJob` + `Wait`/`GetTranscriptionJob` polling loop
+(Transcribe is asynchronous, unlike `AnalyzeExpense`).
+
 ## Environment Variables
 
 | Variable                                                                 | Lambda(s)                      | Source                                                 |
 | ------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------ |
 | `CHAT_STATE_MACHINE_ARN`                                                 | chat handler                   | LambdaChat stack (cross-version import)                |
+| `CHAT_ATTACHMENTS_BUCKET`                                                | chat handler, analyze-receipt  | ChatAttachments stack (cross-version import)           |
 | `APPSYNC_HTTP_DNS`, `APPSYNC_CHAT_NAMESPACE`                             | save-and-publish, save-preview | StepFunctionsChat stack (imports from AppSyncEvents)   |
 | `DATABASE_URL`, `DATABASE_READONLY_URL`                                  | all task Lambdas               | stack props                                            |
 | `EXPO_PUBLIC_APPSYNC_REALTIME_DNS`, `EXPO_PUBLIC_APPSYNC_CHAT_NAMESPACE` | client bundle                  | Amplify build env (written to `.env` by `amplify.yml`) |
@@ -262,8 +384,11 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
   `ChatMalformedModelJson`, `ChatPreviewRequested`, `ChatExpenseCreated`,
   `ChatAssistantMessagePublished`, per-branch `ChatQueryAnswerSent` /
   `ChatExpenseConfirmationSent` / `ChatExpenseCancelled` / `ChatClarificationSent`
-  / `ChatUnknownIntent`, `ChatWorkflowError` (catch-all), and `ChatPublishFailed`.
-- **Alarms**: per-Lambda errors/throttles; `ChatWorkflow-ExecutionsFailed`
+  / `ChatUnknownIntent`, `ChatWorkflowError` (catch-all), `ChatPublishFailed`, and
+  for attachments `ChatAttachmentUploadUrlIssued`, `ChatReceiptExtracted` /
+  `ChatReceiptUnreadable` (the ratio between the last two is the signal for how
+  well receipt reading is actually working).
+- **Alarms**: per-Lambda errors; `ChatWorkflow-ExecutionsFailed`
   (thresholded — >2 in 2 of 3 windows, since the catch-all already replies to the
   user on a single failure), `ChatWorkflow-ExecutionsTimedOut`,
   `ChatWorkflow-ExecutionsAborted`, `ChatWorkflow-LatencyP90High` (p90 > 60s),
@@ -278,11 +403,17 @@ inside the workflow input is the **Cognito uid** (`users.uid`), not the DB
   `DATABASE_SCHEMA=financial_management TEST_RUN_ID=x pnpm test:integration`
   (inside `services/chat`, with `DATABASE_URL` set)
 - Per-Lambda exec scripts in `services/chat/src/exec/` (`pnpm run:file src/exec/<name>.ts`),
-  payloads overridable via env vars.
+  payloads overridable via env vars. For receipts, run `src/exec/upload-url.ts`
+  first, `curl -X PUT` the printed URL with a real photo, then pass the key to
+  `src/exec/sfn-analyze-receipt.ts` (Textract reads the object from S3, so a real
+  upload is required).
 - **Workflow tests (no deploy)** — see `infra/test/sfn-local/`:
   - `pnpm --filter @infra test:sfn-local` — runs the REAL ASL in Step Functions
     Local (Docker) with a MockConfigFile across every branch + the retry/catch
     paths; a completeness guard fails CI if a new `Task` state has no test case.
-    Runs as the `sfn-local` job in `.github/workflows/ci.yml`.
+    Runs as the `sfn-local` job in `.github/workflows/ci.yml`. Test cases pick an
+    execution input via a third field (`case:STATUS:image`) — `text` (default),
+    `image` and `audio` — because the attachment branch is selected by the
+    presence of `$.attachmentS3Key`/`$.attachmentType` in the input.
   - `pnpm --filter @infra test:sfn-teststate` — TestState API for single-state
     routing (DEV only, narrow IAM role).

@@ -1,6 +1,7 @@
 import {
   ChatController,
   ChatConfirmController,
+  ChatUploadUrlController,
   ChatSessionsController,
   ChatSessionMessagesController,
 } from './controller';
@@ -15,6 +16,10 @@ export const ROUTES: Array<ModuleType> = [
   {
     url: '/chat/confirm',
     controller: (app: Application) => new ChatConfirmController(app),
+  },
+  {
+    url: '/chat/upload-url',
+    controller: (app: Application) => new ChatUploadUrlController(app),
   },
   {
     url: '/chat/sessions',

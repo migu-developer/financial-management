@@ -56,6 +56,21 @@ export class LambdaChatStack extends BaseStack {
       'StateMachineArn',
     );
 
+    // Attachments bucket (same v2). Only the NAME is needed to presign — the
+    // ARN is used for the least-privilege PutObject grant below.
+    const attachmentsBucketName = importFromVersion(
+      this,
+      version,
+      'ChatAttachments',
+      'AttachmentsBucketName',
+    );
+    const attachmentsBucketArn = importFromVersion(
+      this,
+      version,
+      'ChatAttachments',
+      'AttachmentsBucketArn',
+    );
+
     // ── Lambda Function ─────────────────────────────────────
     const fnName = `fm-${stage}-chat`;
     const logGroup = new LogGroup(this, `${stackName}-ChatLogGroup`, {
@@ -89,6 +104,7 @@ export class LambdaChatStack extends BaseStack {
         ALLOWED_ORIGINS: allowedOrigins.join(','),
         ALLOWED_METHODS: this.allowedMethods.join(','),
         CHAT_STATE_MACHINE_ARN: chatStateMachineArn,
+        CHAT_ATTACHMENTS_BUCKET: attachmentsBucketName,
       },
     });
 
@@ -107,6 +123,17 @@ export class LambdaChatStack extends BaseStack {
       }),
     );
 
+    // ── IAM: presign attachment uploads ─────────────────────
+    // PutObject ONLY, and only under the attachments prefix: the Lambda signs
+    // upload URLs, it never reads or deletes user attachments (Textract reads
+    // them from the state machine's own role).
+    lambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:PutObject'],
+        resources: [`${attachmentsBucketArn}/chat-attachments/*`],
+      }),
+    );
+
     // ── API Gateway Routes ───────────────────────────────────
     const integration = ApiGatewayStack.integration(lambda);
 
@@ -120,6 +147,14 @@ export class LambdaChatStack extends BaseStack {
 
     const chatResource = gateway.api.root.addResource('chat');
     chatResource.addMethod(
+      'POST',
+      integration,
+      gateway.authWithBody(passthroughModel),
+    );
+
+    // POST /chat/upload-url — presigned S3 PUT for a receipt photo.
+    const uploadUrlResource = chatResource.addResource('upload-url');
+    uploadUrlResource.addMethod(
       'POST',
       integration,
       gateway.authWithBody(passthroughModel),

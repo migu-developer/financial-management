@@ -10,6 +10,7 @@ export enum ActiveStack {
   LAMBDA_USERS = 'LambdaUsers',
   LAMBDA_EXCHANGE_RATES = 'LambdaExchangeRates',
   LAMBDA_CHAT = 'LambdaChat',
+  CHAT_ATTACHMENTS = 'ChatAttachments',
   STEP_FUNCTIONS_CHAT = 'StepFunctionsChat',
   API_DOCS = 'ApiDocs',
   APPSYNC_EVENTS = 'AppSyncEvents',

@@ -4,6 +4,7 @@ import { SendMessageUseCase } from '@services/chat/application/use-cases/send-me
 import { ConfirmPendingExpenseUseCase } from '@services/chat/application/use-cases/confirm-pending-expense.use-case';
 import { ListSessionsUseCase } from '@services/chat/application/use-cases/list-sessions.use-case';
 import { GetSessionMessagesUseCase } from '@services/chat/application/use-cases/get-session-messages.use-case';
+import { CreateAttachmentUploadUrlUseCase } from '@services/chat/application/use-cases/create-attachment-upload-url.use-case';
 import { PostgresChatSessionRepository } from '@services/chat/infrastructure/repositories/postgres-chat-session.repository';
 import { PostgresChatMessageRepository } from '@services/chat/infrastructure/repositories/postgres-chat-message.repository';
 import { DataNotDefinedError } from '@packages/models/shared/utils/errors';
@@ -19,6 +20,10 @@ interface SendMessageRequestBody {
 interface ConfirmRequestBody {
   taskToken: string;
   confirmed: boolean;
+}
+
+interface UploadUrlRequestBody {
+  contentType: string;
 }
 
 /**
@@ -165,6 +170,48 @@ export class ChatConfirmService extends Service {
       }),
       { status: HttpCode.SUCCESS },
     );
+  }
+}
+
+/**
+ * Service for `POST /chat/upload-url`.
+ *
+ * Returns a short-lived presigned S3 PUT so the client can upload a receipt
+ * photo directly. The bytes never pass through API Gateway (which caps
+ * payloads well below a phone photo) and the returned key is echoed back on
+ * `POST /chat` as `attachmentS3Key`.
+ */
+export class ChatUploadUrlService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executePOST(): Promise<Response> {
+    this.app.logger.info(
+      'Executing chat upload-url POST request',
+      ChatUploadUrlService.name,
+    );
+
+    if (!this.app.event.body) {
+      throw new DataNotDefinedError('Request body is required');
+    }
+
+    const body = JSON.parse(this.app.event.body) as UploadUrlRequestBody;
+
+    const useCase = new CreateAttachmentUploadUrlUseCase(
+      this.app.attachmentStorage,
+    );
+
+    const result = await useCase.execute(
+      { contentType: body.contentType },
+      this.app.user.uid,
+    );
+
+    this.app.metrics.count('ChatAttachmentUploadUrlIssued');
+
+    return new Response(JSON.stringify({ success: true, data: result }), {
+      status: HttpCode.SUCCESS,
+    });
   }
 }
 

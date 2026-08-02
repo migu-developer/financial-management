@@ -16,6 +16,8 @@ import { SfnWorkflowStarter } from '@services/chat/infrastructure/services/sfn-w
 import { SfnWorkflowCallback } from '@services/chat/infrastructure/services/sfn-workflow-callback.service';
 import { requireEnv } from '@packages/models/shared/utils/require-env';
 import { SFNClient } from '@aws-sdk/client-sfn';
+import { S3Client } from '@aws-sdk/client-s3';
+import { S3AttachmentStorage } from '@services/chat/infrastructure/services/s3-attachment-storage.service';
 
 const dbService = new PostgresDatabaseService();
 const tracerService = new TracerServiceImplementation('chat-service');
@@ -28,6 +30,13 @@ const workflowStarter = new SfnWorkflowStarter(
   sfnClient,
 );
 const workflowCallback = new SfnWorkflowCallback(sfnClient);
+// Presigning is a local signing operation (no network call), but the client is
+// still X-Ray-instrumented so any real S3 request it makes shows up in traces.
+const s3Client = tracerService.captureAWSv3Client(new S3Client({}));
+const attachmentStorage = new S3AttachmentStorage(
+  requireEnv(process.env['CHAT_ATTACHMENTS_BUCKET'], 'CHAT_ATTACHMENTS_BUCKET'),
+  s3Client,
+);
 
 export const handler = async (event: APIGatewayProxyEvent) => {
   let response: APIGatewayProxyResult | undefined = undefined;
@@ -60,6 +69,7 @@ export const handler = async (event: APIGatewayProxyEvent) => {
       metrics: metricsService,
       workflowStarter,
       workflowCallback,
+      attachmentStorage,
     });
 
     const router = Router.instantiate(app);

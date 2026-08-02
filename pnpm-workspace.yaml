@@ -14,9 +14,15 @@ catalog:
   '@aws-sdk/client-s3': ^3.1045.0
   '@aws-sdk/client-ses': ^3.1045.0
   '@aws-sdk/client-sfn': ^3.1045.0
+  # Pinned (no caret) to the same minor as @aws-sdk/client-s3: a newer AWS SDK
+  # minor pulls a newer @smithy/types, and two @smithy/types copies in the tree
+  # produce two incompatible `Client` type declarations (TS2379, "separate
+  # declarations of a private property 'handlers'"). Bump these three together.
+  '@aws-sdk/client-textract': 3.1045.0
   '@aws-crypto/sha256-js': ^5.2.0
   '@aws-sdk/credential-provider-node': ^3.972.52
   '@aws-sdk/protocol-http': ^3.374.0
+  '@aws-sdk/s3-request-presigner': 3.1045.0
   '@aws-sdk/signature-v4': ^3.374.0
   '@babel/parser': ^7.29.3
   '@babel/traverse': ^7.29.0

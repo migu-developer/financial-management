@@ -63,6 +63,39 @@ export class DataNotDefinedError extends ModuleError {
 }
 
 /**
+ * Error thrown when the CALLER sent something invalid — an unsupported
+ * content type, a malformed identifier, a value outside the allowed set.
+ *
+ * Distinct from `DataNotDefinedError` (500): that one signals a missing value
+ * we expected to be there, i.e. our own bug. This one is a 400, so the client
+ * learns it must change the request rather than retrying it unchanged.
+ */
+export class BadRequestError extends ModuleError {
+  /**
+   * Constructor for BadRequestError.
+   */
+  constructor(message: string, cause?: unknown) {
+    super({ message, cause }, HttpCode.BAD_REQUEST);
+  }
+
+  /**
+   * Get the error message.
+   * @returns {string} The error message
+   */
+  getMessage(): string {
+    return this.params['message'] as string;
+  }
+
+  /**
+   * Get the HTTP status code.
+   * @returns {number} The HTTP status code
+   */
+  getCode(): number {
+    return this.code;
+  }
+}
+
+/**
  * Error thrown when a request is unauthorized.
  * Extends ModuleError with a specific message and code.
  */
