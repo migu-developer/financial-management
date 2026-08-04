@@ -6,6 +6,7 @@ import {
   NOVA_MICRO_FOUNDATION_MODEL_ID,
 } from '@packages/prompts/bedrock/models';
 import { CHAT_BEDROCK_PROMPTS } from '@packages/prompts/chat/catalog';
+import { THROTTLE_ERROR_NAMES } from '@packages/models/shared/utils/throttle-errors';
 import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import { Duration } from 'aws-cdk-lib';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
@@ -172,11 +173,34 @@ export class StepFunctionsChatStack extends BaseStack {
     );
 
     // No DATABASE_* env: this task only reads an image and returns text.
+    // Textract's `AnalyzeExpense` is capped per ACCOUNT and REGION, and the cap
+    // is not the same everywhere:
+    //
+    //   us-east-1, us-west-2 ....... 5 TPS
+    //   us-east-2 (ours), others ... 1 TPS
+    //
+    // https://docs.aws.amazon.com/general/latest/gr/textract.html
+    //
+    // Hardcoded rather than derived from the region because `this.region` is a
+    // CloudFormation TOKEN at synth time (it resolves to `{"Ref":"AWS::Region"}`),
+    // so a region → quota lookup would always miss and silently take the
+    // default. If this stack ever moves to us-east-1 or us-west-2, raise it.
+    const TEXTRACT_MAX_CONCURRENCY = 1;
+
+    // Reserving concurrency is what actually ENFORCES the quota: one receipt is
+    // read at a time, so we can never burst past it. The overflow then surfaces
+    // as `Lambda.TooManyRequestsException`, which the shared retry below
+    // already knows how to back off on — a concurrent upload is serialised
+    // instead of failing.
+    //
+    // Trade-off: if this function ever wedges, ALL receipt reading stalls.
+    // That is the intended cost of serialising.
     const analyzeReceiptFn = this.makeLambda(
       'AnalyzeReceiptFn',
       `fm-${stage}-chat-analyze-receipt`,
       'src/handlers/sfn-analyze-receipt.ts',
       { CHAT_ATTACHMENTS_BUCKET: attachmentsBucketName },
+      TEXTRACT_MAX_CONCURRENCY,
     );
 
     // Textract reads the object itself, but the CALLER's credentials are used
@@ -737,7 +761,34 @@ export class StepFunctionsChatStack extends BaseStack {
       payloadResponseOnly: true,
       taskTimeout: LAMBDA_TASK_TIMEOUT,
     });
+    // ORDER MATTERS: Step Functions uses the FIRST retrier whose ErrorEquals
+    // matches, so the throttle rule has to be registered BEFORE the shared
+    // helper — the helper also lists `Lambda.TooManyRequestsException`, and
+    // would otherwise win with its much shorter 3-attempt window.
+    //
+    // Two distinct sources land here:
+    //   * `Lambda.TooManyRequestsException` — our own reserved concurrency
+    //     rejecting a second simultaneous receipt (the common case).
+    //   * `ThrottlingException` / `ProvisionedThroughputExceededException` —
+    //     Textract itself refusing. Step Functions matches on the error NAME
+    //     the Lambda reports, and an unhandled AWS SDK error surfaces its own
+    //     `name`, so these match with no wrapping in the handler.
+    //
+    // The SDK already retries throttling 3 times internally (~1.5 s). This adds
+    // a much wider window on top: 2 → 4 → 8 → 16 → 32 s, about a minute, which
+    // absorbs a burst of ~5-6 simultaneous uploads at 1 TPS without the user
+    // ever seeing an error. The chat reply is already asynchronous behind a
+    // typing indicator, so the cost is a slower answer, not a failure.
+    analyzeReceipt.addRetry({
+      // Built from the SHARED list so the retrier and the runtime metric can
+      // never disagree about what counts as throttling.
+      errors: ['Lambda.TooManyRequestsException', ...THROTTLE_ERROR_NAMES],
+      interval: Duration.seconds(2),
+      maxAttempts: 5,
+      backoffRate: 2,
+    });
     addLambdaRetry(analyzeReceipt);
+
     analyzeReceipt.addCatch(publishError, {
       errors: ['States.ALL'],
       resultPath: '$.error',
@@ -880,6 +931,7 @@ export class StepFunctionsChatStack extends BaseStack {
     fnName: string,
     relativeEntry: string,
     env: Record<string, string>,
+    reservedConcurrentExecutions?: number,
   ): NodejsFunction {
     const logGroup = new LogGroup(this, `${id}LogGroup`, {
       logGroupName: `/aws/lambda/${fnName}`,
@@ -900,6 +952,9 @@ export class StepFunctionsChatStack extends BaseStack {
       tracing: Tracing.ACTIVE,
       logGroup,
       environment: env,
+      ...(reservedConcurrentExecutions !== undefined && {
+        reservedConcurrentExecutions,
+      }),
       bundling: {
         format: OutputFormat.ESM,
         sourceMap: true,

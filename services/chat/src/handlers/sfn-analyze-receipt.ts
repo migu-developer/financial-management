@@ -5,6 +5,7 @@ import { MetricsServiceImplementation } from '@services/shared/infrastructure/se
 import { AnalyzeReceiptUseCase } from '@services/chat/application/use-cases/analyze-receipt.use-case';
 import { TextractReceiptAnalyzer } from '@services/chat/infrastructure/services/textract-receipt-analyzer.service';
 import { requireEnv } from '@packages/models/shared/utils/require-env';
+import { isThrottleError } from '@services/chat/infrastructure/utils/throttle-error';
 
 const tracerService = new TracerServiceImplementation('chat-analyze-receipt');
 const metricsService = new MetricsServiceImplementation('chat');
@@ -65,6 +66,20 @@ export const handler = async (event: AnalyzeReceiptEvent) => {
     });
 
     return result;
+  } catch (error: unknown) {
+    // Count throttles separately, then RETHROW untouched: the Step Functions
+    // retrier matches on the error name, so wrapping it here would break the
+    // backoff that keeps the user from seeing a failure.
+    if (isThrottleError(error)) {
+      metricsService.count('ChatReceiptThrottled');
+      logger.warn(
+        'Textract throttled the receipt read; Step Functions will retry',
+        {
+          errorName: (error as { name?: string }).name,
+        },
+      );
+    }
+    throw error;
   } finally {
     metricsService.publish();
   }
