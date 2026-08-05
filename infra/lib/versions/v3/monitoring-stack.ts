@@ -421,12 +421,29 @@ export class MonitoringStack extends BaseStack {
     }
 
     // NOTE: there are deliberately NO per-Lambda `Throttles` alarms.
-    // No function sets `reservedConcurrentExecutions`, so throttling could only
-    // come from the account-level concurrency limit (1000 concurrent
-    // executions) — unreachable at this workload. A throttled invocation also
-    // surfaces through the signals we already alarm on: `Errors` on the
-    // function and 5xx on API Gateway. Throttles remain visible on the
-    // dashboard widget (free) instead of costing $0.10/alarm/month each.
+    //
+    // CORRECTION (2026-08): the original justification here claimed the
+    // account-level limit was 1000 concurrent executions. It is NOT — this
+    // account is on the reduced quota AWS gives new accounts:
+    //
+    //   aws lambda get-account-settings
+    //   → ConcurrentExecutions: 10
+    //
+    // So the ceiling is far closer than that comment implied. The decision to
+    // skip these alarms still holds, but now on MEASURED grounds rather than a
+    // wrong premise — 30 days of CloudWatch show:
+    //
+    //   Throttles (whole account) ... 0
+    //   Peak ConcurrentExecutions ... 3 of 10
+    //
+    // Peak usage is 30% of the ceiling and nothing has ever been throttled, so
+    // these alarms would still be non-actionable noise at $0.10 each per month.
+    // A throttled invocation also surfaces through signals we DO alarm on:
+    // `Errors` on the function and 5xx on API Gateway. Throttles stay visible
+    // on the dashboard widget, which is free.
+    //
+    // REVISIT if peak concurrency approaches 10, or if the quota is raised and
+    // traffic grows — the headroom, not the alarm cost, is the thing to watch.
 
     // ── Cognito Trigger Alarms ─────────────────────────────
     for (const [trigger, fnName] of Object.entries(cognitoTriggers)) {

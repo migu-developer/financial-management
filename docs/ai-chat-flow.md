@@ -393,18 +393,37 @@ stack runs
 receipt equals one call, so the ceiling is literally "more than one receipt per
 second across the whole account".
 
-Two mechanisms keep a user from ever losing a receipt to that ceiling:
+A **throttle retrier** on the `AnalyzeReceipt` task keeps a user from losing a
+receipt to that ceiling: 2 → 4 → 8 → 16 → 32 s, about a minute of backoff, on
+`ThrottlingException` / `ProvisionedThroughputExceededException` and on
+`Lambda.TooManyRequestsException`. Roughly 5-6 simultaneous uploads are absorbed
+with no user-visible error — the chat reply is already asynchronous behind a
+typing indicator, so the cost is a slower answer, not a failure.
 
-| Mechanism                                                   | What it does                                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `reservedConcurrentExecutions: 1` on `chat-analyze-receipt` | Makes exceeding the quota **structurally impossible** — one receipt is read at a time |
-| A throttle retrier on the `AnalyzeReceipt` task             | 2 → 4 → 8 → 16 → 32 s, about a minute of backoff                                      |
-
-The two compose: reserving concurrency turns a would-be Textract throttle into
-`Lambda.TooManyRequestsException`, which the retrier backs off on, so concurrent
-uploads are **serialised instead of failing**. Roughly 5-6 simultaneous uploads
-are absorbed with no user-visible error — the chat reply is already asynchronous
-behind a typing indicator, so the cost is a slower answer, not a failure.
+> **Why there is no `reservedConcurrentExecutions: 1`.** Reserving 1 would make
+> exceeding the 1 TPS cap structurally impossible, and this stack briefly did
+> exactly that — the production deploy then failed:
+>
+> ```
+> Specified ReservedConcurrentExecutions for function decreases account's
+> UnreservedConcurrentExecution below its minimum value of [10].
+> ```
+>
+> This account's Lambda quota is **10** concurrent executions (the reduced
+> default AWS gives new accounts, verified with
+> `aws lambda get-account-settings`), and AWS requires 10 to remain UNRESERVED —
+> so with a total of 10, reserving even one is impossible. It is an account-quota
+> constraint, invisible to synth and to every test, so it only surfaced at deploy
+> time. A unit test now asserts the reservation is absent, to stop it being
+> reintroduced before the quota is raised.
+>
+> If the quota is ever raised (Service Quotas → Lambda → _Concurrent
+> executions_, free and adjustable), reserving 1 becomes possible and is worth
+> adding back.
+>
+> Measured headroom (30 days, whole account): **0 throttles**, peak
+> `ConcurrentExecutions` of **3 of 10**. The ceiling has never been approached,
+> but it is thin enough to watch as traffic grows.
 
 > **Retrier order matters.** Step Functions uses the FIRST retrier whose
 > `ErrorEquals` matches. The throttle rule is registered BEFORE the shared

@@ -621,7 +621,7 @@ describe('StepFunctionsChatStack', () => {
       expect(retries.length).toBe(10);
     });
 
-    test('caps AnalyzeReceipt at one concurrent execution to honour the TPS quota', () => {
+    test('does NOT reserve concurrency — the account quota forbids it', () => {
       createStack();
       const { NodejsFunction: MockFn } = jest.requireMock<
         Record<string, jest.Mock>
@@ -631,13 +631,21 @@ describe('StepFunctionsChatStack', () => {
           (c[2] as { functionName: string }).functionName ===
           'fm-dev-chat-analyze-receipt',
       );
-      // Textract's AnalyzeExpense is 1 TPS per account in us-east-2. Reserving
-      // concurrency is what makes exceeding it structurally impossible; the
-      // overflow then surfaces as Lambda.TooManyRequestsException, which the
-      // retrier below backs off on.
+
+      // Reserving 1 would enforce Textract's 1 TPS cap structurally, and that IS
+      // what this stack used to do — but the deploy failed in production:
+      //
+      //   Specified ReservedConcurrentExecutions for function decreases
+      //   account's UnreservedConcurrentExecution below its minimum value of [10]
+      //
+      // The account's Lambda quota is 10 concurrent executions, and AWS requires
+      // 10 to stay UNRESERVED, so no reservation is possible at all. It is an
+      // account-quota constraint, invisible to synth — which is exactly why this
+      // assertion exists: it stops the reservation being reintroduced without
+      // first raising the quota.
       expect(
         (call![2] as Record<string, unknown>)['reservedConcurrentExecutions'],
-      ).toBe(1);
+      ).toBeUndefined();
     });
 
     test('retries AnalyzeReceipt on throttling with a much wider window', () => {
