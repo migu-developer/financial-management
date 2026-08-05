@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, useColorScheme } from 'react-native';
+import { Image, Text, View, useColorScheme } from 'react-native';
 
 import {
   generic,
@@ -7,16 +7,47 @@ import {
   primary,
   textTokens,
 } from '@features/ui/utils/colors';
-import { fontSizeScale, radius, space } from '@features/ui/utils/spacing';
+import {
+  fontSizeScale,
+  mediaHeight,
+  radius,
+  space,
+} from '@features/ui/utils/spacing';
 import { fontWeight } from '@features/ui/utils/typography';
 
-export interface ChatBubbleProps {
+/**
+ * An attached photo ALWAYS travels with its accessible description.
+ *
+ * Modelled as a union rather than two optional props so an unlabeled image is
+ * impossible to construct: a receipt photo is content, not decoration, so
+ * hiding it from screen readers would lose information, and announcing it with
+ * no description would be worse still.
+ */
+export type ChatBubbleAttachment =
+  | {
+      /**
+       * Either a local blob (the message the user just sent) or a presigned S3
+       * GET (a message restored from history) — the bubble does not care which.
+       */
+      imageUri: string;
+      /** Accessible description of `imageUri`. */
+      imageAccessibilityLabel: string;
+    }
+  | { imageUri?: undefined; imageAccessibilityLabel?: undefined };
+
+export type ChatBubbleProps = {
   message: string;
   timestamp: string;
   isUser: boolean;
-}
+} & ChatBubbleAttachment;
 
-export function ChatBubble({ message, timestamp, isUser }: ChatBubbleProps) {
+export function ChatBubble({
+  message,
+  timestamp,
+  isUser,
+  imageUri,
+  imageAccessibilityLabel,
+}: ChatBubbleProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -55,6 +86,25 @@ export function ChatBubble({ message, timestamp, isUser }: ChatBubbleProps) {
           paddingVertical: space.xs,
         }}
       >
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            // `contain` so a tall receipt is never cropped — the whole slip has
+            // to stay legible, which is the point of showing it back.
+            resizeMode="contain"
+            accessible
+            accessibilityRole="image"
+            // Guaranteed present by the props union — an image never reaches
+            // here without its description.
+            accessibilityLabel={imageAccessibilityLabel}
+            style={{
+              width: '100%',
+              height: mediaHeight.chatAttachment,
+              borderRadius: radius.md,
+              marginBottom: space.xs,
+            }}
+          />
+        ) : null}
         <Text
           style={{
             fontSize: fontSizeScale.sm,

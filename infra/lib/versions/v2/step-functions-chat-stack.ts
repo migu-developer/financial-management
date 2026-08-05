@@ -6,6 +6,7 @@ import {
   NOVA_MICRO_FOUNDATION_MODEL_ID,
 } from '@packages/prompts/bedrock/models';
 import { CHAT_BEDROCK_PROMPTS } from '@packages/prompts/chat/catalog';
+import { ATTACHMENT_READY_PREFIX } from '@packages/models/chat/attachment-keys';
 import { THROTTLE_ERROR_NAMES } from '@packages/models/shared/utils/throttle-errors';
 import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import { Duration } from 'aws-cdk-lib';
@@ -207,10 +208,20 @@ export class StepFunctionsChatStack extends BaseStack {
 
     // Textract reads the object itself, but the CALLER's credentials are used
     // for the S3Object access, so the Lambda role needs GetObject too.
+    //
+    // Scoped to the READY prefix, NOT the upload prefix: ImageProcess writes the
+    // normalized object to `chat-ready/` and the client sends THAT key on
+    // `POST /chat`, so a ready key is the only thing this Lambda ever reads.
+    //
+    // This used to be a hardcoded 'chat-attachments/*', which silently granted
+    // the wrong prefix — Textract answered `InvalidS3ObjectException` ("Unable
+    // to get object metadata from S3"), an error that reads like a bad key
+    // rather than a missing permission. Always use the shared constant so this
+    // cannot drift from ImageProcess again.
     analyzeReceiptFn.addToRolePolicy(
       new PolicyStatement({
         actions: ['s3:GetObject'],
-        resources: [`${attachmentsBucketArn}/chat-attachments/*`],
+        resources: [`${attachmentsBucketArn}/${ATTACHMENT_READY_PREFIX}/*`],
       }),
     );
     // AnalyzeExpense is not resource-scopable — Textract has no per-document

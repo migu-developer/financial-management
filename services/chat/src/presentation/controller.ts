@@ -4,6 +4,7 @@ import {
   ChatService,
   ChatConfirmService,
   ChatUploadUrlService,
+  ChatAttachmentUrlService,
   ChatSessionsService,
   ChatSessionMessagesService,
 } from './service';
@@ -78,6 +79,37 @@ export class ChatConfirmController extends Controller {
 export class ChatUploadUrlController extends Controller {
   constructor(public override readonly app: Application) {
     const service = new ChatUploadUrlService(app);
+    super(app, service);
+  }
+
+  override GET(): Promise<Response> {
+    throw new MethodNotImplementedError();
+  }
+
+  override async POST(): Promise<Response> {
+    return this.service.executePOST();
+  }
+
+  override PUT(): Promise<Response> {
+    throw new MethodNotImplementedError();
+  }
+
+  override PATCH(): Promise<Response> {
+    throw new MethodNotImplementedError();
+  }
+
+  override DELETE(): Promise<Response> {
+    throw new MethodNotImplementedError();
+  }
+}
+
+/**
+ * Controller for `POST /chat/attachment-url`. Issues a presigned S3 GET so the
+ * chat can render an attachment the user sent; only POST is supported.
+ */
+export class ChatAttachmentUrlController extends Controller {
+  constructor(public override readonly app: Application) {
+    const service = new ChatAttachmentUrlService(app);
     super(app, service);
   }
 

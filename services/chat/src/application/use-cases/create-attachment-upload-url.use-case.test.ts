@@ -11,6 +11,8 @@ const makeStorage = (): jest.Mocked<AttachmentStorageService> => ({
     expiresIn: 300,
     attachmentType: 'image',
   }),
+  // Present to satisfy the port; this use case must never touch it.
+  createDownloadUrl: jest.fn(),
 });
 
 describe('CreateAttachmentUploadUrlUseCase', () => {

@@ -1,14 +1,24 @@
 import { randomUUID } from 'node:crypto';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type {
   AttachmentStorageService,
   ChatAttachmentKind,
+  CreateDownloadUrlInput,
+  CreateDownloadUrlResult,
   CreateUploadUrlInput,
   CreateUploadUrlResult,
 } from '@services/chat/domain/services/attachment-storage.service';
 import { BadRequestError } from '@packages/models/shared/utils/errors';
-import { ATTACHMENT_UPLOAD_PREFIX } from '@packages/models/chat/attachment-keys';
+import {
+  ATTACHMENT_READY_PREFIX,
+  ATTACHMENT_UPLOAD_PREFIX,
+  assertKeyOwnedBy,
+} from '@packages/models/chat/attachment-keys';
 import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 /**
@@ -43,6 +53,15 @@ export const ALLOWED_ATTACHMENT_TYPES: Readonly<
 
 /** How long the client has to complete the upload. */
 export const UPLOAD_URL_TTL_SECONDS = 300;
+
+/**
+ * How long a presigned read stays valid.
+ *
+ * Longer than the upload TTL because this one backs rendering: a user can sit
+ * on an open conversation, scroll back, or leave the tab idle. Still short
+ * enough that a leaked URL stops working the same hour.
+ */
+export const DOWNLOAD_URL_TTL_SECONDS = 3600;
 
 /**
  * S3 adapter for `AttachmentStorageService`.
@@ -94,5 +113,23 @@ export class S3AttachmentStorage implements AttachmentStorageService {
       expiresIn: UPLOAD_URL_TTL_SECONDS,
       attachmentType: allowed.kind,
     };
+  }
+
+  @trace('S3:presignAttachmentDownload')
+  async createDownloadUrl(
+    input: CreateDownloadUrlInput,
+  ): Promise<CreateDownloadUrlResult> {
+    // The key round-trips through the client, so it is untrusted here. This
+    // rejects traversal, extra path segments, the raw upload prefix, and any
+    // key whose owner segment is not the caller — one object, one owner.
+    assertKeyOwnedBy(input.s3Key, input.userId, ATTACHMENT_READY_PREFIX);
+
+    const downloadUrl = await getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucketName, Key: input.s3Key }),
+      { expiresIn: DOWNLOAD_URL_TTL_SECONDS },
+    );
+
+    return { downloadUrl, expiresIn: DOWNLOAD_URL_TTL_SECONDS };
   }
 }

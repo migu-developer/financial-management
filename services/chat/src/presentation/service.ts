@@ -5,6 +5,7 @@ import { ConfirmPendingExpenseUseCase } from '@services/chat/application/use-cas
 import { ListSessionsUseCase } from '@services/chat/application/use-cases/list-sessions.use-case';
 import { GetSessionMessagesUseCase } from '@services/chat/application/use-cases/get-session-messages.use-case';
 import { CreateAttachmentUploadUrlUseCase } from '@services/chat/application/use-cases/create-attachment-upload-url.use-case';
+import { CreateAttachmentDownloadUrlUseCase } from '@services/chat/application/use-cases/create-attachment-download-url.use-case';
 import { PostgresChatSessionRepository } from '@services/chat/infrastructure/repositories/postgres-chat-session.repository';
 import { PostgresChatMessageRepository } from '@services/chat/infrastructure/repositories/postgres-chat-message.repository';
 import { DataNotDefinedError } from '@packages/models/shared/utils/errors';
@@ -24,6 +25,11 @@ interface ConfirmRequestBody {
 
 interface UploadUrlRequestBody {
   contentType: string;
+}
+
+interface AttachmentUrlRequestBody {
+  /** Normalized (`chat-ready/...`) key of the attachment to read back. */
+  s3Key: string;
 }
 
 /**
@@ -208,6 +214,51 @@ export class ChatUploadUrlService extends Service {
     );
 
     this.app.metrics.count('ChatAttachmentUploadUrlIssued');
+
+    return new Response(JSON.stringify({ success: true, data: result }), {
+      status: HttpCode.SUCCESS,
+    });
+  }
+}
+
+/**
+ * Service for `POST /chat/attachment-url`.
+ *
+ * Returns a short-lived presigned S3 GET so the chat can render the receipt a
+ * user attached. The bucket stays fully private — this is the only read path,
+ * and it grants one object, to its owner, for one hour.
+ *
+ * POST rather than GET because the key contains slashes: putting it in a path
+ * segment would need double-encoding to survive API Gateway, and a query string
+ * would land it in access logs.
+ */
+export class ChatAttachmentUrlService extends Service {
+  constructor(public readonly app: Application) {
+    super(app);
+  }
+
+  override async executePOST(): Promise<Response> {
+    this.app.logger.info(
+      'Executing chat attachment-url POST request',
+      ChatAttachmentUrlService.name,
+    );
+
+    if (!this.app.event.body) {
+      throw new DataNotDefinedError('Request body is required');
+    }
+
+    const body = JSON.parse(this.app.event.body) as AttachmentUrlRequestBody;
+
+    const useCase = new CreateAttachmentDownloadUrlUseCase(
+      this.app.attachmentStorage,
+    );
+
+    const result = await useCase.execute(
+      { s3Key: body.s3Key },
+      this.app.user.uid,
+    );
+
+    this.app.metrics.count('ChatAttachmentDownloadUrlIssued');
 
     return new Response(JSON.stringify({ success: true, data: result }), {
       status: HttpCode.SUCCESS,

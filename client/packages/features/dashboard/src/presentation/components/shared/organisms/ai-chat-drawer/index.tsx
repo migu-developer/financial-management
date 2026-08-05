@@ -20,6 +20,7 @@ import { isWeb, preferenceStorage } from '@packages/utils';
 import { ChatInput } from '@features/ui/components/shared/atoms/chat-input';
 import { AttachmentPreview } from '@features/ui/components/shared/atoms/attachment-preview';
 import { useChatAttachment } from '@features/dashboard/presentation/hooks/use-chat-attachment';
+import { useAttachmentUrls } from '@features/dashboard/presentation/hooks/use-attachment-urls';
 import { Skeleton } from '@features/ui/components/shared/atoms/skeleton';
 import { TypingIndicator } from '@features/ui/components/shared/atoms/typing-indicator';
 import { ChatMessageList } from '@features/ui/components/shared/molecules/chat-message-list';
@@ -57,6 +58,12 @@ export interface AIChatDrawerProps {
 }
 
 interface InternalMessage extends UiChatMessage {
+  /**
+   * Normalized key of the photo sent with this message. Exchanged for a
+   * presigned URL by `useAttachmentUrls` — the bucket is private, so the key
+   * alone cannot be rendered.
+   */
+  attachmentS3Key?: string;
   taskToken?: string;
   /** True until a Confirm/Cancel decision is taken. */
   pending?: boolean;
@@ -166,6 +173,31 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
     },
   ]);
 
+  // ── Attachment thumbnails ─────────────────────────────────
+  // Memoized so `useAttachmentUrls` only re-runs when the message list actually
+  // changes, not on every unrelated re-render.
+  const attachmentKeys = useMemo(
+    () =>
+      messages
+        .map((m) => m.attachmentS3Key)
+        .filter((key): key is string => key !== undefined),
+    [messages],
+  );
+  const attachmentUrls = useAttachmentUrls(chatRepository, attachmentKeys);
+
+  // A message keeps its own key; the URL arrives asynchronously, so until it
+  // does the bubble simply renders without an image.
+  const messagesWithImages = useMemo(
+    (): InternalMessage[] =>
+      messages.map((m) => {
+        const uri = m.attachmentS3Key
+          ? attachmentUrls[m.attachmentS3Key]
+          : undefined;
+        return uri === undefined ? m : { ...m, imageUri: uri };
+      }),
+    [messages, attachmentUrls],
+  );
+
   // ── Map persisted history → UI messages ───────────────────
   const mapHistory = useCallback(
     (history: ChatHistoryMessage[]): InternalMessage[] =>
@@ -174,6 +206,10 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
         message: m.content,
         timestamp: formatTimestampFromIso(m.createdAt),
         isUser: m.role === 'user',
+        // Only images are renderable; an audio note gets no thumbnail.
+        ...(m.attachmentS3Key && m.attachmentType === 'image'
+          ? { attachmentS3Key: m.attachmentS3Key }
+          : {}),
         // Restore a still-pending preview so its Confirm/Cancel reappears.
         ...(m.role !== 'user' && m.taskToken && m.taskTokenStatus === 'pending'
           ? { taskToken: m.taskToken, pending: true }
@@ -354,6 +390,7 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
       message: trimmed || t('aiChat.attachReady'),
       timestamp: formatTimestamp(),
       isUser: true,
+      ...(readyKey !== undefined && { attachmentS3Key: readyKey }),
     };
     // Sending iterates on any pending preview — drop stale Confirm/Cancel.
     setMessages((prev) => [
@@ -648,7 +685,10 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
                   ))}
                 </View>
               ) : (
-                <ChatMessageList messages={messages} />
+                <ChatMessageList
+                  messages={messagesWithImages}
+                  imageAccessibilityLabel={t('aiChat.attachmentImageLabel')}
+                />
               )}
 
               {/* HITL actions: only for the latest pending preview */}

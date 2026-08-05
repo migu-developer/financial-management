@@ -132,6 +132,7 @@ export const dashboard = {
     untitledSession: 'Conversación',
     loadingSessions: 'Cargando conversaciones...',
     attachLabel: 'Adjuntar foto de un recibo',
+    attachmentImageLabel: 'Foto del recibo adjunto',
     attachRemoveLabel: 'Quitar adjunto',
     attachPreparing: 'Preparando imagen...',
     attachUploading: 'Subiendo...',
