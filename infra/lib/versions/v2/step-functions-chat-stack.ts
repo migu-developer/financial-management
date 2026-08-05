@@ -181,26 +181,28 @@ export class StepFunctionsChatStack extends BaseStack {
     //
     // https://docs.aws.amazon.com/general/latest/gr/textract.html
     //
-    // Hardcoded rather than derived from the region because `this.region` is a
-    // CloudFormation TOKEN at synth time (it resolves to `{"Ref":"AWS::Region"}`),
-    // so a region → quota lookup would always miss and silently take the
-    // default. If this stack ever moves to us-east-1 or us-west-2, raise it.
-    const TEXTRACT_MAX_CONCURRENCY = 1;
-
-    // Reserving concurrency is what actually ENFORCES the quota: one receipt is
-    // read at a time, so we can never burst past it. The overflow then surfaces
-    // as `Lambda.TooManyRequestsException`, which the shared retry below
-    // already knows how to back off on — a concurrent upload is serialised
-    // instead of failing.
+    // There is deliberately NO `reservedConcurrentExecutions` here, even though
+    // reserving 1 would enforce that cap structurally. This account's Lambda
+    // quota is 10 concurrent executions (the reduced default AWS gives new
+    // accounts), and AWS refuses any reservation that would leave fewer than 10
+    // UNRESERVED — so with a total of 10, reserving even 1 is impossible:
     //
-    // Trade-off: if this function ever wedges, ALL receipt reading stalls.
-    // That is the intended cost of serialising.
+    //   Specified ReservedConcurrentExecutions for function decreases account's
+    //   UnreservedConcurrentExecution below its minimum value of [10].
+    //
+    // That is an account-quota constraint, not a code one, so no test can catch
+    // it — it only fails at deploy time. The throttle retrier below is therefore
+    // the sole mechanism, which is what it was designed to be; the reservation
+    // was only ever a structural reinforcement.
+    //
+    // If the concurrency quota is ever raised (Service Quotas → Lambda →
+    // Concurrent executions), reserving 1 becomes possible and worth adding
+    // back.
     const analyzeReceiptFn = this.makeLambda(
       'AnalyzeReceiptFn',
       `fm-${stage}-chat-analyze-receipt`,
       'src/handlers/sfn-analyze-receipt.ts',
       { CHAT_ATTACHMENTS_BUCKET: attachmentsBucketName },
-      TEXTRACT_MAX_CONCURRENCY,
     );
 
     // Textract reads the object itself, but the CALLER's credentials are used
@@ -931,7 +933,6 @@ export class StepFunctionsChatStack extends BaseStack {
     fnName: string,
     relativeEntry: string,
     env: Record<string, string>,
-    reservedConcurrentExecutions?: number,
   ): NodejsFunction {
     const logGroup = new LogGroup(this, `${id}LogGroup`, {
       logGroupName: `/aws/lambda/${fnName}`,
@@ -952,9 +953,6 @@ export class StepFunctionsChatStack extends BaseStack {
       tracing: Tracing.ACTIVE,
       logGroup,
       environment: env,
-      ...(reservedConcurrentExecutions !== undefined && {
-        reservedConcurrentExecutions,
-      }),
       bundling: {
         format: OutputFormat.ESM,
         sourceMap: true,

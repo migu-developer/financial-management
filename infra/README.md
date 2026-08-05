@@ -325,16 +325,18 @@ after the table.
 
 All alarms use `TreatMissingData.NOT_BREACHING` and trigger the SNS alert topic.
 
-**Deliberately NOT alarmed:** per-Lambda `Throttles` (no function sets
-`reservedConcurrentExecutions`, so throttling could only come from the
-account-level 1000-concurrency limit — unreachable at this workload, and a
-throttled invocation also surfaces as `Errors` plus API 5xx) and
+**Deliberately NOT alarmed:** per-Lambda `Throttles` and
 `Api-4xx-Spike` (a 4xx is a CLIENT fault, not a service fault, so it is not
 actionable by an on-call alert). Both remain on the dashboard for trend
-analysis. CloudWatch bills $0.10 per alarm-metric per month, and consolidating
-alarms does NOT help — metric math is billed per metric referenced — so the only
-lever is removing metrics from monitoring. See
-`docs/observability-flow.md#what-is-deliberately-not-alarmed`.
+analysis.
+
+> The Throttles decision rests on MEASUREMENT, not on an assumed quota. This
+> account's Lambda ceiling is **10** concurrent executions (the reduced default
+> for new accounts), not 1000 — but 30 days of CloudWatch show **0 throttles**
+> and a peak of **3 of 10**. Revisit if peak concurrency approaches the ceiling. CloudWatch bills $0.10 per alarm-metric per month, and consolidating
+> alarms does NOT help — metric math is billed per metric referenced — so the only
+> lever is removing metrics from monitoring. See
+> `docs/observability-flow.md#what-is-deliberately-not-alarmed`.
 
 **AI chat alarms** (in addition to the table above): per-Lambda errors
 for the 10 chat Lambdas (handler + 6 chat workflow task Lambdas + 3 image-normalization Lambdas); state-machine

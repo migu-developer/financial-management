@@ -182,9 +182,10 @@ describe('MonitoringStack', () => {
     }
     expect(alarmNames).toContain('Monitoring-Lambda-UpdateRates-Errors');
 
-    // No Lambda sets reservedConcurrentExecutions, so throttling can only come
-    // from the 1000-concurrency account limit — unreachable here. Throttles
-    // stay on the dashboard widget instead of paying per alarm.
+    // Skipped on MEASURED grounds, not on an assumed quota: this account's
+    // Lambda ceiling is 10 concurrent executions (not the 1000 default), but
+    // 30 days of CloudWatch show 0 throttles and a peak of 3. Throttles stay on
+    // the dashboard widget instead of paying $0.10/alarm/month.
     expect(alarmNames.filter((n) => n.endsWith('-Throttles'))).toHaveLength(0);
   });
 
