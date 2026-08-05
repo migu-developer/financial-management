@@ -73,6 +73,19 @@ export interface ChatHistoryMessage {
   taskToken: string | null;
   taskTokenStatus: ChatTaskTokenStatus | null;
   createdAt: string;
+  /**
+   * Normalized key of the attachment sent with this message, when there was
+   * one. Not renderable on its own — the bucket is private, so the UI has to
+   * exchange it for a presigned URL via `createAttachmentUrl`.
+   */
+  attachmentS3Key: string | null;
+  attachmentType: 'image' | 'audio' | null;
+}
+
+export interface CreateAttachmentUrlResult {
+  /** Presigned GET the UI can point an `<Image>` at. */
+  downloadUrl: string;
+  expiresIn: number;
 }
 
 /**
@@ -99,4 +112,9 @@ export interface ChatRepositoryPort {
   listSessions(): Promise<ChatSessionSummary[]>;
   /** Returns a session's messages (oldest → newest) to restore it. */
   getSessionMessages(sessionId: string): Promise<ChatHistoryMessage[]>;
+  /**
+   * Exchanges a normalized attachment key for a short-lived presigned GET, so
+   * the chat can render a photo without the bucket ever being public.
+   */
+  createAttachmentUrl(s3Key: string): Promise<CreateAttachmentUrlResult>;
 }

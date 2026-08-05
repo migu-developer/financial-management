@@ -198,6 +198,13 @@ export const maxWidth = {
   xl: 1280,
 } as const;
 
+// ─── Media sizes (inline images/thumbnails in dp) ─────────────────────────
+
+export const mediaHeight = {
+  /** 180dp — image attached to a chat bubble: readable without dominating it. */
+  chatAttachment: 180,
+} as const;
+
 // ─── ZIndex constants ────────────────────────────────────────────────────────
 export const zIndex = {
   /** 1 — lowest */

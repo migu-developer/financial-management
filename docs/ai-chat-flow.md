@@ -29,6 +29,7 @@ authenticated with the **Cognito** authorizer.
 | ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------- |
 | `POST /chat`                       | Send a message (`{ content, sessionId?, attachmentS3Key?, attachmentType? }`) | **StartExecution** (new workflow run) |
 | `POST /chat/upload-url`            | Presign an attachment upload (`{ contentType }`)                              | S3 presign only (no workflow)         |
+| `POST /chat/attachment-url`        | Presign an attachment READ (`{ s3Key }`) so a sent photo can be displayed     | S3 presign only (no workflow)         |
 | `POST /chat/confirm`               | Resolve a pending preview (`{ taskToken, confirmed }`)                        | **SendTaskSuccess** (resumes the run) |
 | `GET /chat/sessions`               | List the user's sessions for the sidebar                                      | DB read (no workflow)                 |
 | `GET /chat/sessions/{id}/messages` | Restore a conversation (oldest → newest)                                      | DB read (no workflow)                 |
@@ -274,6 +275,25 @@ inflate it further, so the upload is a **presigned S3 PUT** straight from the
 device. `Content-Type` is part of the signature — the client MUST send the same
 value it requested, or S3 rejects the PUT.
 
+### Read path — showing the photo back
+
+The bucket is fully private (all four public-access blocks on), so a stored key
+is not renderable on its own. `POST /chat/attachment-url` exchanges one key for
+a presigned GET, valid one hour.
+
+Three properties make that safe, and all three are enforced server-side:
+
+- The user id comes from the Cognito authorizer, never the request body.
+- `assertKeyOwnedBy` rejects any key whose owner segment is not the caller —
+  compared exactly, so `user-1` never matches `user-12`.
+- Only the **ready** prefix is presignable. A raw upload may be HEIC or 60 MP
+  and is never something a browser should be pointed at, so the Lambda's IAM
+  grant covers `chat-ready/*` only.
+
+The message the user just sent renders through the same path rather than the
+local blob preview, which keeps one code path and means a reopened conversation
+looks identical to a live one.
+
 ### Image normalization (ImageProcess state machine)
 
 Users upload whatever their device produces — HEIC from an iPhone, 48 MP
@@ -511,6 +531,7 @@ camera icon → pickImageFile()          browser file chooser
             → PUT to S3                bytes never touch API Gateway
             → wait for attachment_ready on the EXISTING chat channel
             → POST /chat { attachmentS3Key: readyKey }
+            → POST /chat/attachment-url  presign a READ, render the thumbnail
 ```
 
 The Send button is disabled while the attachment is `preparing` / `uploading` /

@@ -1,6 +1,7 @@
 import type {
   ChatHistoryMessage,
   ChatRepositoryPort,
+  CreateAttachmentUrlResult,
   CreateUploadUrlInput,
   CreateUploadUrlResult,
   ChatSessionSummary,
@@ -34,6 +35,8 @@ interface RawChatMessage {
   task_token: string | null;
   task_token_status: ChatTaskTokenStatus | null;
   created_at: string;
+  attachment_s3_key: string | null;
+  attachment_type: 'image' | 'audio' | null;
 }
 
 /**
@@ -129,6 +132,17 @@ export class ChatApiRepository implements ChatRepositoryPort {
       taskToken: m.task_token,
       taskTokenStatus: m.task_token_status,
       createdAt: m.created_at,
+      // The backend has always returned these; the mapper used to drop them,
+      // which is why a restored conversation showed no photos.
+      attachmentS3Key: m.attachment_s3_key ?? null,
+      attachmentType: m.attachment_type ?? null,
     }));
+  }
+
+  async createAttachmentUrl(s3Key: string): Promise<CreateAttachmentUrlResult> {
+    const response = await this.api.post<
+      ApiResponse<CreateAttachmentUrlResult>
+    >('/chat/attachment-url', { s3Key });
+    return response.data;
   }
 }

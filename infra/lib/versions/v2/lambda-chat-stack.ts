@@ -1,4 +1,8 @@
 import { BaseStack, BaseStackProps } from '@core/base-stack';
+import {
+  ATTACHMENT_READY_PREFIX,
+  ATTACHMENT_UPLOAD_PREFIX,
+} from '@packages/models/chat/attachment-keys';
 import { exportForCrossVersion, importFromVersion } from '@utils/cross-version';
 import type { StackDeps } from '@utils/types';
 import { Duration } from 'aws-cdk-lib';
@@ -124,13 +128,32 @@ export class LambdaChatStack extends BaseStack {
     );
 
     // ── IAM: presign attachment uploads ─────────────────────
-    // PutObject ONLY, and only under the attachments prefix: the Lambda signs
-    // upload URLs, it never reads or deletes user attachments (Textract reads
-    // them from the state machine's own role).
+    // PutObject ONLY, and only under the UPLOAD prefix: the Lambda signs upload
+    // URLs, it never reads or deletes user attachments (Textract reads the
+    // normalized object from AnalyzeReceipt's own role, scoped to `chat-ready/`).
+    //
+    // Uses the shared constant on purpose — the sibling grant in
+    // StepFunctionsChat was hardcoded and drifted to the wrong prefix, which
+    // broke every receipt in prod. Same class of bug, same guard.
     lambda.addToRolePolicy(
       new PolicyStatement({
         actions: ['s3:PutObject'],
-        resources: [`${attachmentsBucketArn}/chat-attachments/*`],
+        resources: [`${attachmentsBucketArn}/${ATTACHMENT_UPLOAD_PREFIX}/*`],
+      }),
+    );
+
+    // ── IAM: presign attachment reads ───────────────────────
+    // GetObject on the READY prefix only, so the chat can render a receipt the
+    // user already sent. A presigned URL carries the SIGNER's permissions, so
+    // without this grant the signed URL would exist but return 403.
+    //
+    // Deliberately not the upload prefix: raw uploads may be HEIC or 60 MP and
+    // are never something a browser should be pointed at. The per-request
+    // ownership assertion lives in `S3AttachmentStorage.createDownloadUrl`.
+    lambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: [`${attachmentsBucketArn}/${ATTACHMENT_READY_PREFIX}/*`],
       }),
     );
 
@@ -155,6 +178,17 @@ export class LambdaChatStack extends BaseStack {
     // POST /chat/upload-url — presigned S3 PUT for a receipt photo.
     const uploadUrlResource = chatResource.addResource('upload-url');
     uploadUrlResource.addMethod(
+      'POST',
+      integration,
+      gateway.authWithBody(passthroughModel),
+    );
+
+    // POST /chat/attachment-url — presigned S3 GET so the chat can render an
+    // attachment. POST, not GET, because the key contains slashes: a path
+    // segment would need double-encoding to survive API Gateway and a query
+    // string would put user object keys in access logs.
+    const attachmentUrlResource = chatResource.addResource('attachment-url');
+    attachmentUrlResource.addMethod(
       'POST',
       integration,
       gateway.authWithBody(passthroughModel),

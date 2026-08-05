@@ -90,16 +90,16 @@ describe('ChatAttachmentsStack', () => {
     expect(bucketProps().removalPolicy).toBe('Retain');
   });
 
-  test('allows only PUT from the app origins, so presigned uploads work on web', () => {
+  test('allows PUT and GET from the app origins only', () => {
     createStack();
     const cors = bucketProps().cors as Array<{
       allowedMethods: string[];
       allowedOrigins: string[];
     }>;
     expect(cors).toHaveLength(1);
-    // Read access is never needed from the browser — Textract reads the object
-    // server-side — so PUT is the ONLY method exposed.
-    expect(cors[0]!.allowedMethods).toEqual(['PUT']);
+    // PUT for the presigned upload, GET so the chat can render an attachment
+    // the user sent. Nothing else — no POST, no DELETE, no HEAD.
+    expect(cors[0]!.allowedMethods).toEqual(['PUT', 'GET']);
     expect(cors[0]!.allowedOrigins).toEqual([
       'https://financial-management.migudev.com',
     ]);

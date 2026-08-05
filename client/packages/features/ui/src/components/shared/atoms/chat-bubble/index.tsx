@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, useColorScheme } from 'react-native';
+import { Image, Text, View, useColorScheme } from 'react-native';
 
 import {
   generic,
@@ -7,16 +7,36 @@ import {
   primary,
   textTokens,
 } from '@features/ui/utils/colors';
-import { fontSizeScale, radius, space } from '@features/ui/utils/spacing';
+import {
+  fontSizeScale,
+  mediaHeight,
+  radius,
+  space,
+} from '@features/ui/utils/spacing';
 import { fontWeight } from '@features/ui/utils/typography';
 
 export interface ChatBubbleProps {
   message: string;
   timestamp: string;
   isUser: boolean;
+  /**
+   * Renders an attached photo above the text.
+   *
+   * Either a local blob (the message the user just sent) or a presigned S3 GET
+   * (a message restored from history) — the bubble does not care which.
+   */
+  imageUri?: string;
+  /** Accessible description of `imageUri`. Required whenever one is passed. */
+  imageAccessibilityLabel?: string;
 }
 
-export function ChatBubble({ message, timestamp, isUser }: ChatBubbleProps) {
+export function ChatBubble({
+  message,
+  timestamp,
+  isUser,
+  imageUri,
+  imageAccessibilityLabel,
+}: ChatBubbleProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -55,6 +75,25 @@ export function ChatBubble({ message, timestamp, isUser }: ChatBubbleProps) {
           paddingVertical: space.xs,
         }}
       >
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            // `contain` so a tall receipt is never cropped — the whole slip has
+            // to stay legible, which is the point of showing it back.
+            resizeMode="contain"
+            accessible
+            accessibilityRole="image"
+            {...(imageAccessibilityLabel !== undefined && {
+              accessibilityLabel: imageAccessibilityLabel,
+            })}
+            style={{
+              width: '100%',
+              height: mediaHeight.chatAttachment,
+              borderRadius: radius.md,
+              marginBottom: space.xs,
+            }}
+          />
+        ) : null}
         <Text
           style={{
             fontSize: fontSizeScale.sm,

@@ -69,9 +69,16 @@ export class ChatAttachmentsStack extends BaseStack {
       eventBridgeEnabled: true,
       cors: [
         {
-          // Only PUT is needed: the client uploads through a presigned URL and
-          // never reads the object back directly (Textract reads it server-side).
-          allowedMethods: [HttpMethods.PUT],
+          // PUT for the presigned upload; GET so the chat can render a receipt
+          // the user already sent, through a presigned read.
+          //
+          // GET is not strictly required for an `<img>`/RN `Image` (those are
+          // not CORS-governed), but it is required the moment anything reaches
+          // the object with `fetch`/XHR — a download button, a canvas thumbnail.
+          // Allowing it now costs nothing and avoids a confusing CORS failure
+          // later; the bucket stays private either way, since every read still
+          // needs a signature.
+          allowedMethods: [HttpMethods.PUT, HttpMethods.GET],
           allowedOrigins,
           allowedHeaders: ['content-type'],
           maxAge: 3000,

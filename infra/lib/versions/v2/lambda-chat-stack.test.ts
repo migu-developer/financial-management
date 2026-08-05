@@ -1,5 +1,9 @@
 import { Construct } from 'constructs';
 import { LambdaChatStack } from './lambda-chat-stack';
+import {
+  ATTACHMENT_READY_PREFIX,
+  ATTACHMENT_UPLOAD_PREFIX,
+} from '@packages/models/chat/attachment-keys';
 
 jest.mock('@utils/cross-version', () => ({
   exportForCrossVersion: jest.fn(),
@@ -21,9 +25,11 @@ const mockSessionsAddMethod = jest.fn();
 const mockSessionMessagesAddMethod = jest.fn();
 
 const mockUploadUrlAddMethod = jest.fn();
+const mockAttachmentUrlAddMethod = jest.fn();
 
 const mockConfirmResource = { addMethod: mockConfirmAddMethod };
 const mockUploadUrlResource = { addMethod: mockUploadUrlAddMethod };
+const mockAttachmentUrlResource = { addMethod: mockAttachmentUrlAddMethod };
 const mockSessionMessagesResource = { addMethod: mockSessionMessagesAddMethod };
 const mockSessionIdResource = {
   addResource: jest.fn().mockReturnValue(mockSessionMessagesResource),
@@ -36,6 +42,7 @@ const mockSessionsResource = {
 function chatAddResource(name: string) {
   if (name === 'sessions') return mockSessionsResource;
   if (name === 'upload-url') return mockUploadUrlResource;
+  if (name === 'attachment-url') return mockAttachmentUrlResource;
   return mockConfirmResource;
 }
 
@@ -259,7 +266,7 @@ describe('LambdaChatStack', () => {
       expect(stmt.props.resources).toEqual([IMPORTED_SFN_ARN]);
     });
 
-    test('grants s3:PutObject ONLY, scoped to the attachments prefix', () => {
+    test('grants s3:PutObject scoped to the UPLOAD prefix', () => {
       createStack();
       const putCall = mockAddToRolePolicy.mock.calls.find((c: unknown[]) => {
         const stmt = c[0] as { props: { actions?: string[] } };
@@ -267,12 +274,29 @@ describe('LambdaChatStack', () => {
       });
       expect(putCall).toBeDefined();
       const props = (putCall![0] as { props: Record<string, unknown> }).props;
-      // The Lambda only SIGNS uploads — it must not be able to read or delete
-      // user attachments (Textract reads them under the state machine's role).
+      // Write is upload-only: never Delete, and never the ready prefix, which
+      // belongs exclusively to the image-processing workflow's role.
       expect(props['actions']).toEqual(['s3:PutObject']);
-      expect((props['resources'] as string[])[0]).toContain(
-        '/chat-attachments/*',
-      );
+      const resource = (props['resources'] as string[])[0]!;
+      expect(resource).toContain(`/${ATTACHMENT_UPLOAD_PREFIX}/*`);
+      expect(resource).not.toContain(`/${ATTACHMENT_READY_PREFIX}/`);
+    });
+
+    test('grants s3:GetObject scoped to the READY prefix, so presigned reads work', () => {
+      createStack();
+      const getCall = mockAddToRolePolicy.mock.calls.find((c: unknown[]) => {
+        const stmt = c[0] as { props: { actions?: string[] } };
+        return stmt.props.actions?.includes('s3:GetObject');
+      });
+      expect(getCall).toBeDefined();
+      const props = (getCall![0] as { props: Record<string, unknown> }).props;
+      // A presigned URL carries the SIGNER's permissions: without this grant the
+      // URL would be produced happily and then 403 in the browser.
+      expect(props['actions']).toEqual(['s3:GetObject']);
+      const resource = (props['resources'] as string[])[0]!;
+      expect(resource).toContain(`/${ATTACHMENT_READY_PREFIX}/*`);
+      // Raw uploads must stay unreadable — they may be HEIC or 60 MP.
+      expect(resource).not.toContain(`/${ATTACHMENT_UPLOAD_PREFIX}/`);
     });
 
     test('grants states:SendTaskSuccess and SendTaskFailure with resource *', () => {
@@ -334,6 +358,16 @@ describe('LambdaChatStack', () => {
       expect(mockChatResource.addResource).toHaveBeenCalledWith('upload-url');
       expect(mockUploadUrlAddMethod).toHaveBeenCalledTimes(1);
       expect(mockUploadUrlAddMethod.mock.calls[0]![0]).toBe('POST');
+    });
+
+    test('creates /chat/attachment-url sub-resource with POST only', () => {
+      createStack();
+      expect(mockChatResource.addResource).toHaveBeenCalledWith(
+        'attachment-url',
+      );
+      expect(mockAttachmentUrlAddMethod).toHaveBeenCalledTimes(1);
+      // POST because the S3 key contains slashes — see the stack comment.
+      expect(mockAttachmentUrlAddMethod.mock.calls[0]![0]).toBe('POST');
     });
 
     test('creates /chat/sessions sub-resource', () => {

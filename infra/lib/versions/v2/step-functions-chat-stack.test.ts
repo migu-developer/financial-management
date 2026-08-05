@@ -1,5 +1,9 @@
 import { Construct } from 'constructs';
 import { StepFunctionsChatStack } from './step-functions-chat-stack';
+import {
+  ATTACHMENT_READY_PREFIX,
+  ATTACHMENT_UPLOAD_PREFIX,
+} from '@packages/models/chat/attachment-keys';
 import { THROTTLE_ERROR_NAMES } from '@packages/models/shared/utils/throttle-errors';
 
 jest.mock('@utils/cross-version', () => ({
@@ -582,10 +586,21 @@ describe('StepFunctionsChatStack', () => {
         (p['actions'] as string[])?.includes('s3:GetObject'),
       );
       expect(getObject).toBeDefined();
-      // Scoped to the attachments prefix — not the whole bucket.
-      expect((getObject!['resources'] as string[])[0]).toContain(
-        '/chat-attachments/*',
-      );
+      const resource = (getObject!['resources'] as string[])[0]!;
+
+      // Must be the READY prefix. ImageProcess writes the normalized object to
+      // `chat-ready/` and the client sends that key, so a ready key is the only
+      // thing this Lambda ever reads.
+      //
+      // REGRESSION: this asserted `/chat-attachments/*` and passed while prod
+      // was broken — the grant covered the upload prefix, so Textract failed
+      // with `InvalidS3ObjectException` on every real receipt. Assert against
+      // the shared constants, and assert the upload prefix is NOT granted, so
+      // the two can never be swapped silently again.
+      expect(resource).toContain(`/${ATTACHMENT_READY_PREFIX}/*`);
+      expect(resource).not.toContain(`/${ATTACHMENT_UPLOAD_PREFIX}/`);
+      // Still prefix-scoped, never the whole bucket.
+      expect(resource).not.toMatch(/chat-attachments$|:::[^/]+\/\*$/);
     });
 
     test('passes the attachments bucket to the analyze Lambda and no database url', () => {
