@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { ChatBubble } from '@features/ui/components/shared/atoms/chat-bubble';
+import type { ChatBubbleAttachment } from '@features/ui/components/shared/atoms/chat-bubble';
 import { space } from '@features/ui/utils/spacing';
 
 export interface ChatMessage {
@@ -16,10 +17,15 @@ export interface ChatMessage {
 export interface ChatMessageListProps {
   messages: ChatMessage[];
   /**
-   * Accessible description applied to every attachment image. Passed in rather
-   * than hardcoded so the copy stays in the consumer's i18n namespace.
+   * Accessible description applied to every attachment image.
+   *
+   * REQUIRED, not optional: any message may carry an image, and TypeScript
+   * cannot express "required only if some array item has `imageUri`". Demanding
+   * it here is what lets the bubble guarantee no image is ever announced to a
+   * screen reader without a description. Passed in rather than hardcoded so the
+   * copy stays in the consumer's i18n namespace.
    */
-  imageAccessibilityLabel?: string;
+  imageAccessibilityLabel: string;
 }
 
 export function ChatMessageList({
@@ -44,18 +50,25 @@ export function ChatMessageList({
         paddingVertical: space.sm,
       }}
     >
-      {messages.map((msg) => (
-        <ChatBubble
-          key={msg.id}
-          message={msg.message}
-          timestamp={msg.timestamp}
-          isUser={msg.isUser}
-          {...(msg.imageUri !== undefined && { imageUri: msg.imageUri })}
-          {...(imageAccessibilityLabel !== undefined && {
-            imageAccessibilityLabel,
-          })}
-        />
-      ))}
+      {messages.map((msg) => {
+        // Built as the union rather than spread inline: a conditional spread
+        // does not narrow, so TypeScript could not prove the image and its
+        // label always travel together.
+        const attachment: ChatBubbleAttachment =
+          msg.imageUri !== undefined
+            ? { imageUri: msg.imageUri, imageAccessibilityLabel }
+            : {};
+
+        return (
+          <ChatBubble
+            key={msg.id}
+            message={msg.message}
+            timestamp={msg.timestamp}
+            isUser={msg.isUser}
+            {...attachment}
+          />
+        );
+      })}
       <View style={{ height: space.xs }} />
     </ScrollView>
   );

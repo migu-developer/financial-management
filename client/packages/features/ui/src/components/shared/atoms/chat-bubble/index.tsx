@@ -15,20 +15,31 @@ import {
 } from '@features/ui/utils/spacing';
 import { fontWeight } from '@features/ui/utils/typography';
 
-export interface ChatBubbleProps {
+/**
+ * An attached photo ALWAYS travels with its accessible description.
+ *
+ * Modelled as a union rather than two optional props so an unlabeled image is
+ * impossible to construct: a receipt photo is content, not decoration, so
+ * hiding it from screen readers would lose information, and announcing it with
+ * no description would be worse still.
+ */
+export type ChatBubbleAttachment =
+  | {
+      /**
+       * Either a local blob (the message the user just sent) or a presigned S3
+       * GET (a message restored from history) — the bubble does not care which.
+       */
+      imageUri: string;
+      /** Accessible description of `imageUri`. */
+      imageAccessibilityLabel: string;
+    }
+  | { imageUri?: undefined; imageAccessibilityLabel?: undefined };
+
+export type ChatBubbleProps = {
   message: string;
   timestamp: string;
   isUser: boolean;
-  /**
-   * Renders an attached photo above the text.
-   *
-   * Either a local blob (the message the user just sent) or a presigned S3 GET
-   * (a message restored from history) — the bubble does not care which.
-   */
-  imageUri?: string;
-  /** Accessible description of `imageUri`. Required whenever one is passed. */
-  imageAccessibilityLabel?: string;
-}
+} & ChatBubbleAttachment;
 
 export function ChatBubble({
   message,
@@ -83,9 +94,9 @@ export function ChatBubble({
             resizeMode="contain"
             accessible
             accessibilityRole="image"
-            {...(imageAccessibilityLabel !== undefined && {
-              accessibilityLabel: imageAccessibilityLabel,
-            })}
+            // Guaranteed present by the props union — an image never reaches
+            // here without its description.
+            accessibilityLabel={imageAccessibilityLabel}
             style={{
               width: '100%',
               height: mediaHeight.chatAttachment,
