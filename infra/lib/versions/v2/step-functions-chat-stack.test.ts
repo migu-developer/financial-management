@@ -631,6 +631,10 @@ describe('StepFunctionsChatStack', () => {
           (c[2] as { functionName: string }).functionName ===
           'fm-dev-chat-analyze-receipt',
       );
+      // Assert the lookup found something before dereferencing it: without this,
+      // renaming the function makes the test fail with "Cannot read properties
+      // of undefined" instead of naming the actual problem.
+      expect(call).toBeDefined();
 
       // Reserving 1 would enforce Textract's 1 TPS cap structurally, and that IS
       // what this stack used to do — but the deploy failed in production:
