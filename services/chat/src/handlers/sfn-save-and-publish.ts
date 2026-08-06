@@ -96,6 +96,15 @@ export const handler = async (event: SaveAndPublishEvent) => {
     messageRepository,
     publisher,
     channelTemplate,
+    // Retiring the receipt extraction is best-effort — the expense already
+    // exists — so a failure is counted and logged here rather than thrown.
+    (error) => {
+      metricsService.count('ChatReceiptLinkFailed');
+      logger.warn('Failed to retire the receipt extraction', {
+        messageId: event.messageId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    },
   );
 
   const isError = event.eventKind === 'error';
@@ -106,7 +115,12 @@ export const handler = async (event: SaveAndPublishEvent) => {
       uid: event.uid,
       userEmail: event.userEmail,
       content: event.content,
-      ...(event.expenseId !== undefined && { expenseId: event.expenseId }),
+      ...(event.expenseId !== undefined && {
+        expenseId: event.expenseId,
+        // `event.messageId` is the USER message the workflow started from —
+        // the row that holds the receipt extraction to retire.
+        userMessageId: event.messageId,
+      }),
       ...(isError && { eventType: 'error' as const }),
     });
 

@@ -1,4 +1,5 @@
 import type {
+  ChatAttachmentExtraction,
   ChatMessage,
   ChatMessageTaskTokenStatus,
   CreateChatMessageInput,
@@ -10,12 +11,12 @@ import { trace } from '@services/shared/infrastructure/decorators/trace';
 
 const MESSAGE_COLUMNS = `
   m.id, m.session_id, m.role, m.content, m.attachment_s3_key, m.attachment_type,
-  m.expense_id, m.task_token, m.task_token_status,
+  m.attachment_extraction, m.expense_id, m.task_token, m.task_token_status,
   m.created_at, m.updated_at, m.created_by, m.modified_by
 `.trim();
 
 const RETURNING_COLUMNS = `id, session_id, role, content, attachment_s3_key, attachment_type,
-                           expense_id, task_token, task_token_status,
+                           attachment_extraction, expense_id, task_token, task_token_status,
                            created_at, updated_at, created_by, modified_by`;
 
 export class PostgresChatMessageRepository implements ChatMessageRepository {
@@ -141,6 +142,89 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
       );
     }
     return rows[0];
+  }
+
+  @trace('ChatMessage:saveAttachmentExtraction')
+  async saveAttachmentExtraction(
+    id: string,
+    uid: string,
+    extraction: ChatAttachmentExtraction,
+    modifiedBy: string,
+  ): Promise<void> {
+    // `attachment_s3_key IS NOT NULL` mirrors the table CHECK. Without it a
+    // wrong messageId would raise a constraint violation the caller would have
+    // to interpret; with it the UPDATE simply matches no row, and the workflow
+    // carries on (the extraction is a cache, not the user's expense).
+    await this.dbService.query(
+      `UPDATE financial_management.chat_messages m
+       SET attachment_extraction = $3::jsonb, modified_by = $4
+       FROM financial_management.chat_sessions s,
+            financial_management.users u
+       WHERE m.id = $1
+         AND m.session_id = s.id
+         AND s.user_id = u.id
+         AND u.uid = $2
+         AND m.attachment_s3_key IS NOT NULL`,
+      [id, uid, JSON.stringify(extraction), modifiedBy],
+    );
+  }
+
+  @trace('ChatMessage:linkExpenseToMessage')
+  async linkExpenseToMessage(
+    id: string,
+    uid: string,
+    expenseId: string,
+    modifiedBy: string,
+  ): Promise<void> {
+    // No status guard: this only records which expense the message produced.
+    await this.dbService.query(
+      `UPDATE financial_management.chat_messages m
+       SET expense_id = $3, modified_by = $4
+       FROM financial_management.chat_sessions s,
+            financial_management.users u
+       WHERE m.id = $1
+         AND m.session_id = s.id
+         AND s.user_id = u.id
+         AND u.uid = $2`,
+      [id, uid, expenseId, modifiedBy],
+    );
+  }
+
+  @trace('ChatMessage:findLatestUnusedExtraction')
+  async findLatestUnusedExtraction(
+    sessionId: string,
+    uid: string,
+  ): Promise<ChatAttachmentExtraction | null> {
+    // `expense_id IS NULL` is what keeps a finished receipt from being replayed:
+    // once its message produced an expense, the extraction is history, and
+    // feeding it into a later unrelated message would invent an expense the user
+    // never described.
+    //
+    // PRIMARY, not the read replica. This is a read-your-writes dependency: the
+    // extraction was written seconds earlier by the previous turn's workflow,
+    // and a lagging replica would return nothing — silently restoring the exact
+    // dead end this whole feature removes.
+    //
+    // A read-through fallback (replica, then primary on a miss) was considered
+    // and rejected: a miss is the COMMON case (most messages have no receipt in
+    // flight), so it would double the query count for ordinary traffic to
+    // protect the rare one. This is a single indexed row lookup.
+    const rows = await this.dbService.query<{
+      attachment_extraction: ChatAttachmentExtraction;
+    }>(
+      `SELECT m.attachment_extraction
+       FROM financial_management.chat_messages m
+       JOIN financial_management.chat_sessions s ON m.session_id = s.id
+       JOIN financial_management.users u ON s.user_id = u.id
+       WHERE m.session_id = $1
+         AND u.uid = $2
+         AND m.attachment_extraction IS NOT NULL
+         AND m.expense_id IS NULL
+       ORDER BY m.created_at DESC, m.id DESC
+       LIMIT 1`,
+      [sessionId, uid],
+    );
+    return rows[0]?.attachment_extraction ?? null;
   }
 
   @trace('ChatMessage:markExpired')

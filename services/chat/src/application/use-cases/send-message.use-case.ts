@@ -11,6 +11,7 @@ import type {
 } from '@services/chat/domain/services/workflow-starter.service';
 import type { WorkflowCallbackService } from '@services/chat/domain/services/workflow-callback.service';
 import { UnauthorizedError } from '@packages/models/shared/utils/errors';
+import { buildPriorReceiptContext } from '@packages/prompts/chat/attachments';
 
 export interface SendMessageInput {
   sessionId?: string;
@@ -108,6 +109,24 @@ export class SendMessageUseCase {
     );
     const history = formatHistory(priorMessages);
 
+    // Carry forward what a previous turn already read off an attachment, unless
+    // THIS message brings its own. Without this, answering "COP" to a question
+    // about a receipt starts a workflow that sees only that word: no amount, no
+    // merchant, nothing to complete — the question would be unanswerable.
+    //
+    // Skipped when the message has its own attachment: that one is about to be
+    // analyzed, and mixing it with an older receipt would blend two purchases.
+    const priorExtraction =
+      input.attachmentS3Key === undefined
+        ? await this.messageRepository.findLatestUnusedExtraction(
+            session.id,
+            uid,
+          )
+        : null;
+    const priorReceipt = priorExtraction
+      ? buildPriorReceiptContext(priorExtraction)
+      : '';
+
     const userMessage = await this.messageRepository.create(
       {
         session_id: session.id,
@@ -134,6 +153,7 @@ export class SendMessageUseCase {
       ...(input.attachmentType !== undefined && {
         attachmentType: input.attachmentType,
       }),
+      priorReceipt,
     });
 
     return { session, userMessage, execution, supersededPreviews };

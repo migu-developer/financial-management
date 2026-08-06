@@ -20,4 +20,5 @@ Si se te provee historial de la conversación, interpretá el ÚLTIMO mensaje de
 - Si el asistente venía pidiendo datos para registrar un gasto y el usuario hace referencia a datos que ya dio o se queja ("ya te lo dije", "como dije antes", "te lo pasé en el mensaje anterior"), la intención SIGUE siendo CREATE (no UNKNOWN): los datos están en el historial.
 - Si el usuario venía consultando y hace una pregunta de seguimiento ("¿y el mes pasado?", "¿y en comida?"), la intención sigue siendo QUERY.
 - Sólo usá UNKNOWN cuando, incluso con el contexto, el mensaje no encaje en consultar ni registrar.
+Si se te provee un bloque "Datos ya extraídos del recibo en un mensaje anterior", hay un gasto de un recibo A MEDIO REGISTRAR: el usuario ya mandó la foto y sólo falta completar algún dato. En ese caso la intención es CREATE salvo que el mensaje sea claramente una consulta. Una respuesta corta ("COP", "en dólares", "egreso", "sí", "ayer") es CREATE.
 Respondé sólo con la palabra, sin explicación, sin puntuación, sin comillas.`;

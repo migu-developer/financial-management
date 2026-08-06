@@ -76,7 +76,8 @@
           "WaitForConfirmation": "ConfirmationConfirmed",
           "CreateExpense": "ExpenseCreated",
           "GenerateConfirmation": "ConfirmationText",
-          "SaveCreatedExpense": "SavedOk"
+          "SaveCreatedExpense": "SavedOk",
+          "PersistReceiptExtraction": "ExtractionStored"
         },
         "receiptUnreadableAsksForData": {
           "AnalyzeReceipt": "ReceiptUnreadable",
@@ -84,13 +85,36 @@
           "ExtractExpenseFields": "FieldsExtracted",
           "ValidateFields": "FieldsIncomplete",
           "GenerateClarification": "ClarificationText",
-          "SaveClarification": "SavedOk"
+          "SaveClarification": "SavedOk",
+          "PersistReceiptExtraction": "ExtractionEmpty"
         },
         "analyzeReceiptFailsRoutesToPublishError": {
           "AnalyzeReceipt": "AnalyzeReceiptTaskFailed",
           "PublishError": "SavedOk"
         },
         "audioAttachmentSkipsReceiptBranch": {
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationConfirmed",
+          "CreateExpense": "ExpenseCreated",
+          "GenerateConfirmation": "ConfirmationText",
+          "SaveCreatedExpense": "SavedOk"
+        },
+        "persistExtractionFailsButExpenseStillWorks": {
+          "AnalyzeReceipt": "ReceiptExtracted",
+          "PersistReceiptExtraction": "PersistExtractionTaskFailed",
+          "ClassifyIntent": "IntentCreate",
+          "ExtractExpenseFields": "FieldsExtracted",
+          "ValidateFields": "FieldsComplete",
+          "GeneratePreview": "PreviewText",
+          "WaitForConfirmation": "ConfirmationConfirmed",
+          "CreateExpense": "ExpenseCreated",
+          "GenerateConfirmation": "ConfirmationText",
+          "SaveCreatedExpense": "SavedOk"
+        },
+        "followUpUsesPriorReceipt": {
           "ClassifyIntent": "IntentCreate",
           "ExtractExpenseFields": "FieldsExtracted",
           "ValidateFields": "FieldsComplete",
@@ -441,7 +465,14 @@
         "Return": {
           "enrichedContent": "registra este gasto\n\nDatos extraídos del recibo adjunto:\n- Comercio: Crepes & Waffles\n- Total: 48900\n- Moneda: COP\n- Fecha: 2026-07-20",
           "extracted": true,
-          "confidence": 96.4
+          "confidence": 96.4,
+          "extraction": {
+            "merchant": "Crepes & Waffles",
+            "total": "48900",
+            "currency": "COP",
+            "date": "2026-07-20",
+            "confidence": 96.4
+          }
         }
       }
     },
@@ -449,7 +480,8 @@
       "0": {
         "Return": {
           "enrichedContent": "registra este gasto\n\nNo se pudieron leer datos del recibo adjunto; pide los datos al usuario.",
-          "extracted": false
+          "extracted": false,
+          "extraction": {}
         }
       }
     },
@@ -601,6 +633,28 @@
       "0": {
         "Return": {
           "published": true
+        }
+      }
+    },
+    "ExtractionStored": {
+      "0": {
+        "Return": {
+          "stored": true
+        }
+      }
+    },
+    "ExtractionEmpty": {
+      "0": {
+        "Return": {
+          "stored": false
+        }
+      }
+    },
+    "PersistExtractionTaskFailed": {
+      "0": {
+        "Throw": {
+          "Error": "States.TaskFailed",
+          "Cause": "PersistReceiptExtraction Lambda threw: database unavailable."
         }
       }
     }

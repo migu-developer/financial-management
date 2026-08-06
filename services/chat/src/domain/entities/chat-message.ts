@@ -32,6 +32,33 @@ export type ChatMessageTaskTokenStatus =
   | 'superseded';
 
 /**
+ * Structured data extracted from a message's attachment.
+ *
+ * Persisted so a follow-up turn can finish the expense WITHOUT analyzing the
+ * attachment again: re-reading costs a Textract call, is rate limited (1 TPS for
+ * AnalyzeExpense in us-east-2), and the raw upload is deleted after 7 days.
+ *
+ * Every field is optional because Textract returns only what it recognizes —
+ * a blurry receipt may yield a total and nothing else.
+ */
+export interface ChatAttachmentExtraction {
+  /** Vendor name as read from the receipt. */
+  merchant?: string;
+  /**
+   * Total as a plain number STRING, exactly as `AnalyzedReceipt.total` produces
+   * it. Kept as text rather than parsed: the value is replayed into a prompt,
+   * and converting here would add a lossy step for no reader's benefit.
+   */
+  total?: string;
+  /** ISO currency code, only when the receipt stated one. */
+  currency?: string;
+  /** ISO date (YYYY-MM-DD). */
+  date?: string;
+  /** Weakest confidence among the fields that were kept, 0-100. */
+  confidence?: number;
+}
+
+/**
  * A chat message persisted in `financial_management.chat_messages`.
  */
 export interface ChatMessage {
@@ -41,6 +68,11 @@ export interface ChatMessage {
   content: string;
   attachment_s3_key: string | null;
   attachment_type: ChatMessageAttachmentType | null;
+  /**
+   * What was read from `attachment_s3_key`. Only ever set on a message that
+   * has an attachment — the database enforces that with a CHECK.
+   */
+  attachment_extraction: ChatAttachmentExtraction | null;
   expense_id: string | null;
   task_token: string | null;
   task_token_status: ChatMessageTaskTokenStatus | null;

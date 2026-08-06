@@ -12,6 +12,7 @@ const INPUT = {
   userEmail: 'a@b.c',
   content: 'Hola',
   history: '',
+  priorReceipt: '',
 };
 
 describe('SfnWorkflowStarter', () => {

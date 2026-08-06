@@ -13,6 +13,14 @@ export interface SaveAssistantMessageInput {
   content: string;
   expenseId?: string;
   /**
+   * The USER message this reply answers.
+   *
+   * Used together with `expenseId` to retire that message's stored receipt
+   * extraction once it has produced an expense. Optional so the branches that
+   * do not create anything (query, clarification, unknown) need not supply it.
+   */
+  userMessageId?: string;
+  /**
    * If provided, the message is persisted as a HITL preview:
    *   - role stays 'assistant'
    *   - task_token + task_token_status='pending' are stored
@@ -47,6 +55,11 @@ export class SaveAssistantMessageUseCase {
     private readonly messageRepository: ChatMessageRepository,
     private readonly publisher: EventPublisherService,
     private readonly channelTemplate: (userId: string) => string,
+    /**
+     * Notified when retiring the receipt extraction fails. Injected so the
+     * handler can log/count it without this layer importing Powertools.
+     */
+    private readonly onLinkFailure?: (error: unknown) => void,
   ) {}
 
   async execute(
@@ -69,6 +82,28 @@ export class SaveAssistantMessageUseCase {
     );
 
     await this.sessionRepository.touchLastMessage(input.sessionId, input.uid);
+
+    // Retire the receipt that produced this expense. Without it the extraction
+    // stays "unused" forever: `expense_id` is written on THIS assistant message,
+    // never on the user message that carried the image, so the guard in
+    // `findLatestUnusedExtraction` could never become false and the receipt
+    // would be merged into unrelated later messages of the same session.
+    //
+    // Best-effort: the expense already exists and the user has been told so, so
+    // a failure here must not turn a successful registration into an error. The
+    // cost of missing it is a stale replay, not lost money.
+    if (input.expenseId !== undefined && input.userMessageId !== undefined) {
+      try {
+        await this.messageRepository.linkExpenseToMessage(
+          input.userMessageId,
+          input.uid,
+          input.expenseId,
+          input.userEmail,
+        );
+      } catch (error) {
+        this.onLinkFailure?.(error);
+      }
+    }
 
     const payload: ChatMessageEventPayload = {
       type:

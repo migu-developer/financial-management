@@ -1,4 +1,5 @@
 import type {
+  ChatAttachmentExtraction,
   ChatMessage,
   ChatMessageTaskTokenStatus,
   CreateChatMessageInput,
@@ -28,6 +29,54 @@ export interface ChatMessageRepository {
     uid: string,
     limit: number,
   ): Promise<ChatMessage[]>;
+
+  /**
+   * Stores what was read from a message's attachment.
+   *
+   * Separate from `create` because the extraction is produced LATER, by the
+   * workflow, after the user message is already persisted. Written as soon as
+   * the read succeeds rather than at the end of the run, so a failure further
+   * down the workflow does not force the attachment to be analyzed again.
+   *
+   * Scoped to the owning user, like every other write here.
+   */
+  saveAttachmentExtraction(
+    id: string,
+    uid: string,
+    extraction: ChatAttachmentExtraction,
+    modifiedBy: string,
+  ): Promise<void>;
+
+  /**
+   * Links a USER message to the expense it produced, which retires its stored
+   * extraction from `findLatestUnusedExtraction`.
+   *
+   * Needed because `expense_id` was only ever written on the ASSISTANT
+   * confirmation, never on the message that carried the receipt — so the
+   * "already used" guard below could never become false and a finished receipt
+   * would be replayed into unrelated later messages of the same session.
+   */
+  linkExpenseToMessage(
+    id: string,
+    uid: string,
+    expenseId: string,
+    modifiedBy: string,
+  ): Promise<void>;
+
+  /**
+   * Returns the most recent attachment extraction in a session that has NOT yet
+   * produced an expense, or null when there is none.
+   *
+   * This is what makes a follow-up turn work: when the user answers "COP" to a
+   * question about a receipt, the answer alone carries no amount or merchant, so
+   * the workflow needs the fields already read from the image. Excluding
+   * extractions whose message already led to an expense stops a finished receipt
+   * from leaking into an unrelated later message.
+   */
+  findLatestUnusedExtraction(
+    sessionId: string,
+    uid: string,
+  ): Promise<ChatAttachmentExtraction | null>;
 
   /**
    * Finds the assistant message that is currently holding a `pending`

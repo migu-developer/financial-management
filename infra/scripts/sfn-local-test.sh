@@ -91,6 +91,11 @@ ROLE_ARN="arn:aws:iam::123456789012:role/DummyRole"
 #   receiptUnreadableAsksForData         → SUCCEEDED (unreadable photo → clarification)
 #   analyzeReceiptFailsRoutesToPublishError → FAILED (Textract task fails → catch-all)
 #   audioAttachmentSkipsReceiptBranch    → SUCCEEDED (audio not yet wired → text path)
+#   persistExtractionFailsButExpenseStillWorks → SUCCEEDED (cache write fails,
+#                                          conversation continues — the deviation
+#                                          from "catch → PublishError" is the point)
+#   followUpUsesPriorReceipt             → SUCCEEDED (no attachment, but a stored
+#                                          receipt block completes the expense)
 #
 # The third field selects the execution input (see INPUT_* below); it defaults
 # to `text` when omitted.
@@ -108,6 +113,8 @@ declare -a CASES=(
   "receiptUnreadableAsksForData:SUCCEEDED:image"
   "analyzeReceiptFailsRoutesToPublishError:FAILED:image"
   "audioAttachmentSkipsReceiptBranch:SUCCEEDED:audio"
+  "persistExtractionFailsButExpenseStillWorks:SUCCEEDED:image"
+  "followUpUsesPriorReceipt:SUCCEEDED:followup"
 )
 
 # A representative execution input. The mock config matches on STATE NAME, not
@@ -119,7 +126,8 @@ INPUT_text='{
   "messageId": "message-123",
   "userEmail": "test@example.com",
   "content": "¿cuánto gasté en comida este mes?",
-  "history": "[]"
+  "history": "[]",
+  "priorReceipt": ""
 }'
 
 # Attachment inputs additionally carry $.attachmentS3Key and $.attachmentType,
@@ -134,7 +142,8 @@ INPUT_image='{
   "content": "registra este gasto",
   "history": "[]",
   "attachmentS3Key": "chat-attachments/user-123/8f14e45f.jpg",
-  "attachmentType": "image"
+  "attachmentType": "image",
+  "priorReceipt": ""
 }'
 
 # `audio` is accepted by the schema but has no Transcribe branch yet, so it must
@@ -164,7 +173,22 @@ INPUT_audio='{
   "content": "gasté 20 mil en taxi",
   "history": "[]",
   "attachmentS3Key": "chat-attachments/user-123/8f14e45f.m4a",
-  "attachmentType": "audio"
+  "attachmentType": "audio",
+  "priorReceipt": ""
+}'
+
+# A FOLLOW-UP turn: no attachment of its own, but an earlier message in the
+# session already had one, so SendMessage replays what was read. This is the flow
+# that used to be a dead end — the user answered a question about a receipt and
+# the workflow saw only that one word.
+INPUT_followup='{
+  "userId": "user-123",
+  "sessionId": "session-123",
+  "messageId": "message-124",
+  "userEmail": "test@example.com",
+  "content": "COP",
+  "history": "Usuario: es esta === Asistente: ¿En qué moneda fue el gasto?",
+  "priorReceipt": "Datos ya extraídos del recibo en un mensaje anterior de esta conversación:\n- Comercio: Crepes & Waffles\n- Total: 48900\n- Fecha: 2026-07-20"
 }'
 
 # ── Helpers ────────────────────────────────────────────────

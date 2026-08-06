@@ -294,6 +294,56 @@ The message the user just sent renders through the same path rather than the
 local blob preview, which keeps one code path and means a reopened conversation
 looks identical to a live one.
 
+### Receipt data survives the execution
+
+A receipt rarely carries everything an expense needs: it has the merchant, the
+total and the date, but almost never the currency or whether it is an income or
+an outgoing. So the ordinary `FieldsComplete?` → `GenerateClarification` branch
+fires and the assistant asks for what is missing.
+
+That question used to be **unanswerable**. `SaveClarification` ends the
+execution, and everything Textract had read lived only in that execution's
+state, so it died with it. The user's reply started a fresh workflow that saw
+one word — "COP" — with no amount and no merchant to attach it to. Worse, with a
+noisy history Nova Micro classified that word as `UNKNOWN`, and the user got
+"no puedo procesar imágenes" for a receipt that had in fact been read perfectly.
+
+The reading is now persisted the moment it exists:
+
+```
+AnalyzeReceipt (λ, Textract)
+  → PersistReceiptExtraction (λ)   writes chat_messages.attachment_extraction
+  → ApplyReceiptText               $.content = enriched prose
+  → ClassifyIntent ...
+```
+
+Three properties matter:
+
+- **Written immediately, not at the end.** AnalyzeExpense costs money, is rate
+  limited (1 TPS in us-east-2) and the raw upload is deleted after 7 days, so
+  the result is banked before any later state can fail.
+- **A separate Lambda from AnalyzeReceipt.** That one processes an arbitrary
+  user-supplied image and deliberately holds no database credentials; the write
+  lives elsewhere rather than widening its blast radius.
+- **Its failure does NOT fail the run.** This is a deliberate deviation from the
+  "every fallible task catches to PublishError" convention: the row is a cache
+  for the next turn, so losing it must not cost the user the expense they are
+  registering. The catch routes onward to `ApplyReceiptText`.
+
+On the NEXT turn, `SendMessage` looks up the most recent extraction in the
+session that has **not** yet produced an expense (`expense_id IS NULL` — once a
+receipt became an expense, replaying it would invent one the user never
+described) and passes it as `priorReceipt`, a rendered text block. Both
+`ClassifyIntent` and `ExtractExpenseFields` receive it, so a one-word answer is
+understood as continuing that expense and merged with the stored fields.
+
+`priorReceipt` is **always present**, an empty string when there is nothing to
+replay — exactly like `history`. `States.Format` cannot serialize an object and
+raises `States.Runtime` on a missing path, which would kill the execution, so
+the field is never omitted. It is also skipped when the current message brings
+its own attachment: blending a fresh photo with an older receipt would merge two
+purchases into one expense.
+
 ### Image normalization (ImageProcess state machine)
 
 Users upload whatever their device produces — HEIC from an iPhone, 48 MP
