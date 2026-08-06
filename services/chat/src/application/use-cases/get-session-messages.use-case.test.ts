@@ -25,6 +25,7 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
     findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
     linkExpenseToMessage: jest.fn().mockResolvedValue(undefined),
+    findRecentForContext: jest.fn().mockResolvedValue([]),
   };
 }
 
@@ -51,6 +52,7 @@ const mockMessages: ChatMessage[] = [
     attachment_s3_key: null,
     attachment_type: null,
     attachment_extraction: null,
+    hidden_from_context: false,
     expense_id: null,
     task_token: null,
     task_token_status: null,

@@ -26,6 +26,7 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
     findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
     linkExpenseToMessage: jest.fn().mockResolvedValue(undefined),
+    findRecentForContext: jest.fn().mockResolvedValue([]),
   };
 }
 
@@ -61,6 +62,7 @@ const mockUserMessage: ChatMessage = {
   attachment_s3_key: null,
   attachment_type: null,
   attachment_extraction: null,
+  hidden_from_context: false,
   expense_id: null,
   task_token: null,
   task_token_status: null,
@@ -229,7 +231,7 @@ describe('SendMessageUseCase', () => {
     messageRepo.create.mockResolvedValue(mockUserMessage);
     starter.start.mockResolvedValue(mockExecution);
     // Prior turns (oldest → newest), loaded BEFORE the current message.
-    messageRepo.findRecentBySession.mockResolvedValue([
+    messageRepo.findRecentForContext.mockResolvedValue([
       {
         ...mockUserMessage,
         role: 'user',
@@ -251,7 +253,7 @@ describe('SendMessageUseCase', () => {
     );
 
     // History is loaded for the session/user, before persisting the new message.
-    expect(messageRepo.findRecentBySession).toHaveBeenCalledWith(
+    expect(messageRepo.findRecentForContext).toHaveBeenCalledWith(
       'session-1',
       UID,
       expect.any(Number),

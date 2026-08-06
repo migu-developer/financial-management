@@ -102,7 +102,13 @@ export class SendMessageUseCase {
 
     // Load prior turns BEFORE persisting the current message so the history
     // is context for it (not including it).
-    const priorMessages = await this.messageRepository.findRecentBySession(
+    //
+    // `findRecentForContext`, not `findRecentBySession`: the transcript the model
+    // reasons over excludes the error and unknown replies. Those are still shown
+    // to the user, but in production a history containing "Uy, tuve un problema"
+    // and "no puedo procesar imágenes" derailed the classifier into UNKNOWN on
+    // the very next one-word answer.
+    const priorMessages = await this.messageRepository.findRecentForContext(
       session.id,
       uid,
       HISTORY_LIMIT,

@@ -76,6 +76,13 @@ export interface ChatMessage {
   expense_id: string | null;
   task_token: string | null;
   task_token_status: ChatMessageTaskTokenStatus | null;
+  /**
+   * True for replies that must NOT reach the LLM transcript — the `error` and
+   * `unknown` branches. They are still shown to the user; they simply carry no
+   * information about the expense and have been observed derailing intent
+   * classification.
+   */
+  hidden_from_context: boolean;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -97,4 +104,6 @@ export interface CreateChatMessageInput {
   expense_id?: string | null;
   task_token?: string | null;
   task_token_status?: ChatMessageTaskTokenStatus | null;
+  /** Defaults to false at the DB layer. */
+  hidden_from_context?: boolean;
 }
