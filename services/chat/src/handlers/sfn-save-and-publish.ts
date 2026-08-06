@@ -55,10 +55,6 @@ export interface SaveAndPublishEvent {
 }
 
 /**
- * Maps a non-error workflow branch to its dedicated business-metric name. Pure
- * and exported so the mapping can be unit-tested without invoking the handler.
- */
-/**
  * Branches whose reply must NOT reach the LLM transcript.
  *
  * `error` is the static "Uy, tuve un problema…" and `unknown` is the "¿es sobre
@@ -69,16 +65,23 @@ export interface SaveAndPublishEvent {
  * `clarification` is deliberately ABSENT: it is the question the user's next
  * message answers, so hiding it would break the multi-turn flow this supports.
  * `cancelled` is absent too — a cancellation is a real decision worth remembering.
+ *
+ * Typed to the event-kind union rather than `string`: a typo, or a new branch
+ * added to `SaveAndPublishEventKind`, is then a compile error here instead of a
+ * silent miss at runtime.
  */
-export const HIDDEN_FROM_CONTEXT_KINDS: ReadonlySet<string> = new Set([
-  'error',
-  'unknown',
-]);
+export const HIDDEN_FROM_CONTEXT_KINDS: ReadonlySet<SaveAndPublishEventKind> =
+  new Set<SaveAndPublishEventKind>(['error', 'unknown']);
 
 /** True when this branch's reply should be kept out of the model transcript. */
-export const isHiddenFromContext = (kind: string | undefined): boolean =>
-  kind !== undefined && HIDDEN_FROM_CONTEXT_KINDS.has(kind);
+export const isHiddenFromContext = (
+  kind: SaveAndPublishEventKind | undefined,
+): boolean => kind !== undefined && HIDDEN_FROM_CONTEXT_KINDS.has(kind);
 
+/**
+ * Maps a non-error workflow branch to its dedicated business-metric name. Pure
+ * and exported so the mapping can be unit-tested without invoking the handler.
+ */
 export const BRANCH_METRIC_BY_KIND: Record<
   Exclude<SaveAndPublishEventKind, 'error'>,
   string

@@ -261,7 +261,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     );
 
     const newest = rows[0];
-    if (!newest || newest.expense_id !== null) return null;
+    if (newest?.expense_id !== null) return null;
     return newest.attachment_extraction;
   }
 
