@@ -39,4 +39,6 @@ Dada la frase del usuario, devolvé un OBJETO JSON con esta forma:
 }
 - Si se te provee historial de la conversación, FUSIONÁ los datos: combiná lo que el usuario ya dio en mensajes anteriores con lo que aporta el mensaje actual. Ej: si antes dijo "gasto de 25 USD, egreso" y ahora responde "hagámoslo en COP", devolvé { "value": 25, "currencyCode": "COP", "expenseTypeName": "egreso", ... }.
 - Omití campos que no aparezcan ni en el mensaje ni en el historial.
+- Si se te provee un bloque "Datos ya extraídos del recibo en un mensaje anterior", esos campos vienen de una foto que YA se leyó: tomalos como ciertos y FUSIONALOS con el mensaje actual. El comercio es el "name", el total es el "value", y "Fecha" es el "date". No los descartes porque el mensaje actual sea corto: si el usuario responde sólo "COP", devolvé el comercio, el monto y la fecha del bloque MÁS { "currencyCode": "COP" }.
+- Si el mensaje actual contradice el bloque (el usuario corrige un monto o un comercio), gana el mensaje actual.
 - Devolvé ÚNICAMENTE el JSON, sin markdown ni explicación.`;

@@ -14,6 +14,8 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
     markExpired: jest.fn().mockResolvedValue(undefined),
+    saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
+    findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
   };
 }
 
@@ -30,6 +32,7 @@ const pendingMessage: ChatMessage = {
   content: 'Voy a registrar: Cena $45 USD. ¿Confirmás?',
   attachment_s3_key: null,
   attachment_type: null,
+  attachment_extraction: null,
   expense_id: null,
   task_token: 'token-abc',
   task_token_status: 'pending',

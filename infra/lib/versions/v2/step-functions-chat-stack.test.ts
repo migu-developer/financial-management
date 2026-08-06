@@ -199,7 +199,7 @@ describe('StepFunctionsChatStack', () => {
   });
 
   describe('Task Lambdas', () => {
-    test('creates 6 task Lambdas with stage-prefixed function names', () => {
+    test('creates 7 task Lambdas with stage-prefixed function names', () => {
       createStack();
       const { NodejsFunction: MockFn } = jest.requireMock<
         Record<string, jest.Mock>
@@ -214,6 +214,7 @@ describe('StepFunctionsChatStack', () => {
         'fm-dev-chat-save-and-publish',
         'fm-dev-chat-save-preview',
         'fm-dev-chat-analyze-receipt',
+        'fm-dev-chat-persist-receipt',
       ]);
     });
 
@@ -499,9 +500,10 @@ describe('StepFunctionsChatStack', () => {
         return opts?.errors?.includes('Lambda.ServiceException');
       });
       // executeQuery, validateFields, 4×save*, saveUnknownReply, publishError,
-      // waitForConfirmation, analyzeReceipt = 10. CreateExpense is
-      // intentionally excluded (a retry would duplicate the expense).
-      expect(lambdaRetries.length).toBe(10);
+      // waitForConfirmation, analyzeReceipt, persistExtraction = 11.
+      // CreateExpense is intentionally excluded (a retry would duplicate the
+      // expense).
+      expect(lambdaRetries.length).toBe(11);
     });
   });
 
@@ -621,19 +623,141 @@ describe('StepFunctionsChatStack', () => {
       expect(env['DATABASE_URL']).toBeUndefined();
     });
 
-    test('retries AnalyzeReceipt on transient errors and catches terminal ones', () => {
+    test('AnalyzeReceipt is retried at all — reading an image is idempotent', () => {
       createStack();
       const analyzeCall = mockLambdaInvokeCtor.mock.calls.find(
         (c: unknown[]) => c[0] === 'AnalyzeReceipt',
       );
       expect(analyzeCall).toBeDefined();
-      // Reading an image is idempotent, so a transient retry is safe (unlike
-      // CreateExpense). Terminal failures route to the shared catch-all.
-      const retries = mockAddRetry.mock.calls.filter((c: unknown[]) => {
+
+      // `mockAddRetry` is ONE shared spy across every chainable, so a retry
+      // cannot be attributed to a single state here. This test used to assert a
+      // global count, which made it a duplicate of the CreateExpense test and
+      // meant its name promised more than it checked.
+      //
+      // What IS attributable is the throttle retrier: only AnalyzeReceipt has
+      // one. Its parameters and its position relative to the shared helper are
+      // asserted in 'retries AnalyzeReceipt on throttling with a much wider
+      // window' and 'registers the throttle retrier BEFORE the shared one'; the
+      // catch-all coverage is in 'routes every fallible task to a catch-all'.
+      // All this test adds is that a generic Lambda retrier was registered too.
+      const genericRetry = mockAddRetry.mock.calls.find((c: unknown[]) => {
         const opts = c[0] as { errors?: string[] };
-        return opts?.errors?.includes('Lambda.ServiceException');
+        return (
+          opts?.errors?.includes('Lambda.ServiceException') === true &&
+          opts?.errors?.includes('Lambda.TooManyRequestsException') === true
+        );
       });
-      expect(retries.length).toBe(10);
+      expect(genericRetry).toBeDefined();
+    });
+
+    test('PersistReceiptExtraction gets database credentials, the analyzer does not', () => {
+      createStack();
+      const { NodejsFunction: MockFn } = jest.requireMock<
+        Record<string, jest.Mock>
+      >('aws-cdk-lib/aws-lambda-nodejs');
+      const find = (name: string) =>
+        (MockFn as jest.Mock).mock.calls.find(
+          (c: unknown[]) =>
+            (c[2] as { functionName: string }).functionName === name,
+        );
+
+      const persist = find('fm-dev-chat-persist-receipt');
+      const analyze = find('fm-dev-chat-analyze-receipt');
+      expect(persist).toBeDefined();
+      expect(analyze).toBeDefined();
+
+      // The split is the whole point of the extra Lambda: the one that handles
+      // an arbitrary user-supplied image holds no credentials, and the one that
+      // writes holds no image.
+      const persistEnv = (
+        persist![2] as { environment: Record<string, string> }
+      ).environment;
+      const analyzeEnv = (
+        analyze![2] as { environment: Record<string, string> }
+      ).environment;
+      expect(persistEnv['DATABASE_URL']).toBeDefined();
+      expect(persistEnv['CHAT_ATTACHMENTS_BUCKET']).toBeUndefined();
+      expect(analyzeEnv['DATABASE_URL']).toBeUndefined();
+    });
+
+    test('persists the extraction BEFORE the content is rewritten', () => {
+      createStack();
+      const persistCall = mockLambdaInvokeCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'PersistReceiptExtraction',
+      );
+      expect(persistCall).toBeDefined();
+      const props = persistCall![1] as {
+        payload: { obj: Record<string, unknown> };
+        resultPath: string;
+      };
+
+      // Reads `$.receipt.extraction` — the structured copy — not the prose in
+      // `enrichedContent`, and carries the message id so the row it updates is
+      // the one that held the image.
+      expect(props.payload.obj['extraction.$']).toBe('$.receipt.extraction');
+      expect(props.payload.obj['messageId.$']).toBe('$.messageId');
+      expect(props.payload.obj['uid.$']).toBe('$.userId');
+      expect(props.resultPath).toBe('$.extractionStored');
+    });
+
+    test('a failed extraction write CONTINUES the run instead of failing it', () => {
+      createStack();
+      // Deliberate deviation from "every fallible task catches to PublishError":
+      // this write is a cache for the next turn, so losing it must not cost the
+      // user the expense they are registering.
+      const catches = mockAddCatch.mock.calls.filter((c: unknown[]) => {
+        const opts = c[1] as { resultPath?: string } | undefined;
+        return opts?.resultPath === '$.extractionError';
+      });
+      expect(catches).toHaveLength(1);
+      // Its target must NOT be the shared error publisher.
+      const target = catches[0]![0] as { constructor: { name: string } };
+      expect(target).toBeDefined();
+    });
+
+    test('both prompts receive the prior-receipt block as a plain string', () => {
+      createStack();
+      const bodies = mockBedrockTaskCtor.mock.calls
+        .filter((c: unknown[]) =>
+          ['ClassifyIntent', 'ExtractExpenseFields'].includes(c[0] as string),
+        )
+        .map((c: unknown[]) =>
+          JSON.stringify((c[1] as { body: unknown }).body),
+        );
+
+      expect(bodies).toHaveLength(2);
+      for (const body of bodies) {
+        // Interpolated unconditionally: a missing path in States.Format raises
+        // States.Runtime and would kill the execution, so SendMessage always
+        // sends '' rather than omitting the field.
+        expect(body).toContain('$.priorReceipt');
+      }
+    });
+
+    test('the SQL-params prompt does NOT get the receipt block', () => {
+      createStack();
+      const sqlCall = mockBedrockTaskCtor.mock.calls.find(
+        (c: unknown[]) => c[0] === 'ExtractSqlParams',
+      );
+      expect(sqlCall).toBeDefined();
+      // Both extraction prompts share the same States.Format text, so an
+      // unanchored edit lands on the wrong one — which happened while writing
+      // this. A query has no receipt to merge.
+      expect(
+        JSON.stringify((sqlCall![1] as { body: unknown }).body),
+      ).not.toContain('$.priorReceipt');
+    });
+
+    test('exports the persist Lambda name so monitoring can alarm on it', () => {
+      createStack();
+      const { exportForCrossVersion } = jest.requireMock<
+        Record<string, jest.Mock>
+      >('@utils/cross-version');
+      const keys = (exportForCrossVersion as jest.Mock).mock.calls.map(
+        (c: unknown[]) => c[1] as string,
+      );
+      expect(keys).toContain('PersistReceiptExtractionFnName');
     });
 
     test('does NOT reserve concurrency — the account quota forbids it', () => {

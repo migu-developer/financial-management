@@ -324,6 +324,23 @@ export class MonitoringStack extends BaseStack {
         datapointsToAlarm: 2,
         period: Duration.minutes(5),
       },
+      // Caches the receipt reading for the follow-up turn. Its failures are
+      // caught in the state machine and do NOT fail the conversation, so an
+      // alarm here means the cache is silently broken: receipts still work, but
+      // every follow-up would re-read the image. Worth knowing about precisely
+      // because the user would never notice.
+      ChatPersistReceipt: {
+        fnName: importFromVersion(
+          this,
+          'v2',
+          'StepFunctionsChat',
+          'PersistReceiptExtractionFnName',
+        ),
+        errorThreshold: 3,
+        evaluationPeriods: 3,
+        datapointsToAlarm: 2,
+        period: Duration.minutes(5),
+      },
     };
 
     const cognitoTriggers: Record<string, string> = {

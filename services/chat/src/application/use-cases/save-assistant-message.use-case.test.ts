@@ -12,6 +12,8 @@ function makeMessageRepo(): jest.Mocked<ChatMessageRepository> {
     findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
     markExpired: jest.fn().mockResolvedValue(undefined),
+    saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
+    findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
   };
 }
 
@@ -35,6 +37,7 @@ const mockMessage: ChatMessage = {
   content: 'Listo!',
   attachment_s3_key: null,
   attachment_type: null,
+  attachment_extraction: null,
   expense_id: null,
   task_token: null,
   task_token_status: null,

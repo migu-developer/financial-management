@@ -233,6 +233,17 @@ export class StepFunctionsChatStack extends BaseStack {
       }),
     );
 
+    // Banks the extraction onto the user's message. A SEPARATE Lambda from
+    // AnalyzeReceipt because that one processes an arbitrary user-supplied image
+    // and deliberately carries no database credentials — see the test asserting
+    // it gets no DATABASE_URL. Writing from here keeps that boundary intact.
+    const persistExtractionFn = this.makeLambda(
+      'PersistReceiptExtractionFn',
+      `fm-${stage}-chat-persist-receipt`,
+      'src/handlers/sfn-persist-receipt-extraction.ts',
+      baseEnv,
+    );
+
     // Grant the publishers IAM EventPublish on the Event API.
     const eventApiPublishPolicy = new PolicyStatement({
       actions: ['appsync:EventPublish'],
@@ -321,7 +332,16 @@ export class StepFunctionsChatStack extends BaseStack {
       model: novaMicro,
       body: novaBody(
         PROMPTS.intent.system,
-        "States.Format('Historial de la conversación: {} === Último mensaje del usuario: {}', $.history, $.content)",
+        // `$.priorReceipt` is ALWAYS present — an empty string when no receipt is
+        // in flight — exactly like `$.history`. A missing path would raise
+        // States.Runtime and kill the execution, so SendMessage always supplies
+        // it instead of the ASL branching on its presence.
+        //
+        // The classifier needs it because a follow-up answer is often a single
+        // word: with a noisy history, Nova Micro read "COP" as UNKNOWN even
+        // though the prompt already had a multi-turn rule. An explicit
+        // receipt-in-flight block is a far stronger signal than prose.
+        "States.Format('Historial de la conversación: {} === {} === Último mensaje del usuario: {}', $.history, $.priorReceipt, $.content)",
         PROMPTS.intent.maxTokens,
       ),
       resultSelector: {
@@ -386,7 +406,11 @@ export class StepFunctionsChatStack extends BaseStack {
       model: novaLite,
       body: novaBody(
         PROMPTS.extractExpenseFields.system,
-        "States.Format('Fecha actual: {}. Historial: {} === Mensaje actual: {}', $$.Execution.StartTime, $.history, $.content)",
+        // Same always-present contract as ClassifyIntent. This is the state that
+        // actually completes the expense: it merges the merchant, total and date
+        // already read from the image with whatever the user just answered, so
+        // the attachment never has to be analyzed a second time.
+        "States.Format('Fecha actual: {}. Historial: {} === {} === Mensaje actual: {}', $$.Execution.StartTime, $.history, $.priorReceipt, $.content)",
         PROMPTS.extractExpenseFields.maxTokens,
       ),
       resultSelector: {
@@ -807,11 +831,46 @@ export class StepFunctionsChatStack extends BaseStack {
       resultPath: '$.error',
     });
 
+    // Bank the reading BEFORE anything else can fail. The Textract call costs
+    // money, is rate limited (1 TPS for AnalyzeExpense in us-east-2) and the raw
+    // upload is deleted after 7 days, so the result is persisted the moment it
+    // exists — a later failure then costs a retry of the cheap states, not
+    // another read of the image.
+    const persistExtraction = new LambdaInvoke(
+      this,
+      'PersistReceiptExtraction',
+      {
+        lambdaFunction: persistExtractionFn,
+        payload: TaskInput.fromObject({
+          'uid.$': '$.userId',
+          'sessionId.$': '$.sessionId',
+          'messageId.$': '$.messageId',
+          'extraction.$': '$.receipt.extraction',
+        }),
+        resultPath: '$.extractionStored',
+        payloadResponseOnly: true,
+        taskTimeout: LAMBDA_TASK_TIMEOUT,
+      },
+    );
+    addLambdaRetry(persistExtraction);
+
     // Overwrite $.content with the enriched text. A Pass with inputPath +
     // resultPath is enough — no intrinsic-function gymnastics needed.
     const applyReceiptText = new Pass(this, 'ApplyReceiptText', {
       inputPath: '$.receipt.enrichedContent',
       resultPath: '$.content',
+    });
+
+    // DELIBERATE DEVIATION from the "every fallible task catches to
+    // PublishError" convention: this write is a CACHE for the next turn, not the
+    // user's expense. If it fails, the receipt has still been read and the
+    // conversation can complete normally — only a follow-up would need the image
+    // re-read. Killing the run here would turn a degraded optimisation into a
+    // user-visible failure, which is the opposite of what that rule protects.
+    // The rule's intent (the client never hangs) is satisfied: we carry on.
+    persistExtraction.addCatch(applyReceiptText, {
+      errors: ['States.ALL'],
+      resultPath: '$.extractionError',
     });
 
     // Only IMAGE attachments are wired up. An `audio` attachment falls through
@@ -830,7 +889,10 @@ export class StepFunctionsChatStack extends BaseStack {
           Condition.isPresent('$.attachmentType'),
           Condition.stringEquals('$.attachmentType', 'image'),
         ),
-        analyzeReceipt.next(applyReceiptText).next(classifyIntent),
+        analyzeReceipt
+          .next(persistExtraction)
+          .next(applyReceiptText)
+          .next(classifyIntent),
       )
       .otherwise(classifyIntent);
 
@@ -934,6 +996,13 @@ export class StepFunctionsChatStack extends BaseStack {
       this,
       'AnalyzeReceiptFnName',
       analyzeReceiptFn.functionName,
+      version,
+      'StepFunctionsChat',
+    );
+    exportForCrossVersion(
+      this,
+      'PersistReceiptExtractionFnName',
+      persistExtractionFn.functionName,
       version,
       'StepFunctionsChat',
     );

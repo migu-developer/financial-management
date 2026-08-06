@@ -75,6 +75,61 @@ describe('AnalyzeReceiptUseCase', () => {
     expect(result.confidence).toBe(61);
   });
 
+  it('returns the fields in structured form so they can be persisted', async () => {
+    const analyzer = makeAnalyzer({
+      merchant: 'Exito',
+      total: '48900',
+      currency: 'COP',
+      date: '2026-08-02',
+      confidence: 91.5,
+    });
+
+    const result = await new AnalyzeReceiptUseCase(analyzer).execute({
+      userId: USER_ID,
+      s3Key: READY_KEY,
+      caption: 'este recibo',
+    });
+
+    // `enrichedContent` is prose for a model; this is the machine-readable copy
+    // a follow-up turn merges with the user's answer instead of re-reading the
+    // image.
+    expect(result.extraction).toEqual({
+      merchant: 'Exito',
+      total: '48900',
+      currency: 'COP',
+      date: '2026-08-02',
+      confidence: 91.5,
+    });
+  });
+
+  it('omits fields Textract could not read from the structured form', async () => {
+    const analyzer = makeAnalyzer({ total: '12000', confidence: 61 });
+
+    const result = await new AnalyzeReceiptUseCase(analyzer).execute({
+      userId: USER_ID,
+      s3Key: READY_KEY,
+      caption: '',
+    });
+
+    // Absent, not null: a stored null would later read as "we know there is no
+    // currency" rather than "we never read one".
+    expect(result.extraction).toEqual({ total: '12000', confidence: 61 });
+    expect('merchant' in result.extraction).toBe(false);
+    expect('currency' in result.extraction).toBe(false);
+  });
+
+  it('returns an empty structured extraction when nothing was read', async () => {
+    const analyzer = makeAnalyzer({});
+
+    const result = await new AnalyzeReceiptUseCase(analyzer).execute({
+      userId: USER_ID,
+      s3Key: READY_KEY,
+      caption: 'algo',
+    });
+
+    expect(result.extraction).toEqual({});
+  });
+
   it('REJECTS a raw upload key — Textract only ever reads normalized images', async () => {
     const analyzer = makeAnalyzer({});
 

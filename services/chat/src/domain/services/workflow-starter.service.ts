@@ -18,6 +18,21 @@ export interface StartChatWorkflowInput {
   history: string;
   attachmentS3Key?: string;
   attachmentType?: 'image' | 'audio';
+  /**
+   * Rendered block describing a receipt read on an EARLIER turn of this session,
+   * or '' when there is none.
+   *
+   * A STRING, always present, deliberately mirroring `history`: the state
+   * machine interpolates it with `States.Format`, which cannot serialize an
+   * object and raises `States.Runtime` on a missing path. An empty string keeps
+   * the prompts branch-free.
+   *
+   * This is what makes a receipt follow-up work: both the intent classifier and
+   * the field extractor see the merchant, total and date already read from the
+   * image, so a one-word answer like "COP" is understood as continuing that
+   * expense — and the attachment is never analyzed twice.
+   */
+  priorReceipt: string;
 }
 
 /**

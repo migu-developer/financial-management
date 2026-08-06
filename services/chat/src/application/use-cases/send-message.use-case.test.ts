@@ -23,6 +23,8 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     findPendingPreviewsBySession: jest.fn().mockResolvedValue([]),
     updateTaskTokenStatus: jest.fn(),
     markExpired: jest.fn().mockResolvedValue(undefined),
+    saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
+    findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
   };
 }
 
@@ -57,6 +59,7 @@ const mockUserMessage: ChatMessage = {
   content: 'Gasté $45 en la cena',
   attachment_s3_key: null,
   attachment_type: null,
+  attachment_extraction: null,
   expense_id: null,
   task_token: null,
   task_token_status: null,
@@ -210,6 +213,9 @@ describe('SendMessageUseCase', () => {
       userEmail: EMAIL,
       content: 'Gasté $45 en la cena',
       history: '',
+      // Always sent, even with nothing to replay: the ASL interpolates it
+      // unconditionally and a missing path would raise States.Runtime.
+      priorReceipt: '',
     });
     expect(result.execution).toEqual(mockExecution);
   });
@@ -297,6 +303,111 @@ describe('SendMessageUseCase', () => {
         attachmentType: 'image',
       }),
     );
+  });
+
+  describe('prior receipt context', () => {
+    it('replays a stored extraction when the message has no attachment', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      messageRepo.create.mockResolvedValue(mockUserMessage);
+      messageRepo.findLatestUnusedExtraction.mockResolvedValue({
+        merchant: 'Crepes & Waffles',
+        total: '48900',
+        date: '2026-07-20',
+      });
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute({ content: 'COP' }, UID, EMAIL);
+
+      // THE FIX: without this the workflow would see only the word "COP" — no
+      // amount, no merchant — and could never complete the expense the user was
+      // answering about.
+      const payload = starter.start.mock.calls[0]![0];
+      expect(payload.priorReceipt).toContain('Crepes & Waffles');
+      expect(payload.priorReceipt).toContain('48900');
+      expect(payload.priorReceipt).toContain('anterior');
+    });
+
+    it('IGNORES a stored extraction when this message brings its own attachment', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      messageRepo.create.mockResolvedValue(mockUserMessage);
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute(
+        {
+          content: 'y este otro',
+          attachmentS3Key: 'chat-ready/user/abc.jpg',
+          attachmentType: 'image',
+        },
+        UID,
+        EMAIL,
+      );
+
+      // Mixing a fresh photo with an older receipt would blend two purchases
+      // into one expense, so the lookup must not even run.
+      expect(messageRepo.findLatestUnusedExtraction).not.toHaveBeenCalled();
+      expect(starter.start.mock.calls[0]![0].priorReceipt).toBe('');
+    });
+
+    it('sends an empty string when there is nothing stored', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      messageRepo.create.mockResolvedValue(mockUserMessage);
+      messageRepo.findLatestUnusedExtraction.mockResolvedValue(null);
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute({ content: 'gasté 5000 en pan' }, UID, EMAIL);
+
+      // ALWAYS present, never omitted: the state machine interpolates it with
+      // States.Format, and a missing path raises States.Runtime — which would
+      // kill the execution rather than degrade it.
+      const payload = starter.start.mock.calls[0]![0];
+      expect(payload.priorReceipt).toBe('');
+      expect('priorReceipt' in payload).toBe(true);
+    });
+
+    it('scopes the lookup to the session and the caller', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      messageRepo.create.mockResolvedValue(mockUserMessage);
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute({ content: 'COP' }, UID, EMAIL);
+
+      expect(messageRepo.findLatestUnusedExtraction).toHaveBeenCalledWith(
+        mockSession.id,
+        UID,
+      );
+    });
   });
 
   it('supersedes pending previews before starting the new workflow', async () => {

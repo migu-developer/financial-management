@@ -1,3 +1,4 @@
+import type { ChatAttachmentExtraction } from '@services/chat/domain/entities/chat-message';
 import type { ReceiptAnalyzerService } from '@services/chat/domain/services/receipt-analyzer.service';
 import { buildReceiptContent } from '@packages/prompts/chat/attachments';
 import {
@@ -25,6 +26,14 @@ export interface AnalyzeReceiptOutput {
   extracted: boolean;
   /** Weakest per-field confidence (0-100), absent when nothing was read. */
   confidence?: number;
+  /**
+   * The same fields in STRUCTURED form, for `PersistReceiptExtraction` to bank.
+   *
+   * `enrichedContent` is prose aimed at a model; this is the machine-readable
+   * copy a later turn merges with the user's answer. Keeping both means a
+   * follow-up never has to re-parse the prose — or re-read the image.
+   */
+  extraction: ChatAttachmentExtraction;
 }
 
 /**
@@ -56,6 +65,15 @@ export class AnalyzeReceiptUseCase {
       ...(receipt.confidence !== undefined && {
         confidence: receipt.confidence,
       }),
+      extraction: {
+        ...(receipt.merchant !== undefined && { merchant: receipt.merchant }),
+        ...(receipt.total !== undefined && { total: receipt.total }),
+        ...(receipt.currency !== undefined && { currency: receipt.currency }),
+        ...(receipt.date !== undefined && { date: receipt.date }),
+        ...(receipt.confidence !== undefined && {
+          confidence: receipt.confidence,
+        }),
+      },
     };
   }
 }
