@@ -255,6 +255,36 @@ describe('PostgresChatMessageRepository — integration', () => {
       confidence: 96.4,
     };
 
+    /**
+     * Creates a real expense row.
+     *
+     * `expense_id` has a foreign key, so a random uuid cannot exercise the
+     * "already used" guard at all. Catalogs are NOT truncated between tests
+     * (only chat_messages/chat_sessions/users are), so seeding unconditionally
+     * would violate `expenses_types_name_key` on the second call.
+     */
+    const createExpense = async (): Promise<string> => {
+      const existing = await dbService.query<{ id: string }>(
+        `SELECT id FROM ${process.env['DATABASE_SCHEMA']}.currencies LIMIT 1`,
+      );
+      if (existing.length === 0) await seedAllCatalogs(dbService);
+
+      const [currency] = await dbService.query<{ id: string }>(
+        `SELECT id FROM ${process.env['DATABASE_SCHEMA']}.currencies LIMIT 1`,
+      );
+      const [type] = await dbService.query<{ id: string }>(
+        `SELECT id FROM ${process.env['DATABASE_SCHEMA']}.expenses_types LIMIT 1`,
+      );
+      const [expense] = await dbService.query<{ id: string }>(
+        `INSERT INTO ${process.env['DATABASE_SCHEMA']}.expenses
+           (user_id, name, value, currency_id, expense_type_id)
+         VALUES ($1, 'Recibo', 48900, $2, $3)
+         RETURNING id`,
+        [userA.id, currency!.id, type!.id],
+      );
+      return expense!.id;
+    };
+
     const insertWithAttachment = async () =>
       repo.create(
         {
@@ -325,23 +355,68 @@ describe('PostgresChatMessageRepository — integration', () => {
       //
       // A REAL expense row, not a random uuid: `expense_id` has a foreign key,
       // so a made-up value cannot exercise this path at all.
-      const { currencies, expenseTypes } = await seedAllCatalogs(dbService);
-      const [expense] = await dbService.query<{ id: string }>(
-        `INSERT INTO ${process.env['DATABASE_SCHEMA']}.expenses
-           (user_id, name, value, currency_id, expense_type_id)
-         VALUES ($1, 'Recibo', 48900, $2, $3)
-         RETURNING id`,
-        [userA.id, currencies[0]!.id, expenseTypes[0]!.id],
-      );
+      const expenseId = await createExpense();
       await dbService.query(
         `UPDATE ${process.env['DATABASE_SCHEMA']}.chat_messages
          SET expense_id = $2 WHERE id = $1`,
-        [message.id, expense!.id],
+        [message.id, expenseId],
       );
 
       await expect(
         repo.findLatestUnusedExtraction(session.id, userA.uid),
       ).resolves.toBeNull();
+    });
+
+    it('linkExpenseToMessage retires the extraction from replay', async () => {
+      const message = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        message.id,
+        userA.uid,
+        EXTRACTION,
+        userA.email,
+      );
+      await expect(
+        repo.findLatestUnusedExtraction(session.id, userA.uid),
+      ).resolves.toEqual(EXTRACTION);
+
+      const expenseId = await createExpense();
+
+      await repo.linkExpenseToMessage(
+        message.id,
+        userA.uid,
+        expenseId,
+        userA.email,
+      );
+
+      // END-TO-END of the guard: production only ever stamped `expense_id` on
+      // the ASSISTANT confirmation, so without this call the extraction stayed
+      // replayable forever and would be merged into unrelated later messages.
+      await expect(
+        repo.findLatestUnusedExtraction(session.id, userA.uid),
+      ).resolves.toBeNull();
+    });
+
+    it("linkExpenseToMessage does NOT touch another user's message", async () => {
+      const message = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        message.id,
+        userA.uid,
+        EXTRACTION,
+        userA.email,
+      );
+      const expenseId = await createExpense();
+
+      await repo.linkExpenseToMessage(
+        message.id,
+        userB.uid,
+        expenseId,
+        userB.email,
+      );
+
+      // Matches no row, so userA's extraction is still replayable.
+      await expect(
+        repo.findLatestUnusedExtraction(session.id, userA.uid),
+      ).resolves.toEqual(EXTRACTION);
     });
 
     it("does NOT read another user's extraction", async () => {

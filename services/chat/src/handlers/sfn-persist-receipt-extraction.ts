@@ -28,6 +28,8 @@ const metricsService = new MetricsServiceImplementation('chat');
  */
 export interface PersistReceiptExtractionEvent {
   uid: string;
+  /** Stamped on `modified_by`, matching every other write in this service. */
+  userEmail: string;
   sessionId?: string;
   /** The user message the attachment arrived on. */
   messageId: string;
@@ -54,6 +56,7 @@ export const handler = async (event: PersistReceiptExtractionEvent) => {
     const result = await useCase.execute({
       messageId: event.messageId,
       userId: event.uid,
+      userEmail: event.userEmail,
       extraction: event.extraction ?? {},
     });
 

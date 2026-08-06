@@ -48,6 +48,22 @@ export interface ChatMessageRepository {
   ): Promise<void>;
 
   /**
+   * Links a USER message to the expense it produced, which retires its stored
+   * extraction from `findLatestUnusedExtraction`.
+   *
+   * Needed because `expense_id` was only ever written on the ASSISTANT
+   * confirmation, never on the message that carried the receipt — so the
+   * "already used" guard below could never become false and a finished receipt
+   * would be replayed into unrelated later messages of the same session.
+   */
+  linkExpenseToMessage(
+    id: string,
+    uid: string,
+    expenseId: string,
+    modifiedBy: string,
+  ): Promise<void>;
+
+  /**
    * Returns the most recent attachment extraction in a session that has NOT yet
    * produced an expense, or null when there is none.
    *

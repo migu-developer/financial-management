@@ -7,6 +7,7 @@ import type { ChatAttachmentExtraction } from '@services/chat/domain/entities/ch
 
 const MESSAGE_ID = 'msg-1';
 const USER_ID = 'user-1';
+const USER_EMAIL = 'user@example.com';
 
 const makeRepository = () =>
   ({
@@ -22,6 +23,7 @@ describe('PersistReceiptExtractionUseCase', () => {
     ).execute({
       messageId: MESSAGE_ID,
       userId: USER_ID,
+      userEmail: USER_EMAIL,
       extraction: {
         merchant: 'INVERVARI SAS',
         total: '251000',
@@ -40,7 +42,7 @@ describe('PersistReceiptExtractionUseCase', () => {
         date: '2026-08-02',
         confidence: 97.7,
       },
-      USER_ID,
+      USER_EMAIL,
     );
   });
 
@@ -50,6 +52,7 @@ describe('PersistReceiptExtractionUseCase', () => {
     await new PersistReceiptExtractionUseCase(repository).execute({
       messageId: MESSAGE_ID,
       userId: USER_ID,
+      userEmail: USER_EMAIL,
       // Cast because `exactOptionalPropertyTypes` forbids an explicit
       // `undefined`, yet the workflow payload arrives as JSON — so undefined and
       // '' genuinely reach this code at runtime. That is what is under test.
@@ -67,7 +70,8 @@ describe('PersistReceiptExtractionUseCase', () => {
       MESSAGE_ID,
       USER_ID,
       { merchant: 'INVERVARI SAS', date: '2026-08-02' },
-      USER_ID,
+      // Audit columns are email-based everywhere else in this repository.
+      USER_EMAIL,
     );
   });
 
@@ -76,7 +80,12 @@ describe('PersistReceiptExtractionUseCase', () => {
 
     const result = await new PersistReceiptExtractionUseCase(
       repository,
-    ).execute({ messageId: MESSAGE_ID, userId: USER_ID, extraction: {} });
+    ).execute({
+      messageId: MESSAGE_ID,
+      userId: USER_ID,
+      userEmail: USER_EMAIL,
+      extraction: {},
+    });
 
     // Storing `{}` would make the next turn think it has receipt context.
     expect(result.stored).toBe(false);
@@ -91,6 +100,7 @@ describe('PersistReceiptExtractionUseCase', () => {
     ).execute({
       messageId: MESSAGE_ID,
       userId: USER_ID,
+      userEmail: USER_EMAIL,
       extraction: { merchant: '', currency: '' },
     });
 

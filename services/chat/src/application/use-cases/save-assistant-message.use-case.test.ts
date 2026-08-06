@@ -14,6 +14,7 @@ function makeMessageRepo(): jest.Mocked<ChatMessageRepository> {
     markExpired: jest.fn().mockResolvedValue(undefined),
     saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
     findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
+    linkExpenseToMessage: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -273,5 +274,86 @@ describe('SaveAssistantMessageUseCase', () => {
       'session-1',
       'uid-1',
     );
+  });
+
+  describe('retiring the receipt extraction', () => {
+    it('links the USER message to the expense it produced', async () => {
+      const messageRepo = makeMessageRepo();
+      messageRepo.create.mockResolvedValue(mockMessage);
+
+      await new SaveAssistantMessageUseCase(
+        makeSessionRepo(),
+        messageRepo,
+        makePublisher(),
+        channelTemplate,
+      ).execute({
+        sessionId: 'session-1',
+        uid: 'uid-1',
+        userEmail: 'u@test.com',
+        content: 'listo',
+        expenseId: 'expense-1',
+        userMessageId: 'user-msg-1',
+      });
+
+      // THE BUG THIS FIXES: `expense_id` was only ever written on THIS assistant
+      // message, never on the user message holding the receipt — so
+      // findLatestUnusedExtraction could never see it as used, and the receipt
+      // would be replayed into unrelated later messages of the session.
+      expect(messageRepo.linkExpenseToMessage).toHaveBeenCalledWith(
+        'user-msg-1',
+        'uid-1',
+        'expense-1',
+        'u@test.com',
+      );
+    });
+
+    it('does NOT link when no expense was created', async () => {
+      const messageRepo = makeMessageRepo();
+      messageRepo.create.mockResolvedValue(mockMessage);
+
+      await new SaveAssistantMessageUseCase(
+        makeSessionRepo(),
+        messageRepo,
+        makePublisher(),
+        channelTemplate,
+      ).execute({
+        sessionId: 'session-1',
+        uid: 'uid-1',
+        userEmail: 'u@test.com',
+        content: '¿En qué moneda?',
+        userMessageId: 'user-msg-1',
+      });
+
+      // A clarification must leave the extraction replayable — that is the whole
+      // point of storing it.
+      expect(messageRepo.linkExpenseToMessage).not.toHaveBeenCalled();
+    });
+
+    it('still succeeds when the link fails, and reports it', async () => {
+      const messageRepo = makeMessageRepo();
+      messageRepo.create.mockResolvedValue(mockMessage);
+      messageRepo.linkExpenseToMessage.mockRejectedValue(new Error('boom'));
+      const onLinkFailure = jest.fn();
+
+      const result = await new SaveAssistantMessageUseCase(
+        makeSessionRepo(),
+        messageRepo,
+        makePublisher(),
+        channelTemplate,
+        onLinkFailure,
+      ).execute({
+        sessionId: 'session-1',
+        uid: 'uid-1',
+        userEmail: 'u@test.com',
+        content: 'listo',
+        expenseId: 'expense-1',
+        userMessageId: 'user-msg-1',
+      });
+
+      // The expense already exists and the user has been told so: failing here
+      // would turn a successful registration into an error message.
+      expect(result.message).toBeDefined();
+      expect(onLinkFailure).toHaveBeenCalled();
+    });
   });
 });

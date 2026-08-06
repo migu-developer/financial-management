@@ -843,6 +843,7 @@ export class StepFunctionsChatStack extends BaseStack {
         lambdaFunction: persistExtractionFn,
         payload: TaskInput.fromObject({
           'uid.$': '$.userId',
+          'userEmail.$': '$.userEmail',
           'sessionId.$': '$.sessionId',
           'messageId.$': '$.messageId',
           'extraction.$': '$.receipt.extraction',

@@ -25,6 +25,7 @@ function makeMockMessageRepo(): jest.Mocked<ChatMessageRepository> {
     markExpired: jest.fn().mockResolvedValue(undefined),
     saveAttachmentExtraction: jest.fn().mockResolvedValue(undefined),
     findLatestUnusedExtraction: jest.fn().mockResolvedValue(null),
+    linkExpenseToMessage: jest.fn().mockResolvedValue(undefined),
   };
 }
 

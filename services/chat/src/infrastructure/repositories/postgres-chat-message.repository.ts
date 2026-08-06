@@ -169,6 +169,27 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     );
   }
 
+  @trace('ChatMessage:linkExpenseToMessage')
+  async linkExpenseToMessage(
+    id: string,
+    uid: string,
+    expenseId: string,
+    modifiedBy: string,
+  ): Promise<void> {
+    // No status guard: this only records which expense the message produced.
+    await this.dbService.query(
+      `UPDATE financial_management.chat_messages m
+       SET expense_id = $3, modified_by = $4
+       FROM financial_management.chat_sessions s,
+            financial_management.users u
+       WHERE m.id = $1
+         AND m.session_id = s.id
+         AND s.user_id = u.id
+         AND u.uid = $2`,
+      [id, uid, expenseId, modifiedBy],
+    );
+  }
+
   @trace('ChatMessage:findLatestUnusedExtraction')
   async findLatestUnusedExtraction(
     sessionId: string,
@@ -179,9 +200,16 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     // feeding it into a later unrelated message would invent an expense the user
     // never described.
     //
-    // Read-only (replica) on purpose: this runs on the request path of
-    // POST /chat, and the row was written by an earlier turn.
-    const rows = await this.dbService.queryReadOnly<{
+    // PRIMARY, not the read replica. This is a read-your-writes dependency: the
+    // extraction was written seconds earlier by the previous turn's workflow,
+    // and a lagging replica would return nothing — silently restoring the exact
+    // dead end this whole feature removes.
+    //
+    // A read-through fallback (replica, then primary on a miss) was considered
+    // and rejected: a miss is the COMMON case (most messages have no receipt in
+    // flight), so it would double the query count for ordinary traffic to
+    // protect the rare one. This is a single indexed row lookup.
+    const rows = await this.dbService.query<{
       attachment_extraction: ChatAttachmentExtraction;
     }>(
       `SELECT m.attachment_extraction

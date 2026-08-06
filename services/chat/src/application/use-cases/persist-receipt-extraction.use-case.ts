@@ -8,6 +8,14 @@ export interface PersistReceiptExtractionInput {
   /** The user message that carried the attachment. */
   messageId: string;
   userId: string;
+  /**
+   * Audit identity for `modified_by`.
+   *
+   * The EMAIL, not the uid: every other write in this repository stamps audit
+   * columns with the email (see `create`, `updateTaskTokenStatus`), and mixing
+   * the two would make the column impossible to trace consistently.
+   */
+  userEmail: string;
   extraction: ChatAttachmentExtraction;
 }
 
@@ -41,7 +49,7 @@ export class PersistReceiptExtractionUseCase {
       input.messageId,
       input.userId,
       extraction,
-      input.userId,
+      input.userEmail,
     );
 
     return { stored: true };
