@@ -21,6 +21,14 @@ export interface SaveAssistantMessageInput {
    */
   userMessageId?: string;
   /**
+   * Keeps this reply out of the LLM transcript (it is still shown to the user).
+   *
+   * Set for the `error` and `unknown` branches: neither says anything about the
+   * user's expense, and a history containing them has been observed pushing the
+   * intent classifier to UNKNOWN on the following message.
+   */
+  hiddenFromContext?: boolean;
+  /**
    * If provided, the message is persisted as a HITL preview:
    *   - role stays 'assistant'
    *   - task_token + task_token_status='pending' are stored
@@ -77,6 +85,7 @@ export class SaveAssistantMessageUseCase {
           task_token: input.taskToken!,
           task_token_status: 'pending',
         }),
+        ...(input.hiddenFromContext === true && { hidden_from_context: true }),
       },
       input.userEmail,
     );

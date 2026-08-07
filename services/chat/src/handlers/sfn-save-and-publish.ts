@@ -55,6 +55,30 @@ export interface SaveAndPublishEvent {
 }
 
 /**
+ * Branches whose reply must NOT reach the LLM transcript.
+ *
+ * `error` is the static "Uy, tuve un problema…" and `unknown` is the "¿es sobre
+ * tus gastos?" fallback: neither says anything about the user's expense, and a
+ * history containing both was observed pushing Nova Micro to classify the next
+ * one-word answer as UNKNOWN.
+ *
+ * `clarification` is deliberately ABSENT: it is the question the user's next
+ * message answers, so hiding it would break the multi-turn flow this supports.
+ * `cancelled` is absent too — a cancellation is a real decision worth remembering.
+ *
+ * Typed to the event-kind union rather than `string`: a typo, or a new branch
+ * added to `SaveAndPublishEventKind`, is then a compile error here instead of a
+ * silent miss at runtime.
+ */
+export const HIDDEN_FROM_CONTEXT_KINDS: ReadonlySet<SaveAndPublishEventKind> =
+  new Set<SaveAndPublishEventKind>(['error', 'unknown']);
+
+/** True when this branch's reply should be kept out of the model transcript. */
+export const isHiddenFromContext = (
+  kind: SaveAndPublishEventKind | undefined,
+): boolean => kind !== undefined && HIDDEN_FROM_CONTEXT_KINDS.has(kind);
+
+/**
  * Maps a non-error workflow branch to its dedicated business-metric name. Pure
  * and exported so the mapping can be unit-tested without invoking the handler.
  */
@@ -108,6 +132,7 @@ export const handler = async (event: SaveAndPublishEvent) => {
   );
 
   const isError = event.eventKind === 'error';
+  const isNoiseForContext = isHiddenFromContext(event.eventKind);
 
   try {
     const result = await useCase.execute({
@@ -122,6 +147,7 @@ export const handler = async (event: SaveAndPublishEvent) => {
         userMessageId: event.messageId,
       }),
       ...(isError && { eventType: 'error' as const }),
+      ...(isNoiseForContext && { hiddenFromContext: true }),
     });
 
     logger.info('Assistant message saved and published', {

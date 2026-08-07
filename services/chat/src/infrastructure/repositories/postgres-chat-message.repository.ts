@@ -12,11 +12,13 @@ import { trace } from '@services/shared/infrastructure/decorators/trace';
 const MESSAGE_COLUMNS = `
   m.id, m.session_id, m.role, m.content, m.attachment_s3_key, m.attachment_type,
   m.attachment_extraction, m.expense_id, m.task_token, m.task_token_status,
+  m.hidden_from_context,
   m.created_at, m.updated_at, m.created_by, m.modified_by
 `.trim();
 
 const RETURNING_COLUMNS = `id, session_id, role, content, attachment_s3_key, attachment_type,
                            attachment_extraction, expense_id, task_token, task_token_status,
+                           hidden_from_context,
                            created_at, updated_at, created_by, modified_by`;
 
 export class PostgresChatMessageRepository implements ChatMessageRepository {
@@ -43,6 +45,29 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     return rows.reverse();
   }
 
+  @trace('ChatMessage:findRecentForContext')
+  async findRecentForContext(
+    sessionId: string,
+    uid: string,
+    limit: number,
+  ): Promise<ChatMessage[]> {
+    // Identical to findRecentBySession apart from the flag. Kept as its own
+    // query rather than a parameter so the UI path can never accidentally start
+    // hiding messages the user actually saw.
+    const rows = await this.dbService.queryReadOnly<ChatMessage>(
+      `SELECT ${MESSAGE_COLUMNS}
+       FROM financial_management.chat_messages m
+       JOIN financial_management.chat_sessions s ON m.session_id = s.id
+       JOIN financial_management.users u ON s.user_id = u.id
+       WHERE m.session_id = $1 AND u.uid = $2
+         AND m.hidden_from_context = false
+       ORDER BY m.created_at DESC, m.id DESC
+       LIMIT $3`,
+      [sessionId, uid, limit],
+    );
+    return rows.reverse();
+  }
+
   @trace('ChatMessage:create')
   async create(
     input: CreateChatMessageInput,
@@ -51,8 +76,9 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     const rows = await this.dbService.query<ChatMessage>(
       `INSERT INTO financial_management.chat_messages
          (session_id, role, content, attachment_s3_key, attachment_type,
-          expense_id, task_token, task_token_status, created_by, modified_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+          expense_id, task_token, task_token_status, hidden_from_context,
+          created_by, modified_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
        RETURNING ${RETURNING_COLUMNS}`,
       [
         input.session_id,
@@ -63,6 +89,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
         input.expense_id ?? null,
         input.task_token ?? null,
         input.task_token_status ?? null,
+        input.hidden_from_context ?? false,
         createdBy,
       ],
     );
@@ -195,10 +222,18 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     sessionId: string,
     uid: string,
   ): Promise<ChatAttachmentExtraction | null> {
-    // `expense_id IS NULL` is what keeps a finished receipt from being replayed:
-    // once its message produced an expense, the extraction is history, and
-    // feeding it into a later unrelated message would invent an expense the user
-    // never described.
+    // Takes the NEWEST extraction in the session and returns it only when it is
+    // still unused — deliberately NOT "the newest unused one".
+    //
+    // That earlier form had a hole, proven against the real database: send photo
+    // A (abandoned), then photo B, then complete B. Retiring B made A the newest
+    // *unused* extraction again, so it resurfaced and would have been replayed
+    // into a later unrelated message — the very failure this feature removes,
+    // through a different door.
+    //
+    // Looking at the newest row regardless of `expense_id` fixes it in one step:
+    // a newer photo naturally supersedes an older one, and once that newest photo
+    // has produced an expense the lookup returns nothing.
     //
     // PRIMARY, not the read replica. This is a read-your-writes dependency: the
     // extraction was written seconds earlier by the previous turn's workflow,
@@ -211,20 +246,23 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     // protect the rare one. This is a single indexed row lookup.
     const rows = await this.dbService.query<{
       attachment_extraction: ChatAttachmentExtraction;
+      expense_id: string | null;
     }>(
-      `SELECT m.attachment_extraction
+      `SELECT m.attachment_extraction, m.expense_id
        FROM financial_management.chat_messages m
        JOIN financial_management.chat_sessions s ON m.session_id = s.id
        JOIN financial_management.users u ON s.user_id = u.id
        WHERE m.session_id = $1
          AND u.uid = $2
          AND m.attachment_extraction IS NOT NULL
-         AND m.expense_id IS NULL
        ORDER BY m.created_at DESC, m.id DESC
        LIMIT 1`,
       [sessionId, uid],
     );
-    return rows[0]?.attachment_extraction ?? null;
+
+    const newest = rows[0];
+    if (newest?.expense_id !== null) return null;
+    return newest.attachment_extraction;
   }
 
   @trace('ChatMessage:markExpired')

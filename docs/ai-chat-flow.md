@@ -344,6 +344,42 @@ the field is never omitted. It is also skipped when the current message brings
 its own attachment: blending a fresh photo with an older receipt would merge two
 purchases into one expense.
 
+### A newer photo supersedes an older one
+
+The lookup takes the **newest** extraction in the session and replays it only if
+it is still unused — deliberately not "the newest unused one".
+
+That earlier form had a hole, proven against the real database: send photo A and
+abandon it, send photo B, complete B. Retiring B made A the newest _unused_
+extraction again, so the abandoned photo resurfaced and would have been merged
+into an unrelated later message. Inspecting the newest row regardless of
+`expense_id` fixes it in one step, and gives the behaviour you want for free: a
+new photo takes over, and once it has produced an expense nothing is replayed.
+
+The trade-off is explicit: after sending a second photo you cannot go back and
+finish the first one. Abandoning A is treated as abandoning it.
+
+### Not everything the assistant says reaches the model
+
+The transcript fed to `ClassifyIntent` and `ExtractExpenseFields` is the last 10
+messages, each truncated to 500 characters — about 1.2k tokens worst case, so it
+is bounded and needs no summarisation.
+
+What it does need is filtering. Replies from the `error` and `unknown` branches
+carry no information about the expense, and a production session containing both
+
+> Uy, tuve un problema procesando tu mensaje
+> Entiendo que querés que procese una imagen, pero por ahora no puedo verla
+
+had its next one-word answer ("COP") classified as `UNKNOWN` — even though the
+prompt already carried a multi-turn rule for exactly that case. Those replies are
+flagged `hidden_from_context` at write time and excluded by
+`findRecentForContext`. They are still shown to the user: `findRecentBySession`,
+which restores the UI, is untouched.
+
+`clarification` is deliberately NOT filtered — it is the question the user's next
+message answers.
+
 ### Image normalization (ImageProcess state machine)
 
 Users upload whatever their device produces — HEIC from an iPhone, 48 MP

@@ -419,6 +419,61 @@ describe('PostgresChatMessageRepository — integration', () => {
       ).resolves.toEqual(EXTRACTION);
     });
 
+    it('a NEWER photo supersedes an older abandoned one', async () => {
+      const first = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        first.id,
+        userA.uid,
+        { merchant: 'IMAGEN_A' },
+        userA.email,
+      );
+      const second = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        second.id,
+        userA.uid,
+        { merchant: 'IMAGEN_B' },
+        userA.email,
+      );
+
+      const found = await repo.findLatestUnusedExtraction(
+        session.id,
+        userA.uid,
+      );
+      expect(found!.merchant).toBe('IMAGEN_B');
+    });
+
+    it('an abandoned older extraction does NOT resurface once the newer one is used', async () => {
+      const first = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        first.id,
+        userA.uid,
+        { merchant: 'IMAGEN_A' },
+        userA.email,
+      );
+      const second = await insertWithAttachment();
+      await repo.saveAttachmentExtraction(
+        second.id,
+        userA.uid,
+        { merchant: 'IMAGEN_B' },
+        userA.email,
+      );
+      await repo.linkExpenseToMessage(
+        second.id,
+        userA.uid,
+        await createExpense(),
+        userA.email,
+      );
+
+      // REGRESSION, proven against the real database before the fix: with
+      // "newest UNUSED", retiring B made A the newest unused again, so the
+      // abandoned first photo resurfaced and would have been merged into an
+      // unrelated later message. The lookup now inspects the NEWEST extraction
+      // regardless of expense_id and stops there.
+      await expect(
+        repo.findLatestUnusedExtraction(session.id, userA.uid),
+      ).resolves.toBeNull();
+    });
+
     it("does NOT read another user's extraction", async () => {
       const message = await insertWithAttachment();
       await repo.saveAttachmentExtraction(
@@ -486,6 +541,73 @@ describe('PostgresChatMessageRepository — integration', () => {
           [plain.id],
         ),
       ).rejects.toThrow(/chk_chat_messages_extraction_needs_attachment/);
+    });
+  });
+
+  describe('findRecentForContext', () => {
+    it('omits replies flagged hidden_from_context but keeps the rest', async () => {
+      await repo.create(
+        { session_id: session.id, role: 'user', content: 'mira este recibo' },
+        userA.email,
+      );
+      await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'Uy, tuve un problema procesando tu mensaje.',
+          hidden_from_context: true,
+        },
+        userA.email,
+      );
+      await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: '¿En qué moneda fue el gasto?',
+        },
+        userA.email,
+      );
+
+      const context = await repo.findRecentForContext(
+        session.id,
+        userA.uid,
+        10,
+      );
+
+      // The clarification MUST stay: it is the question the next message answers.
+      expect(context.map((m) => m.content)).toEqual([
+        'mira este recibo',
+        '¿En qué moneda fue el gasto?',
+      ]);
+    });
+
+    it('still returns everything to findRecentBySession (the UI path)', async () => {
+      await repo.create(
+        {
+          session_id: session.id,
+          role: 'assistant',
+          content: 'Uy, tuve un problema procesando tu mensaje.',
+          hidden_from_context: true,
+        },
+        userA.email,
+      );
+
+      // Hiding it from the model must NOT hide it from the user.
+      const restored = await repo.findRecentBySession(
+        session.id,
+        userA.uid,
+        10,
+      );
+      expect(restored).toHaveLength(1);
+      expect(restored[0]!.hidden_from_context).toBe(true);
+    });
+
+    it('defaults hidden_from_context to false', async () => {
+      const message = await repo.create(
+        { session_id: session.id, role: 'user', content: 'gasté 5000' },
+        userA.email,
+      );
+      expect(message.hidden_from_context).toBe(false);
     });
   });
 

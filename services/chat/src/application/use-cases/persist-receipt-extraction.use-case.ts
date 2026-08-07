@@ -70,7 +70,7 @@ const pruneEmpty = (
     Object.entries(extraction).filter(
       ([, value]) => value !== undefined && value !== null && value !== '',
     ),
-  ) as ChatAttachmentExtraction;
+  );
 
 /** Exported for the read path, which needs the same "is there anything?" test. */
 export const hasExtractedFields = (

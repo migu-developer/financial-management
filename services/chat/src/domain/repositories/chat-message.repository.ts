@@ -79,6 +79,22 @@ export interface ChatMessageRepository {
   ): Promise<ChatAttachmentExtraction | null>;
 
   /**
+   * Same as `findRecentBySession`, but skips replies flagged
+   * `hidden_from_context`.
+   *
+   * A SEPARATE method rather than a flag on the other one because the two have
+   * opposite goals: `findRecentBySession` restores what the USER saw and must
+   * include every message; this builds the transcript the LLM reasons over,
+   * where an "Uy, tuve un problema" or a "no puedo procesar imágenes" is pure
+   * noise that has already been observed derailing intent classification.
+   */
+  findRecentForContext(
+    sessionId: string,
+    uid: string,
+    limit: number,
+  ): Promise<ChatMessage[]>;
+
+  /**
    * Finds the assistant message that is currently holding a `pending`
    * task token. Used by the human-in-the-loop confirmation flow to look
    * up the workflow waiting on the user.
