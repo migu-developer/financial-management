@@ -1,5 +1,6 @@
-import React from 'react';
-import { Image, Text, View, useColorScheme } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, Text, View, useColorScheme } from 'react-native';
+import { isWeb } from '@packages/utils';
 
 import {
   generic,
@@ -9,10 +10,14 @@ import {
 } from '@features/ui/utils/colors';
 import {
   fontSizeScale,
-  mediaHeight,
+  mediaSize,
   radius,
   space,
 } from '@features/ui/utils/spacing';
+import {
+  ImageLightbox,
+  type LightboxOrigin,
+} from '@features/ui/components/shared/atoms/image-lightbox';
 import { fontWeight } from '@features/ui/utils/typography';
 
 /**
@@ -32,8 +37,18 @@ export type ChatBubbleAttachment =
       imageUri: string;
       /** Accessible description of `imageUri`. */
       imageAccessibilityLabel: string;
+      /**
+       * Accessible label for dismissing the expanded view. Required alongside the
+       * image so the lightbox is never opened without a way to describe closing
+       * it to a screen reader.
+       */
+      imageCloseAccessibilityLabel: string;
     }
-  | { imageUri?: undefined; imageAccessibilityLabel?: undefined };
+  | {
+      imageUri?: undefined;
+      imageAccessibilityLabel?: undefined;
+      imageCloseAccessibilityLabel?: undefined;
+    };
 
 export type ChatBubbleProps = {
   message: string;
@@ -47,8 +62,24 @@ export function ChatBubble({
   isUser,
   imageUri,
   imageAccessibilityLabel,
+  imageCloseAccessibilityLabel,
 }: ChatBubbleProps) {
   const colorScheme = useColorScheme();
+  // Tapping to expand is WEB-only for now, per the current scope. On mobile the
+  // thumbnail stays a plain image rather than a control that does nothing.
+  const canExpand = useMemo(() => isWeb(), []);
+  const [expanded, setExpanded] = useState(false);
+  const [origin, setOrigin] = useState<LightboxOrigin | null>(null);
+  const thumbnailRef = useRef<Image | null>(null);
+
+  // Measured at press time, not on layout: the drawer scrolls, so a rect cached
+  // earlier would animate the photo out of the wrong place.
+  const openLightbox = useCallback(() => {
+    thumbnailRef.current?.measureInWindow((x, y, width, height) => {
+      setOrigin({ x, y, width, height });
+      setExpanded(true);
+    });
+  }, []);
   const isDark = colorScheme === 'dark';
 
   const bubbleBackground = isUser
@@ -87,23 +118,36 @@ export function ChatBubble({
         }}
       >
         {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            // `contain` so a tall receipt is never cropped — the whole slip has
-            // to stay legible, which is the point of showing it back.
-            resizeMode="contain"
-            accessible
-            accessibilityRole="image"
-            // Guaranteed present by the props union — an image never reaches
-            // here without its description.
-            accessibilityLabel={imageAccessibilityLabel}
-            style={{
-              width: '100%',
-              height: mediaHeight.chatAttachment,
-              borderRadius: radius.md,
-              marginBottom: space.xs,
-            }}
-          />
+          <Pressable
+            onPress={canExpand ? openLightbox : undefined}
+            disabled={!canExpand}
+            {...(canExpand && {
+              accessibilityRole: 'button' as const,
+              accessibilityLabel: imageAccessibilityLabel,
+            })}
+          >
+            <Image
+              ref={thumbnailRef}
+              source={{ uri: imageUri }}
+              // `contain` so a tall receipt is never cropped — the whole slip has
+              // to stay legible, which is the point of showing it back.
+              resizeMode="contain"
+              // FIXED width and height, not `width: '100%'`: the bubble is sized
+              // by its text, so a percentage made the same photo render wide next
+              // to a long caption and narrow next to "ok".
+              accessible={!canExpand}
+              {...(!canExpand && {
+                accessibilityRole: 'image' as const,
+                accessibilityLabel: imageAccessibilityLabel,
+              })}
+              style={{
+                width: mediaSize.chatAttachment.width,
+                height: mediaSize.chatAttachment.height,
+                borderRadius: radius.md,
+                marginBottom: space.xs,
+              }}
+            />
+          </Pressable>
         ) : null}
         <Text
           style={{
@@ -126,6 +170,17 @@ export function ChatBubble({
           {timestamp}
         </Text>
       </View>
+
+      {imageUri && origin ? (
+        <ImageLightbox
+          visible={expanded}
+          uri={imageUri}
+          accessibilityLabel={imageAccessibilityLabel}
+          closeAccessibilityLabel={imageCloseAccessibilityLabel}
+          origin={origin}
+          onClose={() => setExpanded(false)}
+        />
+      ) : null}
     </View>
   );
 }

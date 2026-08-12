@@ -33,6 +33,15 @@ export interface StartChatWorkflowInput {
    * expense — and the attachment is never analyzed twice.
    */
   priorReceipt: string;
+  /**
+   * The message whose stored extraction an expense created in this run must
+   * retire.
+   *
+   * ALWAYS present, like `history` and `priorReceipt`: the state machine reads it
+   * with `States.Format`/`TaskInput`, and a missing path raises States.Runtime.
+   * Equals the current message when no receipt is being replayed.
+   */
+  extractionOwnerMessageId: string;
 }
 
 /**

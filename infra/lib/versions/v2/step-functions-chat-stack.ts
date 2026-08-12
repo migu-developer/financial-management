@@ -563,6 +563,12 @@ export class StepFunctionsChatStack extends BaseStack {
         payload: TaskInput.fromObject({
           'sessionId.$': '$.sessionId',
           'messageId.$': '$.messageId',
+          // The message whose stored extraction an expense retires. NOT the same
+          // as `messageId` on a follow-up turn: the answer ("COP") is a different
+          // row from the photo, so linking `messageId` left the extraction live
+          // and replayable into an unrelated later message. Always present —
+          // SendMessage falls back to the current message.
+          'extractionOwnerMessageId.$': '$.extractionOwnerMessageId',
           'uid.$': '$.userId',
           'userEmail.$': '$.userEmail',
           'content.$': contentPath,

@@ -219,6 +219,8 @@ describe('SendMessageUseCase', () => {
       // Always sent, even with nothing to replay: the ASL interpolates it
       // unconditionally and a missing path would raise States.Runtime.
       priorReceipt: '',
+      // No receipt in play, so the owner is this very message.
+      extractionOwnerMessageId: 'msg-1',
     });
     expect(result.execution).toEqual(mockExecution);
   });
@@ -316,9 +318,12 @@ describe('SendMessageUseCase', () => {
       sessionRepo.create.mockResolvedValue(mockSession);
       messageRepo.create.mockResolvedValue(mockUserMessage);
       messageRepo.findLatestUnusedExtraction.mockResolvedValue({
-        merchant: 'Crepes & Waffles',
-        total: '48900',
-        date: '2026-07-20',
+        messageId: 'msg-con-la-foto',
+        extraction: {
+          merchant: 'Crepes & Waffles',
+          total: '48900',
+          date: '2026-07-20',
+        },
       });
       starter.start.mockResolvedValue(mockExecution);
 
@@ -336,6 +341,72 @@ describe('SendMessageUseCase', () => {
       expect(payload.priorReceipt).toContain('Crepes & Waffles');
       expect(payload.priorReceipt).toContain('48900');
       expect(payload.priorReceipt).toContain('anterior');
+    });
+
+    it('points the retirement at the message that OWNS the extraction', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      // The message created for THIS turn (the answer) — deliberately a
+      // different id from the one holding the extraction.
+      messageRepo.create.mockResolvedValue({
+        ...mockUserMessage,
+        id: 'msg-cop',
+      });
+      messageRepo.findLatestUnusedExtraction.mockResolvedValue({
+        messageId: 'msg-con-la-foto',
+        extraction: { merchant: 'Crepes & Waffles', total: '48900' },
+      });
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute({ content: 'COP' }, UID, EMAIL);
+
+      // REGRESSION: this used to pass the CURRENT turn's message, so the photo's
+      // extraction was never retired and leaked into later unrelated messages.
+      // The two ids differ on purpose — with them equal the bug is invisible.
+      expect(starter.start.mock.calls[0]![0].extractionOwnerMessageId).toBe(
+        'msg-con-la-foto',
+      );
+    });
+
+    it('falls back to the current message when no receipt is being replayed', async () => {
+      const sessionRepo = makeMockSessionRepo();
+      const messageRepo = makeMockMessageRepo();
+      const starter = makeMockStarter();
+      sessionRepo.create.mockResolvedValue(mockSession);
+      messageRepo.create.mockResolvedValue({
+        ...mockUserMessage,
+        id: 'msg-foto',
+      });
+      messageRepo.findLatestUnusedExtraction.mockResolvedValue(null);
+      starter.start.mockResolvedValue(mockExecution);
+
+      await new SendMessageUseCase(
+        sessionRepo,
+        messageRepo,
+        starter,
+        makeMockCallback(),
+      ).execute(
+        {
+          content: 'este recibo',
+          attachmentS3Key: 'chat-ready/user/abc.jpg',
+          attachmentType: 'image',
+        },
+        UID,
+        EMAIL,
+      );
+
+      // When the photo arrives in THIS turn, its own message is the owner — it is
+      // the row PersistReceiptExtraction is about to write.
+      expect(starter.start.mock.calls[0]![0].extractionOwnerMessageId).toBe(
+        'msg-foto',
+      );
     });
 
     it('IGNORES a stored extraction when this message brings its own attachment', async () => {

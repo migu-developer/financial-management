@@ -687,7 +687,12 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
               ) : (
                 <ChatMessageList
                   messages={messagesWithImages}
-                  imageAccessibilityLabel={t('aiChat.attachmentImageLabel')}
+                  imageAccessibilityLabel={t(
+                    'aiChat.attachmentImageExpandLabel',
+                  )}
+                  imageCloseAccessibilityLabel={t(
+                    'aiChat.attachmentImageCloseLabel',
+                  )}
                 />
               )}
 

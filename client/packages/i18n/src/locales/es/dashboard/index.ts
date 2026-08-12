@@ -133,6 +133,8 @@ export const dashboard = {
     loadingSessions: 'Cargando conversaciones...',
     attachLabel: 'Adjuntar foto de un recibo',
     attachmentImageLabel: 'Foto del recibo adjunto',
+    attachmentImageExpandLabel: 'Ampliar la foto del recibo',
+    attachmentImageCloseLabel: 'Cerrar la foto ampliada',
     attachRemoveLabel: 'Quitar adjunto',
     attachPreparing: 'Preparando imagen...',
     attachUploading: 'Subiendo...',

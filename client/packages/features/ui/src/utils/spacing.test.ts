@@ -1,4 +1,11 @@
-import { spacing, borderRadius, boxShadow } from './spacing';
+import {
+  spacing,
+  borderRadius,
+  boxShadow,
+  lightboxInset,
+  mediaSize,
+  space,
+} from './spacing';
 
 describe('spacing — design system tokens', () => {
   describe('spacing', () => {
@@ -43,5 +50,28 @@ describe('spacing — design system tokens', () => {
     it('card-md is more complex than card (more shadows)', () => {
       expect(boxShadow['card-md']).not.toBe(boxShadow.card);
     });
+  });
+});
+
+describe('mediaSize — chat attachment', () => {
+  it('fixes BOTH axes', () => {
+    // The bug: `width: '100%'` made the image inherit the bubble width, which is
+    // set by the text — so the same photo rendered wide next to a long caption
+    // and narrow next to "ok".
+    expect(typeof mediaSize.chatAttachment.width).toBe('number');
+    expect(typeof mediaSize.chatAttachment.height).toBe('number');
+  });
+
+  it('fits the narrowest drawer a phone can give', () => {
+    // 375dp phone → 85% drawer → 80% bubble → less 2×space.sm of padding.
+    const usable = 375 * 0.85 * 0.8 - space.sm * 2;
+    expect(mediaSize.chatAttachment.width).toBeLessThanOrEqual(usable);
+  });
+
+  it('leaves room for the lightbox inset inside the web drawer', () => {
+    // 380dp is the web drawer; an expanded photo must still fit with its inset.
+    expect(380 - lightboxInset * 2).toBeGreaterThan(
+      mediaSize.chatAttachment.width,
+    );
   });
 });

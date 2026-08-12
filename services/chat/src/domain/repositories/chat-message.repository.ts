@@ -6,6 +6,18 @@ import type {
 } from '@services/chat/domain/entities/chat-message';
 
 /**
+ * The newest replayable extraction plus the message that OWNS it.
+ *
+ * The owner id matters as much as the data: it is the row that has to be retired
+ * once an expense is created, and on a follow-up turn it is NOT the message being
+ * processed — the answer ("COP") is a different row from the photo.
+ */
+export interface UnusedExtraction {
+  messageId: string;
+  extraction: ChatAttachmentExtraction;
+}
+
+/**
  * Port for chat message persistence. Implementations live in
  * `src/infrastructure/repositories/`.
  */
@@ -76,7 +88,7 @@ export interface ChatMessageRepository {
   findLatestUnusedExtraction(
     sessionId: string,
     uid: string,
-  ): Promise<ChatAttachmentExtraction | null>;
+  ): Promise<UnusedExtraction | null>;
 
   /**
    * Same as `findRecentBySession`, but skips replies flagged
