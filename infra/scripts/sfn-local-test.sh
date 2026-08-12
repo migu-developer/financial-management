@@ -127,7 +127,8 @@ INPUT_text='{
   "userEmail": "test@example.com",
   "content": "¿cuánto gasté en comida este mes?",
   "history": "[]",
-  "priorReceipt": ""
+  "priorReceipt": "",
+  "extractionOwnerMessageId": "message-123"
 }'
 
 # Attachment inputs additionally carry $.attachmentS3Key and $.attachmentType,
@@ -143,7 +144,8 @@ INPUT_image='{
   "history": "[]",
   "attachmentS3Key": "chat-attachments/user-123/8f14e45f.jpg",
   "attachmentType": "image",
-  "priorReceipt": ""
+  "priorReceipt": "",
+  "extractionOwnerMessageId": "message-123"
 }'
 
 # `audio` is accepted by the schema but has no Transcribe branch yet, so it must
@@ -174,13 +176,17 @@ INPUT_audio='{
   "history": "[]",
   "attachmentS3Key": "chat-attachments/user-123/8f14e45f.m4a",
   "attachmentType": "audio",
-  "priorReceipt": ""
+  "priorReceipt": "",
+  "extractionOwnerMessageId": "message-123"
 }'
 
 # A FOLLOW-UP turn: no attachment of its own, but an earlier message in the
 # session already had one, so SendMessage replays what was read. This is the flow
 # that used to be a dead end — the user answered a question about a receipt and
 # the workflow saw only that one word.
+# `extractionOwnerMessageId` is deliberately message-123, NOT the message-124 of
+# this turn: the extraction lives on the EARLIER photo message. That difference is
+# the whole reason it is threaded separately from $.messageId.
 INPUT_followup='{
   "userId": "user-123",
   "sessionId": "session-123",
@@ -188,7 +194,8 @@ INPUT_followup='{
   "userEmail": "test@example.com",
   "content": "COP",
   "history": "Usuario: es esta === Asistente: ¿En qué moneda fue el gasto?",
-  "priorReceipt": "Datos ya extraídos del recibo en un mensaje anterior de esta conversación:\n- Comercio: Crepes & Waffles\n- Total: 48900\n- Fecha: 2026-07-20"
+  "priorReceipt": "Datos ya extraídos del recibo en un mensaje anterior de esta conversación:\n- Comercio: Crepes & Waffles\n- Total: 48900\n- Fecha: 2026-07-20",
+  "extractionOwnerMessageId": "message-123"
 }'
 
 # ── Helpers ────────────────────────────────────────────────
