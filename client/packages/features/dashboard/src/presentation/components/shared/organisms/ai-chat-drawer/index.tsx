@@ -687,7 +687,17 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
               ) : (
                 <ChatMessageList
                   messages={messagesWithImages}
+                  // DESCRIPTION of the photo — used for the plain image on
+                  // mobile and for the expanded one. Distinct from the expand
+                  // ACTION below: passing the action string here made a screen
+                  // reader announce the already-open photo as "Expand…".
                   imageAccessibilityLabel={t('aiChat.attachmentImageLabel')}
+                  imageExpandAccessibilityLabel={t(
+                    'aiChat.attachmentImageExpandLabel',
+                  )}
+                  imageCloseAccessibilityLabel={t(
+                    'aiChat.attachmentImageCloseLabel',
+                  )}
                 />
               )}
 

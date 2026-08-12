@@ -63,6 +63,11 @@ export type {
 export { FloatingActionButton } from './shared/atoms/floating-action-button';
 export { ChatBubble } from './shared/atoms/chat-bubble';
 export type { ChatBubbleProps } from './shared/atoms/chat-bubble';
+export { ImageLightbox } from './shared/atoms/image-lightbox';
+export type {
+  ImageLightboxProps,
+  LightboxOrigin,
+} from './shared/atoms/image-lightbox';
 export { ChatInput } from './shared/atoms/chat-input';
 export type { ChatInputProps } from './shared/atoms/chat-input';
 export { AttachmentPreview } from './shared/atoms/attachment-preview';

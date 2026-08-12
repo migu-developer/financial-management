@@ -4,7 +4,10 @@ import type {
   ChatMessageTaskTokenStatus,
   CreateChatMessageInput,
 } from '@services/chat/domain/entities/chat-message';
-import type { ChatMessageRepository } from '@services/chat/domain/repositories/chat-message.repository';
+import type {
+  ChatMessageRepository,
+  UnusedExtraction,
+} from '@services/chat/domain/repositories/chat-message.repository';
 import type { DatabaseService } from '@services/shared/domain/services/database';
 import { DataNotDefinedError } from '@packages/models/shared/utils/errors';
 import { trace } from '@services/shared/infrastructure/decorators/trace';
@@ -221,7 +224,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
   async findLatestUnusedExtraction(
     sessionId: string,
     uid: string,
-  ): Promise<ChatAttachmentExtraction | null> {
+  ): Promise<UnusedExtraction | null> {
     // Takes the NEWEST extraction in the session and returns it only when it is
     // still unused — deliberately NOT "the newest unused one".
     //
@@ -245,10 +248,11 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
     // flight), so it would double the query count for ordinary traffic to
     // protect the rare one. This is a single indexed row lookup.
     const rows = await this.dbService.query<{
+      id: string;
       attachment_extraction: ChatAttachmentExtraction;
       expense_id: string | null;
     }>(
-      `SELECT m.attachment_extraction, m.expense_id
+      `SELECT m.id, m.attachment_extraction, m.expense_id
        FROM financial_management.chat_messages m
        JOIN financial_management.chat_sessions s ON m.session_id = s.id
        JOIN financial_management.users u ON s.user_id = u.id
@@ -262,7 +266,7 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
 
     const newest = rows[0];
     if (newest?.expense_id !== null) return null;
-    return newest.attachment_extraction;
+    return { messageId: newest.id, extraction: newest.attachment_extraction };
   }
 
   @trace('ChatMessage:markExpired')

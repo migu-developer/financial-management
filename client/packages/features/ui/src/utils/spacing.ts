@@ -200,10 +200,28 @@ export const maxWidth = {
 
 // ─── Media sizes (inline images/thumbnails in dp) ─────────────────────────
 
-export const mediaHeight = {
-  /** 180dp — image attached to a chat bubble: readable without dominating it. */
-  chatAttachment: 180,
+export const mediaSize = {
+  /**
+   * Attachment thumbnail inside a chat bubble.
+   *
+   * FIXED on both axes, deliberately. With `width: '100%'` the image inherited
+   * the bubble's width, and the bubble is sized by its text — so the same photo
+   * rendered wide next to a long caption and narrow next to "ok", which reads as
+   * a glitch when scrolling a conversation.
+   *
+   * 220dp fits the narrowest case: a 375dp phone gives an 85%-wide drawer, of
+   * which the bubble takes 80%, less its horizontal padding — about 231dp of
+   * usable space. `resizeMode: 'contain'` keeps the photo's own aspect ratio
+   * inside the box, so a fixed box never distorts a tall receipt.
+   */
+  chatAttachment: { width: 220, height: 180 },
 } as const;
+
+/**
+ * Padding kept between an expanded image and the viewport edge, so a lightboxed
+ * photo never bleeds to the border.
+ */
+export const lightboxInset = space.lg;
 
 // ─── ZIndex constants ────────────────────────────────────────────────────────
 export const zIndex = {

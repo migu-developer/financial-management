@@ -13,6 +13,7 @@ const INPUT = {
   content: 'Hola',
   history: '',
   priorReceipt: '',
+  extractionOwnerMessageId: 'msg-1',
 };
 
 describe('SfnWorkflowStarter', () => {

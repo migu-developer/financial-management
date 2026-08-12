@@ -130,7 +130,7 @@ export class SendMessageUseCase {
           )
         : null;
     const priorReceipt = priorExtraction
-      ? buildPriorReceiptContext(priorExtraction)
+      ? buildPriorReceiptContext(priorExtraction.extraction)
       : '';
 
     const userMessage = await this.messageRepository.create(
@@ -160,6 +160,17 @@ export class SendMessageUseCase {
         attachmentType: input.attachmentType,
       }),
       priorReceipt,
+      // WHICH message owns the extraction an expense would retire.
+      //
+      // On a follow-up turn this is NOT the message being processed: the answer
+      // ("COP") is a different row from the photo. Resolved here because this is
+      // the only place that knows both — the workflow sees one turn at a time.
+      //
+      // With no prior receipt it is the message just created: if this turn
+      // carries a photo, that is exactly the row PersistReceiptExtraction writes.
+      extractionOwnerMessageId: priorExtraction
+        ? priorExtraction.messageId
+        : userMessage.id,
     });
 
     return { session, userMessage, execution, supersededPreviews };

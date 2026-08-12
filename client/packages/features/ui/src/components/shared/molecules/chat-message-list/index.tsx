@@ -26,11 +26,21 @@ export interface ChatMessageListProps {
    * copy stays in the consumer's i18n namespace.
    */
   imageAccessibilityLabel: string;
+  /**
+   * Label for the ACTION of expanding a photo (web only). Separate from the
+   * description above: one string for both made the expanded image announce
+   * itself as "Expand…" instead of describing the photo.
+   */
+  imageExpandAccessibilityLabel: string;
+  /** Accessible label for dismissing the expanded image. Required for the same reason. */
+  imageCloseAccessibilityLabel: string;
 }
 
 export function ChatMessageList({
   messages,
   imageAccessibilityLabel,
+  imageExpandAccessibilityLabel,
+  imageCloseAccessibilityLabel,
 }: ChatMessageListProps) {
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -56,7 +66,12 @@ export function ChatMessageList({
         // label always travel together.
         const attachment: ChatBubbleAttachment =
           msg.imageUri !== undefined
-            ? { imageUri: msg.imageUri, imageAccessibilityLabel }
+            ? {
+                imageUri: msg.imageUri,
+                imageAccessibilityLabel,
+                imageExpandAccessibilityLabel,
+                imageCloseAccessibilityLabel,
+              }
             : {};
 
         return (

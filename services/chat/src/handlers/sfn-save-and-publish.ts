@@ -42,6 +42,16 @@ export type SaveAndPublishEventKind =
 export interface SaveAndPublishEvent {
   sessionId: string;
   messageId?: string;
+  /**
+   * The message whose stored receipt extraction an expense created in this run
+   * must retire.
+   *
+   * Distinct from `messageId` on a follow-up turn: there, `messageId` is the
+   * user's answer ("COP") while the extraction lives on the earlier photo
+   * message. Optional so an execution started before this field existed still
+   * works — the handler falls back to `messageId`.
+   */
+  extractionOwnerMessageId?: string;
   uid: string;
   userEmail: string;
   content: string;
@@ -142,9 +152,11 @@ export const handler = async (event: SaveAndPublishEvent) => {
       content: event.content,
       ...(event.expenseId !== undefined && {
         expenseId: event.expenseId,
-        // `event.messageId` is the USER message the workflow started from —
-        // the row that holds the receipt extraction to retire.
-        userMessageId: event.messageId,
+        // NOT `event.messageId`: on a follow-up turn that is the answer ("COP"),
+        // a different row from the photo that holds the extraction. Linking it
+        // left the extraction live, so a later unrelated message in the session
+        // still inherited the old receipt. Falls back for older payloads.
+        userMessageId: event.extractionOwnerMessageId ?? event.messageId,
       }),
       ...(isError && { eventType: 'error' as const }),
       ...(isNoiseForContext && { hiddenFromContext: true }),

@@ -309,7 +309,7 @@ describe('PostgresChatMessageRepository — integration', () => {
 
       await expect(
         repo.findLatestUnusedExtraction(session.id, userA.uid),
-      ).resolves.toEqual(EXTRACTION);
+      ).resolves.toMatchObject({ extraction: EXTRACTION });
     });
 
     it('returns null when the session has none', async () => {
@@ -337,7 +337,7 @@ describe('PostgresChatMessageRepository — integration', () => {
 
       await expect(
         repo.findLatestUnusedExtraction(session.id, userA.uid),
-      ).resolves.toEqual({ merchant: 'Nuevo' });
+      ).resolves.toMatchObject({ extraction: { merchant: 'Nuevo' } });
     });
 
     it('SKIPS an extraction whose message already produced an expense', async () => {
@@ -377,7 +377,7 @@ describe('PostgresChatMessageRepository — integration', () => {
       );
       await expect(
         repo.findLatestUnusedExtraction(session.id, userA.uid),
-      ).resolves.toEqual(EXTRACTION);
+      ).resolves.toMatchObject({ extraction: EXTRACTION });
 
       const expenseId = await createExpense();
 
@@ -416,7 +416,7 @@ describe('PostgresChatMessageRepository — integration', () => {
       // Matches no row, so userA's extraction is still replayable.
       await expect(
         repo.findLatestUnusedExtraction(session.id, userA.uid),
-      ).resolves.toEqual(EXTRACTION);
+      ).resolves.toMatchObject({ extraction: EXTRACTION });
     });
 
     it('a NEWER photo supersedes an older abandoned one', async () => {
@@ -439,7 +439,10 @@ describe('PostgresChatMessageRepository — integration', () => {
         session.id,
         userA.uid,
       );
-      expect(found!.merchant).toBe('IMAGEN_B');
+      expect(found!.extraction.merchant).toBe('IMAGEN_B');
+      // The OWNER id travels with it: on a follow-up turn that is the row to
+      // retire, and it is not the message being processed.
+      expect(found!.messageId).toBe(second.id);
     });
 
     it('an abandoned older extraction does NOT resurface once the newer one is used', async () => {
