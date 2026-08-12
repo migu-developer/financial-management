@@ -1,4 +1,4 @@
-import { ImageLightbox } from '.';
+import { ImageLightbox, type ImageLightboxProps } from '.';
 import { lightboxInset, mediaSize } from '@features/ui/utils/spacing';
 
 /**
@@ -40,5 +40,24 @@ describe('lightbox geometry', () => {
     const screen = 800;
     const width = target(screen);
     expect((screen - width) / 2).toBe(lightboxInset);
+  });
+});
+
+describe('accessibility semantics are not interchangeable', () => {
+  it('the expanded image takes a DESCRIPTION, never an action label', () => {
+    // REGRESSION: one prop served both, so the caller's "Expand the receipt
+    // photo" ended up on the already-expanded image — a screen reader announced
+    // an action the user had just completed. The prop names now say which is
+    // which, and ImageLightbox only ever receives the description.
+    const props: Pick<
+      ImageLightboxProps,
+      'accessibilityLabel' | 'closeAccessibilityLabel'
+    > = {
+      accessibilityLabel: 'Attached receipt photo',
+      closeAccessibilityLabel: 'Close the expanded photo',
+    };
+
+    expect(props.accessibilityLabel).not.toMatch(/expand/i);
+    expect(props.closeAccessibilityLabel).toMatch(/close/i);
   });
 });
