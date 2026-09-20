@@ -26,7 +26,24 @@ export interface AttachmentUrlCache {
     keys: readonly string[],
     now: number,
   ): Record<string, SignedAttachmentUrl>;
-  write(entries: Readonly<Record<string, SignedAttachmentUrl>>): void;
+  /**
+   * Token identifying the current sign-in. Capture it BEFORE starting a fetch
+   * and hand it back to `write`, so a response that lands after a sign-out is
+   * dropped instead of stored.
+   */
+  generation(): number;
+  /**
+   * Stores freshly minted entries.
+   *
+   * @param generation the value `generation()` returned when the request that
+   *   produced these entries STARTED. A mismatch means `clear()` ran in
+   *   between, so the write is discarded.
+   * @returns whether the entries were stored.
+   */
+  write(
+    entries: Readonly<Record<string, SignedAttachmentUrl>>,
+    generation: number,
+  ): boolean;
   /**
    * Drops the entry for a key whose URL the renderer could not load, so the
    * next pass re-mints it.
@@ -43,17 +60,21 @@ export interface AttachmentUrlCache {
 }
 
 /**
- * One re-mint per key.
+ * Error-driven re-mints allowed per key, per sign-in.
  *
  * Enough to recover from the only failure the client can actually fix (an
- * expired signature), and not enough to hammer the endpoint for a key whose
- * object was deleted.
+ * expired signature). Deliberately NOT restored when a re-mint succeeds:
+ * presigning does not prove the object exists — the server validates the key
+ * and calls `getSignedUrl`, which happily signs a deleted object — so a
+ * successful mint followed by another 404 would reset the budget and loop
+ * forever. Only `clear()` (a new sign-in) gives a key its budget back.
  */
 export const MAX_REFRESH_RETRIES = 1;
 
 export const createAttachmentUrlCache = (): AttachmentUrlCache => {
   const entries = new Map<string, SignedAttachmentUrl>();
   const retries = new Map<string, number>();
+  let generation = 0;
 
   return {
     read(keys, now) {
@@ -65,13 +86,19 @@ export const createAttachmentUrlCache = (): AttachmentUrlCache => {
       return hits;
     },
 
-    write(written) {
+    generation() {
+      return generation;
+    },
+
+    write(written, writtenGeneration) {
+      // A request started before sign-out can resolve after it. Writing it
+      // would put a bearer URL for the previous account back into a cache the
+      // next account reads from.
+      if (writtenGeneration !== generation) return false;
       for (const [key, entry] of Object.entries(written)) {
         entries.set(key, entry);
-        // A successful mint means the key is healthy again; anything that broke
-        // before was transient, so the budget should not carry over.
-        retries.delete(key);
       }
+      return true;
     },
 
     invalidate(s3Key) {
@@ -85,6 +112,7 @@ export const createAttachmentUrlCache = (): AttachmentUrlCache => {
     clear() {
       entries.clear();
       retries.clear();
+      generation += 1;
     },
   };
 };

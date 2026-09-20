@@ -27,9 +27,10 @@ describe('AuthDashboardRepository', () => {
   it('clears cached attachment urls on signOut()', async () => {
     // A presigned GET needs no token: leaving one cached would let the next
     // account on the device read the previous one's receipt.
-    attachmentUrlCache.write({
-      [KEY]: toSignedUrl('https://signed/a', 3600, NOW),
-    });
+    attachmentUrlCache.write(
+      { [KEY]: toSignedUrl('https://signed/a', 3600, NOW) },
+      attachmentUrlCache.generation(),
+    );
     const repo = new AuthDashboardRepository(
       jest.fn().mockResolvedValue(undefined),
     );
@@ -40,9 +41,10 @@ describe('AuthDashboardRepository', () => {
   });
 
   it('clears them even when the sign-out itself fails', async () => {
-    attachmentUrlCache.write({
-      [KEY]: toSignedUrl('https://signed/a', 3600, NOW),
-    });
+    attachmentUrlCache.write(
+      { [KEY]: toSignedUrl('https://signed/a', 3600, NOW) },
+      attachmentUrlCache.generation(),
+    );
     const repo = new AuthDashboardRepository(
       jest.fn().mockRejectedValue(new Error('Network error')),
     );

@@ -13,6 +13,20 @@ import type { ChatRepositoryPort } from '@features/dashboard/domain/repositories
 /** Floor for the renewal timer, so a failing refresh cannot spin. */
 const MIN_REFRESH_DELAY_MS = 1000;
 
+/**
+ * Backoff for a renewal that FAILED. The deadline has already passed at that
+ * point, so without these the timer would re-arm at the floor and hammer the
+ * endpoint once a second for as long as the outage lasts.
+ */
+export const REFRESH_BACKOFF_BASE_MS = 5000;
+export const REFRESH_BACKOFF_MAX_MS = 5 * 60 * 1000;
+
+export const refreshBackoffMs = (failures: number): number =>
+  Math.min(
+    REFRESH_BACKOFF_BASE_MS * 2 ** (failures - 1),
+    REFRESH_BACKOFF_MAX_MS,
+  );
+
 export interface AttachmentUrls {
   /** `s3Key → presigned GET`, containing only URLs that are currently valid. */
   urls: Record<string, string>;
@@ -54,6 +68,10 @@ export const useAttachmentUrls = (
   // Bumped to force the effect to re-run after an invalidation, without making
   // the broken key look like a content change to `keys`.
   const [refreshTick, setRefreshTick] = useState(0);
+  // Consecutive failed renewal rounds. Drives the backoff AND re-arms the
+  // timer: a failed round changes nothing else, so without this state the
+  // timer effect would never run again and the URL would expire in silence.
+  const [failures, setFailures] = useState(0);
 
   useEffect(() => {
     const now = Date.now();
@@ -80,6 +98,8 @@ export const useAttachmentUrls = (
 
     pending.forEach((key) => inFlightRef.current.add(key));
     let cancelled = false;
+    // Captured BEFORE the request so a sign-out mid-flight invalidates it.
+    const generation = attachmentUrlCache.generation();
 
     void resolveAttachmentUrls(
       pending,
@@ -87,10 +107,16 @@ export const useAttachmentUrls = (
       (key) => inFlightRef.current.delete(key),
       now,
     ).then((fresh) => {
-      if (Object.keys(fresh).length === 0) return;
-      // Written even when this mount is gone: the next one should still find it.
-      attachmentUrlCache.write(fresh);
-      if (cancelled) return;
+      if (Object.keys(fresh).length === 0) {
+        // Nothing came back. Count it so the timer re-arms with backoff.
+        if (!cancelled) setFailures((f) => f + 1);
+        return;
+      }
+      // Written even when this mount is gone: the next one should still find
+      // it. Refused outright if a sign-out happened while this was in flight.
+      const stored = attachmentUrlCache.write(fresh, generation);
+      if (cancelled || !stored) return;
+      setFailures(0);
       setResolved((prev) => ({ ...prev, ...fresh }));
     });
 
@@ -102,16 +128,23 @@ export const useAttachmentUrls = (
   // Renew AHEAD of the deadline. Without this the effect above only re-runs on
   // a render, and an idle conversation does not render — so the first sign of
   // expiry would be a broken image.
+  //
+  // `failures` is a dependency on purpose: a failed renewal leaves `resolved`
+  // and `keys` untouched, so it is the only thing that can bring the timer
+  // back after the deadline has already passed.
   useEffect(() => {
     const due = nextRefreshAt(keys, resolved);
     if (due === null) return;
 
     // Floored, never zero: if a refresh fails the entry stays due, and a 0 ms
     // timer would turn that into a tight retry loop against the endpoint.
-    const delay = Math.max(MIN_REFRESH_DELAY_MS, due - Date.now());
+    const delay =
+      failures > 0
+        ? refreshBackoffMs(failures)
+        : Math.max(MIN_REFRESH_DELAY_MS, due - Date.now());
     const timer = setTimeout(() => setRefreshTick((n) => n + 1), delay);
     return () => clearTimeout(timer);
-  }, [keys, resolved]);
+  }, [keys, resolved, failures]);
 
   const reportBroken = useCallback((s3Key: string) => {
     if (!attachmentUrlCache.invalidate(s3Key)) return;
