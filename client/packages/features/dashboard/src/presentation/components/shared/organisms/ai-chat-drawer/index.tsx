@@ -183,7 +183,21 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
         .filter((key): key is string => key !== undefined),
     [messages],
   );
-  const attachmentUrls = useAttachmentUrls(chatRepository, attachmentKeys);
+  const { urls: attachmentUrls, reportBroken } = useAttachmentUrls(
+    chatRepository,
+    attachmentKeys,
+  );
+
+  // A presigned GET can die while the bubble is on screen (signature expired,
+  // device clock skewed). The renderer is the only thing that finds out, so it
+  // reports the message and we re-mint that key's URL.
+  const handleImageError = useCallback(
+    (messageId: string) => {
+      const key = messages.find((m) => m.id === messageId)?.attachmentS3Key;
+      if (key) reportBroken(key);
+    },
+    [messages, reportBroken],
+  );
 
   // A message keeps its own key; the URL arrives asynchronously, so until it
   // does the bubble simply renders without an image.
@@ -698,6 +712,7 @@ export function AIChatDrawer({ visible, onClose }: AIChatDrawerProps) {
                   imageCloseAccessibilityLabel={t(
                     'aiChat.attachmentImageCloseLabel',
                   )}
+                  onImageError={handleImageError}
                 />
               )}
 
