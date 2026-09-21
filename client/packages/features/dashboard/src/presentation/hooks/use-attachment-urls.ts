@@ -33,6 +33,34 @@ export const refreshBackoffMs = (failures: number): number =>
     REFRESH_BACKOFF_MAX_MS,
   );
 
+/**
+ * How long until the next renewal attempt, or `null` when there is nothing to
+ * wait for and no timer should be armed.
+ *
+ * A failed round wins over the cached deadlines, and deliberately so: if the
+ * FIRST round fails for every key nothing is cached at all, `due` is `null`,
+ * and keying the timer purely off cached deadlines would mean the very first
+ * failure — the common one, an offline app on open — is never retried.
+ *
+ * Extracted as a pure function because the effect that uses it is unreachable
+ * from Jest here (the repo mocks `react-native` wholesale and ships no React
+ * testing library), and this decision is the part that carries the risk.
+ *
+ * @param due epoch ms from `nextRefreshAt`, or `null` when nothing is cached.
+ * @param failures consecutive failed renewal rounds.
+ */
+export const renewalDelayMs = (
+  due: number | null,
+  failures: number,
+  now: number,
+): number | null => {
+  if (failures > 0) return refreshBackoffMs(failures);
+  if (due === null) return null;
+  // Floored, never zero: a due entry whose deadline already passed would
+  // otherwise arm a 0 ms timer and spin.
+  return Math.max(MIN_REFRESH_DELAY_MS, due - now);
+};
+
 export interface AttachmentUrls {
   /** `s3Key → presigned GET`, containing only URLs that are currently valid. */
   urls: Record<string, string>;
@@ -141,15 +169,13 @@ export const useAttachmentUrls = (
   // and `keys` untouched, so it is the only thing that can bring the timer
   // back after the deadline has already passed.
   useEffect(() => {
-    const due = nextRefreshAt(keys, resolved);
-    if (due === null) return;
+    const delay = renewalDelayMs(
+      nextRefreshAt(keys, resolved),
+      failures,
+      Date.now(),
+    );
+    if (delay === null) return;
 
-    // Floored, never zero: if a refresh fails the entry stays due, and a 0 ms
-    // timer would turn that into a tight retry loop against the endpoint.
-    const delay =
-      failures > 0
-        ? refreshBackoffMs(failures)
-        : Math.max(MIN_REFRESH_DELAY_MS, due - Date.now());
     const timer = setTimeout(() => setRefreshTick((n) => n + 1), delay);
     return () => clearTimeout(timer);
   }, [keys, resolved, failures]);
