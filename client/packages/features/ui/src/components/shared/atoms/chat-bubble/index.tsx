@@ -53,12 +53,24 @@ export type ChatBubbleAttachment =
        * it to a screen reader.
        */
       imageCloseAccessibilityLabel: string;
+      /**
+       * Called when the image fails to load.
+       *
+       * Belongs to the image arm because it is meaningless without one, and
+       * because a presigned URL is the reason it exists: the signature expires
+       * while the bubble is still on screen, and a silent failure would leave
+       * the user looking at a blank square with nothing able to recover. The
+       * bubble does not know why the load failed and does not decide what to do
+       * — it only reports it upward.
+       */
+      onImageError?: () => void;
     }
   | {
       imageUri?: undefined;
       imageAccessibilityLabel?: undefined;
       imageExpandAccessibilityLabel?: undefined;
       imageCloseAccessibilityLabel?: undefined;
+      onImageError?: undefined;
     };
 
 export type ChatBubbleProps = {
@@ -75,6 +87,7 @@ export function ChatBubble({
   imageAccessibilityLabel,
   imageExpandAccessibilityLabel,
   imageCloseAccessibilityLabel,
+  onImageError,
 }: ChatBubbleProps) {
   const colorScheme = useColorScheme();
   // Tapping to expand is WEB-only for now, per the current scope. On mobile the
@@ -142,6 +155,10 @@ export function ChatBubble({
             <Image
               ref={thumbnailRef}
               source={{ uri: imageUri }}
+              // The URL is presigned and therefore perishable. Reporting the
+              // failure is what lets the owner re-mint it; without this the
+              // bubble would just keep showing an empty frame.
+              {...(onImageError && { onError: onImageError })}
               // `contain` so a tall receipt is never cropped — the whole slip has
               // to stay legible, which is the point of showing it back.
               resizeMode="contain"

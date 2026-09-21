@@ -5,12 +5,13 @@ import {
   DashboardProvider,
   DashboardWebLayout,
   DashboardMobileLayout,
+  clearAttachmentUrlCache,
 } from '@features/dashboard';
 import { ChatProvider } from '@features/dashboard/presentation/providers/chat-provider';
 import { requireEnv } from '@packages/models/shared/utils/require-env';
 import { ROUTES } from '@/utils/route';
 import { isWeb } from '@packages/utils/src';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 const NAVIGATE_MAP: Record<string, string> = {
   home: ROUTES.dashboard.home,
@@ -48,6 +49,22 @@ export default function DashboardLayout() {
   const getToken = useCallback(async () => {
     return session?.idToken ?? null;
   }, [session]);
+
+  // A presigned attachment URL is a BEARER credential: it carries no token and
+  // stays readable for the rest of its hour, so one left in the process-wide
+  // cache is readable by whoever uses the device next.
+  //
+  // The dashboard sign-out adapter clears them, but that is not the only way a
+  // session ends — a failed scheduled token refresh drops the session straight
+  // to null without going through it (see auth-provider's scheduleRefresh).
+  // This layout is the composition root, the one place that sees both the auth
+  // session and the dashboard, so it clears on ANY loss of the user.
+  //
+  // MUST sit above the early returns below: hooks cannot run conditionally, and
+  // the `!user` return is exactly the case this needs to fire on.
+  useEffect(() => {
+    if (!user) clearAttachmentUrlCache();
+  }, [user]);
 
   if (!loading && !session) {
     return <Redirect href={ROUTES.authLogin as never} />;
