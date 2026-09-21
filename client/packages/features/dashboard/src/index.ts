@@ -9,6 +9,16 @@ export { SignOutUseCase } from './domain/use-cases/sign-out.use-case';
 
 // Infrastructure
 export { AuthDashboardRepository } from './infrastructure/auth/auth-dashboard-repository';
+/**
+ * Drops every cached presigned attachment URL.
+ *
+ * Exported because signing out is NOT the only way a session ends: a failed
+ * scheduled token refresh drops the session straight to null without going
+ * through the sign-out adapter. A presigned GET needs no token, so one left
+ * behind is readable by whoever uses the device next. The composition root
+ * calls this on ANY loss of the authenticated user.
+ */
+export { clearAttachmentUrlCache } from './application/attachment-url-cache';
 
 // Providers
 export {

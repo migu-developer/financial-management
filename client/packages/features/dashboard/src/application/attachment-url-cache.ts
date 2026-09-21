@@ -119,3 +119,14 @@ export const createAttachmentUrlCache = (): AttachmentUrlCache => {
 
 /** The instance the chat UI uses. Exported so sign-out can clear it. */
 export const attachmentUrlCache = createAttachmentUrlCache();
+
+/**
+ * Drops every cached URL and retry budget, and invalidates any request still
+ * in flight.
+ *
+ * Part of the package's public API because the dashboard's own sign-out
+ * adapter is not the only path that ends a session — a failed scheduled token
+ * refresh drops it straight to null — and a presigned GET is a bearer
+ * credential that outlives the session that minted it.
+ */
+export const clearAttachmentUrlCache = (): void => attachmentUrlCache.clear();

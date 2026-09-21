@@ -19,7 +19,13 @@ const MIN_REFRESH_DELAY_MS = 1000;
  * endpoint once a second for as long as the outage lasts.
  */
 export const REFRESH_BACKOFF_BASE_MS = 5000;
-export const REFRESH_BACKOFF_MAX_MS = 5 * 60 * 1000;
+/**
+ * Capped well INSIDE `URL_REFRESH_MARGIN_MS` (five minutes). The backoff is
+ * global, so one permanently broken key delays the renewal of its healthy
+ * siblings too; a ceiling at or above the margin would let a healthy URL reach
+ * its real expiry while waiting out someone else's outage.
+ */
+export const REFRESH_BACKOFF_MAX_MS = 60 * 1000;
 
 export const refreshBackoffMs = (failures: number): number =>
   Math.min(
@@ -107,17 +113,19 @@ export const useAttachmentUrls = (
       (key) => inFlightRef.current.delete(key),
       now,
     ).then((fresh) => {
-      if (Object.keys(fresh).length === 0) {
-        // Nothing came back. Count it so the timer re-arms with backoff.
-        if (!cancelled) setFailures((f) => f + 1);
-        return;
-      }
+      const got = Object.keys(fresh).length;
       // Written even when this mount is gone: the next one should still find
-      // it. Refused outright if a sign-out happened while this was in flight.
-      const stored = attachmentUrlCache.write(fresh, generation);
-      if (cancelled || !stored) return;
-      setFailures(0);
-      setResolved((prev) => ({ ...prev, ...fresh }));
+      // it. Refused outright if a sign-out happened while this was in flight,
+      // and a refused write counts as not having landed.
+      const stored = got > 0 && attachmentUrlCache.write(fresh, generation);
+      if (cancelled) return;
+      // The backoff clears ONLY when every pending key came back. A batch
+      // where one key succeeds and another fails still leaves that other key
+      // due, and treating it as a success would drop the delay back to the
+      // one-second floor and re-request it every second for the whole outage.
+      const complete = stored && got === pending.length;
+      setFailures((f) => (complete ? 0 : f + 1));
+      if (stored) setResolved((prev) => ({ ...prev, ...fresh }));
     });
 
     return () => {

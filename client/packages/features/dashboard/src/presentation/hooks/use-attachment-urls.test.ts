@@ -3,6 +3,7 @@ import {
   REFRESH_BACKOFF_MAX_MS,
   refreshBackoffMs,
 } from './use-attachment-urls';
+import { URL_REFRESH_MARGIN_MS } from '@features/dashboard/application/attachment-urls';
 
 /**
  * Only the pure part of the hook is covered here: the repo mocks `react-native`
@@ -26,6 +27,13 @@ describe('refreshBackoffMs', () => {
     for (const failures of [10, 20, 50, 200]) {
       expect(refreshBackoffMs(failures)).toBe(REFRESH_BACKOFF_MAX_MS);
     }
+  });
+
+  it('stays well inside the refresh margin', () => {
+    // The backoff is GLOBAL: one permanently broken key delays its healthy
+    // siblings too. A ceiling at or above the margin would let a healthy URL
+    // reach its real expiry while waiting out someone else's outage.
+    expect(REFRESH_BACKOFF_MAX_MS).toBeLessThan(URL_REFRESH_MARGIN_MS);
   });
 
   it('always returns a delay long enough to not hammer the endpoint', () => {
